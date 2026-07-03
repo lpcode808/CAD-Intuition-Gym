@@ -143,7 +143,7 @@ function e2MainScene(stage, { t, path }) {
   svgEl('rect', { x: left, y: top, width: Wpx, height: Hpx, class: 'part' }, stage);
 
   const hxL = targetL;                           // the hole you remembered to edit
-  const hxR = path === 'a' ? cx + 40 * MM : targetR;   // …and the one you forgot
+  const hxR = path === 'b' ? cx + 40 * MM : targetR;   // …and the one you forgot
   const offMm = (targetR - hxR) / MM;
   const badR = offMm > 0.5;
 
@@ -153,11 +153,11 @@ function e2MainScene(stage, { t, path }) {
   svgEl('circle', { cx: hxL, cy, r, class: 'hole' + (path ? ' is-good' : '') }, stage);
   svgEl('circle', { cx: hxR, cy, r, class: 'hole' + (path ? (badR ? ' is-bad' : ' is-good') : '') }, stage);
 
-  if (path === 'a') {
+  if (path === 'b') {
     centerlineV(stage, cx, top - 30, bot + 14);
     dimH(stage, { x1: hxL, x2: cx, y: top - 22, ext1: cy - r, label: `${Math.round(S / 2)} mm`, cls: 'anchor' });
     dimH(stage, { x1: cx, x2: hxR, y: top - 22, ext2: cy - r, label: '40 mm', cls: badR ? 'bad' : 'anchor' });
-  } else if (path === 'b') {
+  } else if (path === 'a') {
     centerlineV(stage, cx, top - 30, bot + 14);
     dimH(stage, { x1: hxL, x2: hxR, y: top - 22, ext1: cy - r, ext2: cy - r, label: `${Math.round(S)} mm`, cls: 'anchor' });
     sceneLabel(stage, hxR, cy + r + 14, 'mirrored copy', 'muted');
@@ -165,7 +165,7 @@ function e2MainScene(stage, { t, path }) {
 
   dimH(stage, { x1: left, x2: right, y: bot + 28, ext1: bot, ext2: bot, label: '160 mm' });
 
-  if (path === 'a' && offMm >= 3) {
+  if (path === 'b' && offMm >= 3) {
     dimH(stage, {
       x1: hxR, x2: targetR, y: cy - r - 16, ext1: cy - r, ext2: cy - 12,
       label: `${offMm.toFixed(0)} mm short`, cls: 'bad',
@@ -183,7 +183,7 @@ function e2CounterScene(stage, { t, path }) {
   const R = lerp(40, 70, t);                     // connector target, mm right of center
   const sensorX = cx - 40 * MM;                  // the sensor pad: glued down, forever
   const connX = cx + R * MM;
-  const hxL = path === 'b' ? cx - R * MM : sensorX;
+  const hxL = path === 'a' ? cx - R * MM : sensorX;
   const offMm = (sensorX - hxL) / MM;
   const badL = offMm > 0.5;
 
@@ -196,7 +196,7 @@ function e2CounterScene(stage, { t, path }) {
   svgEl('circle', { cx: connX, cy, r, class: 'hole is-good' }, stage);
 
   centerlineV(stage, cx, top - 30, bot + 14);
-  if (path === 'a') {
+  if (path === 'b') {
     dimH(stage, { x1: sensorX, x2: cx, y: top - 22, ext1: cy - r, label: '40 mm', cls: 'anchor' });
     dimH(stage, { x1: cx, x2: connX, y: top - 22, ext2: cy - r, label: `${Math.round(R)} mm`, cls: 'anchor' });
   } else {
@@ -561,7 +561,7 @@ const EXERCISES = [
     predict: {
       prompt: 'Two reasonable-looking ways to put two holes in a plate. The spacing is about to change. Which one keeps the pair symmetric through the edit?',
       note: 'Just a guess — you’ll test both in a minute.',
-      answer: 'b',
+      answer: 'a',
     },
 
     choose: {
@@ -570,16 +570,16 @@ const EXERCISES = [
 
     paths: {
       a: {
-        label: 'Place two holes, one dimension each',
-        sub: 'Left hole: 40 mm from center. Right hole: 40 mm from center. Two dimensions, perfectly symmetric today.',
-        short: 'two copies',
-        kind: 'accident',
-      },
-      b: {
         label: 'Sketch one hole, mirror it',
         sub: 'Draw only the left hole. Reflect it across the centerline — the right one is a copy that can’t disagree.',
         short: 'mirrored',
         kind: 'intent',
+      },
+      b: {
+        label: 'Place two holes, one dimension each',
+        sub: 'Left hole: 40 mm from center. Right hole: 40 mm from center. Two dimensions, perfectly symmetric today.',
+        short: 'two copies',
+        kind: 'accident',
       },
     },
 
@@ -601,7 +601,7 @@ const EXERCISES = [
           note: 'Drag the spacing and play the change request through your scheme.',
         };
       }
-      if (path === 'a') {
+      if (path === 'b') {
         if (off < 5) {
           return {
             tone: 'warn',
@@ -630,10 +630,10 @@ const EXERCISES = [
       if (path === null) {
         base.push({ label: 'Sketch 2 — mounting holes', sub: 'two holes. how they stay symmetric is your call', active: true });
       } else if (path === 'a') {
-        base.push({ label: 'Sketch 2 — mounting holes', sub: 'two holes, two separate 40 mm dimensions', active: true });
-      } else {
         base.push({ label: 'Sketch 2 — left hole', sub: 'the only hole you actually drew', active: true });
         base.push({ label: 'Mirror 1 — right hole', sub: 'reflected across the centerline · a sketch mirror', active: true });
+      } else {
+        base.push({ label: 'Sketch 2 — mounting holes', sub: 'two holes, two separate 40 mm dimensions', active: true });
       }
       base.push({ label: 'Extrude 1', sub: '6 mm thick' });
       return base;
@@ -647,14 +647,14 @@ const EXERCISES = [
     counter: {
       heading: 'Now flip it',
       body: 'Same plate, same two schemes — but now the holes have different jobs. The left one sits over a sensor that’s already glued in place. The right one holds a connector the client keeps moving. The request: “shift the connector outward — and don’t you dare touch my sensor.”',
-      defaultPath: 'b',
+      defaultPath: 'a',
       scene: e2CounterScene,
       sliderLabel: 'Connector position',
       format: (t) => `${Math.round(lerp(40, 70, t))} mm right of center`,
       hint: 'Move the connector — this pair has a different job.',
       pathLabels: {
-        a: 'Two holes, two dimensions',
-        b: 'One hole, mirrored',
+        a: 'One hole, mirrored',
+        b: 'Two holes, two dimensions',
       },
       outcome(path, t) {
         const off = Math.round(30 * t);
@@ -665,7 +665,7 @@ const EXERCISES = [
             note: 'Slide the connector outward and watch both holes.',
           };
         }
-        if (path === 'b') {
+        if (path === 'a') {
           if (off < 5) {
             return { tone: 'warn', headline: `sensor hole dragged ${off} mm`, note: 'The left hole is moving. Nobody asked it to.' };
           }
@@ -687,11 +687,11 @@ const EXERCISES = [
           { label: 'Sketch 1 — plate outline', sub: '160 mm wide' },
         ];
         if (path === 'a') {
-          base.push({ label: 'Sketch 2 — sensor hole', sub: '40 mm left of center · its own dimension', active: true });
-          base.push({ label: 'Sketch 3 — connector hole', sub: 'its own dimension · free to move alone', active: true });
-        } else {
           base.push({ label: 'Sketch 2 — connector hole', sub: 'the one you drew', active: true });
           base.push({ label: 'Mirror 1 — sensor hole', sub: 'a reflected copy — moves whenever the connector moves', active: true });
+        } else {
+          base.push({ label: 'Sketch 2 — sensor hole', sub: '40 mm left of center · its own dimension', active: true });
+          base.push({ label: 'Sketch 3 — connector hole', sub: 'its own dimension · free to move alone', active: true });
         }
         base.push({ label: 'Extrude 1', sub: '6 mm thick' });
         return base;

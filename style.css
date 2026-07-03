@@ -589,6 +589,20 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   .home { padding: 40px 20px 56px; }
 }
 
+@media (max-width: 480px) {
+  /* Compare panes render the same 520×300 scene viewBox at a much smaller
+     display width than the single-view scene does, so the pre-set SVG label
+     sizes end up tighter than elsewhere. Bump just those, just here. */
+  .compare .scenelabel,
+  .compare .ghost-label,
+  .compare .intent-label {
+    font-size: 12px;
+  }
+  .compare .dimtext {
+    font-size: 13px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

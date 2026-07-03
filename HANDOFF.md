@@ -1,6 +1,6 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-03 by Claude Code (cloud session, resuming recovered session `96090277-aebf-44cd-a5bc-d63914531188`).
+Last updated: 2026-07-03 by Claude Code (small polish batch: E2 letter-order flip, mobile compare-pane label sizing, home first-visit cue).
 
 ## Status: MVP complete
 
@@ -14,10 +14,11 @@ Starting point: E1 playable, E2–E4 locked placeholders (`available: false`).
 
 - **E2 — One source of truth** (mirror, don't maintain twins), authored in full:
   - Main scene: a 160 mm bracket with two mounting holes whose spacing changes
-    80→140 mm. Path A (two independent dimensions) plays the classic miss — you
+    80→140 mm. Path B (two independent dimensions) plays the classic miss — you
     edit the left dimension, the forgotten right one glows red and the hole
-    lands up to 30 mm short of its intent mark. Path B (sketch mirror) keeps
-    the pair symmetric at every spacing.
+    lands up to 30 mm short of its intent mark. Path A (sketch mirror) keeps
+    the pair symmetric at every spacing. (Letters flipped in the 2026-07-03
+    polish batch below — mirror moved from B to A.)
   - Counter-context: same plate, but the left hole sits over a glued-down
     sensor and the right one follows a connector the client keeps moving.
     Mirroring now drags the sensor hole off its pad — independence is the
@@ -31,8 +32,10 @@ Starting point: E1 playable, E2–E4 locked placeholders (`available: false`).
   - Counter-context: a ten-minute-old concept sketch. Fully defined refuses to
     explore ("nothing budges"); loose morphs freely between two pre-authored
     proportion variants. Slack matched to intent.
-  - Note: this is the one exercise where the intent path is option **A**, so
-    "always pick B" doesn't become the meta-game.
+  - Note: at the time of authoring, this was the one exercise where the
+    intent path was option **A** — since the 2026-07-03 polish batch also
+    moved E2's intent path to **A**, that's no longer unique to E3, which is
+    the point: option letters no longer correlate with "intent" anywhere.
 - **E4 — Link what belongs together** (relate, don't hardcode), authored in
   full:
   - Main scene: box + lid cross-section. Box grows 100→160 mm. The hardcoded
@@ -57,6 +60,43 @@ All four exercises follow the E1 template exactly: intent brief → light
 predict tap → choose → change-request slider with pre-authored outcomes →
 toggle + side-by-side compare → takeaway → required counter-context with its
 own slider and scheme toggle. No counter-context is a placeholder.
+
+## What changed in this batch (2026-07-03 polish pass)
+
+Three small, targeted fixes on top of the completed MVP:
+
+- **E2 choice order flipped.** Every exercise before this one happened to put
+  the "intent" strategy under option **B**, which risked training "always
+  pick B" instead of actually reading the two schemes. In `exercises.js`,
+  E2's mirror strategy ("Sketch one hole, mirror it") is now path **A** and
+  the two-independent-dimensions strategy is now path **B** — in the predict
+  answer, the `paths` object, both `outcome()` functions, both `features()`
+  functions, `e2MainScene`, `e2CounterScene`, and the counter's
+  `defaultPath`/`pathLabels`. All copy text is unchanged; only which letter
+  it sits under moved. Confirmed `app.js` never assumed a fixed letter→kind
+  mapping — it always reads `ex.paths[p]` / `ex.predict.answer` generically,
+  so no player-logic changes were needed.
+- **Mobile compare-pane label legibility.** `style.css` gained a
+  `@media (max-width: 480px)` rule that bumps `.compare .scenelabel`,
+  `.compare .ghost-label`, `.compare .intent-label` (10px → 12px) and
+  `.compare .dimtext` (11px → 13px). Compare panes render the same fixed
+  520×300 SVG viewBox at a smaller on-screen width than the single-view
+  scene does, so their labels were disproportionately tight at narrow
+  widths — this only touches text inside `.compare`, so the single-view
+  scene and desktop compare view are unaffected.
+- **First-visit cue on the home screen.** In `app.js`, when no exercise has
+  been completed yet, Exercise 1's action link reads "start here →" instead
+  of "start →"; the other three still read the plain "start →". Once any
+  exercise is marked done, all four revert to "start →". Text-only change,
+  same `.ex-status` styling.
+
+Verified with a real-Chromium Playwright pass (`file://` cold load) at
+1400×900 and 390×844: E2 plays end-to-end after the flip (A/mirror = good,
+B/two-copies = the forgotten-hole "mm short" failure; counter-context A/
+mirror = the sensor-hole-dragged failure, B/two-copies = holds), the home
+screen shows "start here →" on E1 only and reverts after completing an
+exercise, zero console/page errors at both widths, and no horizontal
+overflow at 390px.
 
 ## Design / stack choices (unchanged from the recovered session)
 
@@ -99,9 +139,6 @@ Automated Playwright run against a real Chromium, `file://` cold load, at
 - v2 items per PRD §11: bridge-to-real-Onshape micro-tasks, fuller
   commit-a-guess predict interaction if the light tap proves too breezy, E5
   (sketch-level vs. part-level features).
-- Nice-to-have polish, not blocking: scene labels in the small compare panes
-  are dense at mobile widths (legible but tight); could scale up on
-  `max-width` if it bothers anyone in real use.
 
 ## QA checklist (verified this session)
 

@@ -37,6 +37,7 @@ function h(tag, attrs = {}, ...children) {
 function renderHome() {
   document.title = 'CAD Intuition Gym';
   const prog = loadProgress();
+  const anyDone = EXERCISES.some((ex) => prog[ex.id] && prog[ex.id].done);
 
   const rows = EXERCISES.map((ex) => {
     const done = prog[ex.id] && prog[ex.id].done;
@@ -48,10 +49,11 @@ function renderHome() {
       return h('div', { class: 'ex-row is-locked' },
         num, text, h('span', { class: 'ex-status' }, 'in authoring'));
     }
+    const startLabel = !anyDone && ex.num === 1 ? 'start here →' : 'start →';
     return h('a', { class: 'ex-row', href: `#/${ex.id}` },
       num, text,
       h('span', { class: 'ex-status' + (done ? ' is-done' : ' is-go') },
-        done ? 'done ✓' : 'start →'));
+        done ? 'done ✓' : startLabel));
   });
 
   appRoot.replaceChildren(
