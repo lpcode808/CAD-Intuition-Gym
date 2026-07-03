@@ -45,7 +45,7 @@ Not done:
 
 - E2-E4 are placeholders in `exercises.js` with `available: false`.
 - No final desktop/mobile browser QA has been recorded after the recovered session hit the limit.
-- No git repository exists yet in `CAD-Intuition-Gym/` as of this handoff.
+- GitHub repo exists at https://github.com/lpcode808/CAD-Intuition-Gym.
 
 ## Design / Stack Choices Already Made
 
@@ -59,6 +59,8 @@ Not done:
 Paste this into Claude Code Cloud after pushing the repo:
 
 ```txt
+Repo: https://github.com/lpcode808/CAD-Intuition-Gym
+
 Read `AGENTS.md`, `PRD.md`, `_planning/FABLE-BUILD-BRIEF.md`, and `HANDOFF.md` in full. Continue the recovered Claude Code session `96090277-aebf-44cd-a5bc-d63914531188`.
 
 Current state: E1 is playable in the vanilla static app. E2-E4 are intentionally locked placeholders in `exercises.js`. Finish the MVP by authoring E2-E4 with the same full loop: intent brief, light predict tap, choose, change-request slider, pre-authored visual consequences, toggle-and-compare, takeaway, and required counter-context. Keep the app static and localStorage-only. Do not add a backend, build step, real solver, or Onshape bridge.

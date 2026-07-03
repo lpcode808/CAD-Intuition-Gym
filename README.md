@@ -16,6 +16,10 @@ Recovered Claude Code session:
 - Local source: `/Users/justinlai/.claude/projects/-Users-justinlai-Coding/96090277-aebf-44cd-a5bc-d63914531188.jsonl`
 - End state: hit Claude session limit after adding the `dimV` helper in `svg.js`
 
+GitHub:
+
+- Repo: https://github.com/lpcode808/CAD-Intuition-Gym
+
 See `HANDOFF.md` for the continuation prompt and checklist.
 
 ## Run Locally
