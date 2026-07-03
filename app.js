@@ -375,7 +375,7 @@ function renderPlayer(ex) {
     out.push(refs.continueBtn);
     if (!S.moved) {
       out.push(h('p', { class: 'fine', 'data-ref': 'movehint' },
-        'Drag the width first — feel it before we name it.'));
+        ex.change.hint || 'Drag the slider first — feel it before we name it.'));
     }
 
     updateOutcomeNote();
@@ -447,7 +447,7 @@ function renderPlayer(ex) {
     out.push(refs.doneBtn);
     if (!S.counterMoved) {
       out.push(h('p', { class: 'fine', 'data-ref': 'movehint2' },
-        'Run the width change one more time — this part has a different job.'));
+        ex.counter.hint || 'Run the change one more time — this part has a different job.'));
     }
 
     updateCounterNote();

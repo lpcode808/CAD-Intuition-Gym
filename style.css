@@ -520,6 +520,8 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .wall-face { stroke: #8593a2; stroke-width: 2; }
 
 .part { fill: #eef4fb; stroke: #31414f; stroke-width: 1.6; }
+.part.is-loose { stroke: #2e77d0; }   /* Onshape's vocabulary: blue = still free to move */
+.part.alt { fill: #e3edf9; }
 .ghost { fill: none; stroke: var(--faint); stroke-width: 1.2; stroke-dasharray: 5 5; }
 .ghost-label, .scenelabel {
   font-family: var(--mono);
@@ -533,6 +535,14 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .hole { fill: #fff; stroke: #31414f; stroke-width: 1.6; }
 .hole.is-good { stroke: var(--good); stroke-width: 2.2; }
 .hole.is-bad { stroke: var(--bad); stroke-width: 2.2; fill: #fdf1f0; }
+
+.pull-line { stroke: #55677a; stroke-width: 1.7; }
+.offline { stroke: var(--bad); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.gap-bad { fill: rgba(192, 55, 47, 0.14); stroke: var(--bad); stroke-width: 1.1; stroke-dasharray: 4 3; }
+.switch-part { fill: #d7e0ea; stroke: #31414f; stroke-width: 1.6; }
+.switch-mark { stroke: #55677a; stroke-width: 1.2; }
+.scenelabel.bad { fill: var(--bad); }
+.scenelabel.accent { fill: var(--accent); }
 
 .intent-ring { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 3 3; }
 .intent-line { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 3; }
