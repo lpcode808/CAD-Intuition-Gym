@@ -25,6 +25,31 @@ const SCENE_W = 520;
 const SCENE_H = 300;
 const MM = 1.6; // px per mm — one scale for every exercise keeps proportions honest
 
+/* ---------------------------------------------------------------- units
+   Every scene is authored in mm — that stays the source of truth for all
+   geometry. The unit toggle only changes how a length is *printed*. */
+
+const UNIT_KEY = 'cad-gym.unit';
+
+function getUnit() {
+  return localStorage.getItem(UNIT_KEY) === 'in' ? 'in' : 'mm';
+}
+function setUnit(unit) {
+  localStorage.setItem(UNIT_KEY, unit === 'in' ? 'in' : 'mm');
+}
+function toggleUnit() {
+  setUnit(getUnit() === 'in' ? 'mm' : 'in');
+}
+
+const MM_PER_IN = 25.4;
+
+/* Format a millimeter quantity in whichever unit the toggle is set to. */
+function fmtLen(mm, { mmDecimals = 0, inDecimals = 2 } = {}) {
+  return getUnit() === 'in'
+    ? `${(mm / MM_PER_IN).toFixed(inDecimals)} in`
+    : `${mm.toFixed(mmDecimals)} mm`;
+}
+
 /* A scene viewport: grid background + a stage group that scenes draw into. */
 function makeSceneSvg() {
   const svg = svgEl('svg', {

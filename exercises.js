@@ -40,7 +40,7 @@ function e1MainScene(stage, { t, path }) {
   if (path === 'a') {
     dimH(stage, {
       x1: left, x2: hx, y: top - 22, ext1: top, ext2: cy - 5 * MM,
-      label: '60 mm', cls: 'anchor',
+      label: fmtLen(60), cls: 'anchor',
     });
   } else if (path === 'b') {
     centerlineV(stage, cx, top - 34, bot + 18);
@@ -50,13 +50,13 @@ function e1MainScene(stage, { t, path }) {
 
   dimH(stage, {
     x1: left, x2: right, y: bot + 30, ext1: bot, ext2: bot,
-    label: `${Math.round(W)} mm`, cls: 'live',
+    label: fmtLen(W), cls: 'live',
   });
 
   if (path && offMm >= 3) {
     dimH(stage, {
       x1: hx, x2: cx, y: cy - 5 * MM - 18, ext1: cy - 5 * MM, ext2: cy - 12,
-      label: `${offMm.toFixed(0)} mm off`, cls: 'bad',
+      label: `${fmtLen(offMm)} off`, cls: 'bad',
     });
   }
 }
@@ -92,7 +92,7 @@ function e1CounterScene(stage, { t, path }) {
   if (path === 'a') {
     dimH(stage, {
       x1: wallX, x2: hx, y: top - 22, ext1: top, ext2: cy - 5 * MM,
-      label: '60 mm', cls: 'anchor',
+      label: fmtLen(60), cls: 'anchor',
     });
   } else {
     const mid = wallX + Wpx / 2;
@@ -103,13 +103,13 @@ function e1CounterScene(stage, { t, path }) {
 
   dimH(stage, {
     x1: wallX, x2: right, y: bot + 30, ext1: bot, ext2: bot,
-    label: `${Math.round(W)} mm`, cls: 'live',
+    label: fmtLen(W), cls: 'live',
   });
 
   if (offMm >= 3) {
     dimH(stage, {
       x1: intentX, x2: hx, y: cy - 5 * MM - 18, ext1: cy - 12, ext2: cy - 5 * MM,
-      label: `${offMm.toFixed(0)} mm off the bolt`, cls: 'bad',
+      label: `${fmtLen(offMm)} off the bolt`, cls: 'bad',
     });
   }
 }
@@ -155,20 +155,20 @@ function e2MainScene(stage, { t, path }) {
 
   if (path === 'b') {
     centerlineV(stage, cx, top - 30, bot + 14);
-    dimH(stage, { x1: hxL, x2: cx, y: top - 22, ext1: cy - r, label: `${Math.round(S / 2)} mm`, cls: 'anchor' });
-    dimH(stage, { x1: cx, x2: hxR, y: top - 22, ext2: cy - r, label: '40 mm', cls: badR ? 'bad' : 'anchor' });
+    dimH(stage, { x1: hxL, x2: cx, y: top - 22, ext1: cy - r, label: fmtLen(S / 2), cls: 'anchor' });
+    dimH(stage, { x1: cx, x2: hxR, y: top - 22, ext2: cy - r, label: fmtLen(40), cls: badR ? 'bad' : 'anchor' });
   } else if (path === 'a') {
     centerlineV(stage, cx, top - 30, bot + 14);
-    dimH(stage, { x1: hxL, x2: hxR, y: top - 22, ext1: cy - r, ext2: cy - r, label: `${Math.round(S)} mm`, cls: 'anchor' });
+    dimH(stage, { x1: hxL, x2: hxR, y: top - 22, ext1: cy - r, ext2: cy - r, label: fmtLen(S), cls: 'anchor' });
     sceneLabel(stage, hxR, cy + r + 14, 'mirrored copy', 'muted');
   }
 
-  dimH(stage, { x1: left, x2: right, y: bot + 28, ext1: bot, ext2: bot, label: '160 mm' });
+  dimH(stage, { x1: left, x2: right, y: bot + 28, ext1: bot, ext2: bot, label: fmtLen(160) });
 
   if (path === 'b' && offMm >= 3) {
     dimH(stage, {
       x1: hxR, x2: targetR, y: cy - r - 16, ext1: cy - r, ext2: cy - 12,
-      label: `${offMm.toFixed(0)} mm short`, cls: 'bad',
+      label: `${fmtLen(offMm)} short`, cls: 'bad',
     });
   }
 }
@@ -197,19 +197,19 @@ function e2CounterScene(stage, { t, path }) {
 
   centerlineV(stage, cx, top - 30, bot + 14);
   if (path === 'b') {
-    dimH(stage, { x1: sensorX, x2: cx, y: top - 22, ext1: cy - r, label: '40 mm', cls: 'anchor' });
-    dimH(stage, { x1: cx, x2: connX, y: top - 22, ext2: cy - r, label: `${Math.round(R)} mm`, cls: 'anchor' });
+    dimH(stage, { x1: sensorX, x2: cx, y: top - 22, ext1: cy - r, label: fmtLen(40), cls: 'anchor' });
+    dimH(stage, { x1: cx, x2: connX, y: top - 22, ext2: cy - r, label: fmtLen(R), cls: 'anchor' });
   } else {
-    dimH(stage, { x1: hxL, x2: connX, y: top - 22, ext1: cy - r, ext2: cy - r, label: `${Math.round(2 * R)} mm`, cls: 'anchor' });
+    dimH(stage, { x1: hxL, x2: connX, y: top - 22, ext1: cy - r, ext2: cy - r, label: fmtLen(2 * R), cls: 'anchor' });
     sceneLabel(stage, hxL, cy + r + 14, 'mirrored copy', 'muted');
   }
 
-  dimH(stage, { x1: left, x2: right, y: bot + 28, ext1: bot, ext2: bot, label: '160 mm' });
+  dimH(stage, { x1: left, x2: right, y: bot + 28, ext1: bot, ext2: bot, label: fmtLen(160) });
 
   if (offMm >= 3) {
     dimH(stage, {
       x1: hxL, x2: sensorX, y: cy - r - 16, ext1: cy - r, ext2: cy - 12,
-      label: `${offMm.toFixed(0)} mm off the sensor`, cls: 'bad',
+      label: `${fmtLen(offMm)} off the sensor`, cls: 'bad',
     });
   }
 }
@@ -259,16 +259,16 @@ function e3MainScene(stage, { t, path }) {
   if (path === 'a') {
     centerlineV(stage, 260, 92, 126);
     sceneLabel(stage, 260, 86, 'apex centered', 'muted');
-    dimH(stage, { x1: 172, x2: 348, y: 255, ext1: 225, ext2: 225, label: '110 mm', cls: 'anchor' });
-    dimV(stage, { y1: 153, y2: 225, x: 378, ext1: 348, ext2: 348, label: '45 mm', cls: 'anchor' });
-    dimV(stage, { y1: 105, y2: 225, x: 148, ext1: 260, ext2: 172, label: '75 mm', cls: 'anchor' });
+    dimH(stage, { x1: 172, x2: 348, y: 255, ext1: 225, ext2: 225, label: fmtLen(110), cls: 'anchor' });
+    dimV(stage, { y1: 153, y2: 225, x: 378, ext1: 348, ext2: 348, label: fmtLen(45), cls: 'anchor' });
+    dimV(stage, { y1: 105, y2: 225, x: 148, ext1: 260, ext2: 172, label: fmtLen(75), cls: 'anchor' });
   }
 
   pullArrow(stage, D[0], D[1], path ? t : 0);
 
   if (path === 'b' && off >= 3) {
     svgEl('line', { x1: D0[0], y1: D0[1], x2: D[0], y2: D[1], class: 'offline' }, stage);
-    sceneLabel(stage, (D0[0] + D[0]) / 2 + 14, (D0[1] + D[1]) / 2 + 4, `${off} mm adrift`, 'bad', 'start');
+    sceneLabel(stage, (D0[0] + D[0]) / 2 + 14, (D0[1] + D[1]) / 2 + 4, `${fmtLen(off)} adrift`, 'bad', 'start');
   }
 }
 
@@ -284,10 +284,10 @@ function e3CounterScene(stage, { t, path }) {
 
   if (path === 'a') {
     sceneLabel(stage, 260, 86, 'fully defined — it will not be argued with', 'muted');
-    dimH(stage, { x1: 204, x2: 316, y: 259, ext1: 235, ext2: 235, label: '70 mm', cls: 'anchor' });
-    dimV(stage, { y1: 115, y2: 235, x: 176, ext1: 204, ext2: 204, label: '75 mm', cls: 'anchor' });
-    dimH(stage, { x1: 204, x2: 244, y: 97, ext1: 115, ext2: 115, label: '25 mm', cls: 'anchor' });
-    dimV(stage, { y1: 203, y2: 235, x: 344, ext1: 316, ext2: 316, label: '20 mm', cls: 'anchor' });
+    dimH(stage, { x1: 204, x2: 316, y: 259, ext1: 235, ext2: 235, label: fmtLen(70), cls: 'anchor' });
+    dimV(stage, { y1: 115, y2: 235, x: 176, ext1: 204, ext2: 204, label: fmtLen(75), cls: 'anchor' });
+    dimH(stage, { x1: 204, x2: 244, y: 97, ext1: 115, ext2: 115, label: fmtLen(25), cls: 'anchor' });
+    dimV(stage, { y1: 203, y2: 235, x: 344, ext1: 316, ext2: 316, label: fmtLen(20), cls: 'anchor' });
     pullArrow(stage, 204, 115, t, -0.55, -0.835);
   } else {
     sceneLabel(stage, 260, 86, 'rough concept — proportions still on trial', 'muted');
@@ -332,14 +332,14 @@ function e4MainScene(stage, { t, path }) {
   const tickL = cx - (B / 2 + 2) * MM, tickR = cx + (B / 2 + 2) * MM;
   svgEl('line', { x1: tickL, y1: 118, x2: tickL, y2: 148, class: 'intent-line' }, stage);
   svgEl('line', { x1: tickR, y1: 118, x2: tickR, y2: 148, class: 'intent-line' }, stage);
-  svgEl('text', { x: tickL + 6, y: 112, class: 'intent-label', 'text-anchor': 'start', text: 'intent: 2 mm past the box' }, stage);
+  svgEl('text', { x: tickL + 6, y: 112, class: 'intent-label', 'text-anchor': 'start', text: `intent: ${fmtLen(2)} past the box` }, stage);
 
   dimH(stage, {
     x1: lidL, x2: lidR, y: 104, ext1: lidTop, ext2: lidTop,
-    label: path === 'b' ? '= box width + 4 mm' : path === 'a' ? '104 mm' : '? mm',
+    label: path === 'b' ? `= box width + ${fmtLen(4)}` : path === 'a' ? fmtLen(104) : `? ${getUnit()}`,
     cls: path ? 'anchor' : '',
   });
-  dimH(stage, { x1: boxL, x2: boxR, y: boxBot + 26, ext1: boxBot, ext2: boxBot, label: `${Math.round(B)} mm`, cls: 'live' });
+  dimH(stage, { x1: boxL, x2: boxR, y: boxBot + 26, ext1: boxBot, ext2: boxBot, label: fmtLen(B), cls: 'live' });
 
   if (path === 'a') {
     const expPx = boxR - lidR;                   // box sticking out past the lid, per side
@@ -351,11 +351,11 @@ function e4MainScene(stage, { t, path }) {
       }
       dimH(stage, {
         x1: lidR, x2: boxR, y: 118, ext1: lidTop, ext2: boxTop,
-        label: `${(expPx / MM).toFixed(0)} mm short`, cls: 'bad',
+        label: `${fmtLen(expPx / MM)} short`, cls: 'bad',
       });
     }
   } else if (path === 'b') {
-    dimH(stage, { x1: boxR, x2: lidR, y: 118, ext1: boxTop, ext2: lidTop, label: '2 mm', cls: 'anchor' });
+    dimH(stage, { x1: boxR, x2: lidR, y: 118, ext1: boxTop, ext2: lidTop, label: fmtLen(2), cls: 'anchor' });
   }
 }
 
@@ -377,19 +377,19 @@ function e4CounterScene(stage, { t, path }) {
   svgEl('line', { x1: cx - 7, y1: cy, x2: cx + 7, y2: cy, class: 'switch-mark' }, stage);
   svgEl('line', { x1: cx, y1: cy - 7, x2: cx, y2: cy + 7, class: 'switch-mark' }, stage);
 
-  sceneLabel(stage, cx, 98, 'a standard ⌀20 mm switch must drop in here', 'muted');
+  sceneLabel(stage, cx, 98, `a standard ⌀${fmtLen(20)} switch must drop in here`, 'muted');
   svgEl('circle', { cx, cy, r: rS + 3, class: 'intent-ring' }, stage);
-  svgEl('text', { x: cx, y: pBot - 8, class: 'intent-label', 'text-anchor': 'middle', text: 'intent: fit the switch — ⌀20, forever' }, stage);
+  svgEl('text', { x: cx, y: pBot - 8, class: 'intent-label', 'text-anchor': 'middle', text: `intent: fit the switch — ⌀${fmtLen(20)}, forever` }, stage);
 
   sceneLabel(stage, cx, cy + rH + 18,
-    path === 'b' ? `⌀${Math.round(dHole)} mm = panel width ÷ 4` : '⌀20 mm — typed in',
+    path === 'b' ? `⌀${fmtLen(dHole)} = panel width ÷ 4` : `⌀${fmtLen(20)} — typed in`,
     bad ? 'bad' : 'accent');
 
   if (oversize >= 4) {
-    dimH(stage, { x1: cx + rS, x2: cx + rH, y: cy, label: `${(oversize / 2).toFixed(0)} mm gap`, cls: 'bad' });
+    dimH(stage, { x1: cx + rS, x2: cx + rH, y: cy, label: `${fmtLen(oversize / 2)} gap`, cls: 'bad' });
   }
 
-  dimH(stage, { x1: cx - Ppx / 2, x2: cx + Ppx / 2, y: pBot + 26, ext1: pBot, ext2: pBot, label: `${Math.round(P)} mm`, cls: 'live' });
+  dimH(stage, { x1: cx - Ppx / 2, x2: cx + Ppx / 2, y: pBot + 26, ext1: pBot, ext2: pBot, label: fmtLen(P), cls: 'live' });
 }
 
 /* ---------------------------------------------------------------- exercises */
@@ -407,7 +407,7 @@ const EXERCISES = [
       heading: 'A plate, a hole, one promise',
       body: 'This is a mounting plate. A sensor bolts through that one hole, and everything downstream assumes the hole sits dead center.',
       intent: 'Keep the hole at the exact center of the plate.',
-      change: 'The plate’s width. It’s 120 mm today. The client is still deciding — the dashed outline is where it’s headed.',
+      get change() { return `The plate’s width. It’s ${fmtLen(120)} today. The client is still deciding — the dashed outline is where it’s headed.`; },
     },
 
     predict: {
@@ -422,7 +422,7 @@ const EXERCISES = [
 
     paths: {
       a: {
-        label: 'Measure 60 mm from the left edge',
+        get label() { return `Measure ${fmtLen(60)} from the left edge`; },
         sub: '60 is half of 120, so it’s perfectly centered today.',
         short: 'edge-anchored',
         kind: 'accident',
@@ -436,9 +436,9 @@ const EXERCISES = [
     },
 
     change: {
-      request: '“We’re going bigger — take the plate out toward 200 mm. The sensor still needs to be dead center.”',
+      get request() { return `“We’re going bigger — take the plate out toward ${fmtLen(200)}. The sensor still needs to be dead center.”`; },
       sliderLabel: 'Plate width',
-      format: (t) => `${Math.round(lerp(120, 200, t))} mm`,
+      format: (t) => fmtLen(lerp(120, 200, t)),
       hint: 'Drag the width first — feel it before we name it.',
     },
 
@@ -457,14 +457,14 @@ const EXERCISES = [
         if (off < 6) {
           return {
             tone: 'warn',
-            headline: `hole is ${off} mm off center`,
+            headline: `hole is ${fmtLen(off)} off center`,
             note: 'Only a hair off so far. Keep going.',
           };
         }
         return {
           tone: 'bad',
-          headline: `hole is ${off} mm off center`,
-          note: 'The 60 mm dimension is doing exactly what you said — not what you meant. It keeps the hole loyal to an edge that stopped mattering.',
+          headline: `hole is ${fmtLen(off)} off center`,
+          note: `The ${fmtLen(60)} dimension is doing exactly what you said — not what you meant. It keeps the hole loyal to an edge that stopped mattering.`,
         };
       }
       return {
@@ -481,9 +481,9 @@ const EXERCISES = [
         path === null
           ? { label: 'Sketch 2 — sensor hole', sub: 'not anchored yet. that’s your call', active: true }
           : path === 'a'
-            ? { label: 'Sketch 2 — sensor hole', sub: '60 mm off the left edge · a linear dimension', active: true }
+            ? { label: 'Sketch 2 — sensor hole', sub: `${fmtLen(60)} off the left edge · a linear dimension`, active: true }
             : { label: 'Sketch 2 — sensor hole', sub: 'held to the midline · a symmetric constraint', active: true },
-        { label: 'Extrude 1', sub: '6 mm thick' },
+        { label: 'Extrude 1', sub: `${fmtLen(6)} thick` },
       ];
     },
 
@@ -494,14 +494,14 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
-      body: 'Same plate, same two schemes — different job. This one hangs on a wall, and its hole must land on an anchor bolt already set in that wall, 60 mm over. The client still wants the plate wider.',
+      get body() { return `Same plate, same two schemes — different job. This one hangs on a wall, and its hole must land on an anchor bolt already set in that wall, ${fmtLen(60)} over. The client still wants the plate wider.`; },
       defaultPath: 'b',
       scene: e1CounterScene,
       sliderLabel: 'Plate width',
-      format: (t) => `${Math.round(lerp(120, 200, t))} mm`,
+      format: (t) => fmtLen(lerp(120, 200, t)),
       hint: 'Run the width change one more time — this part has a different job.',
       pathLabels: {
-        a: 'Measure 60 mm from the wall edge',
+        get a() { return `Measure ${fmtLen(60)} from the wall edge`; },
         b: 'Tie it to the plate’s midline',
       },
       outcome(path, t) {
@@ -515,18 +515,18 @@ const EXERCISES = [
         }
         if (path === 'b') {
           if (off < 6) {
-            return { tone: 'warn', headline: `hole is ${off} mm off the bolt`, note: 'Drifting already.' };
+            return { tone: 'warn', headline: `hole is ${fmtLen(off)} off the bolt`, note: 'Drifting already.' };
           }
           return {
             tone: 'bad',
-            headline: `hole is ${off} mm off the bolt`,
+            headline: `hole is ${fmtLen(off)} off the bolt`,
             note: '“Stay centered” was never this part’s job. The midline moved; the bolt didn’t.',
           };
         }
         return {
           tone: 'good',
           headline: 'still on the bolt line',
-          note: '60 mm from the wall, at every width. Here, the edge is the intent.',
+          note: `${fmtLen(60)} from the wall, at every width. Here, the edge is the intent.`,
         };
       },
       features(path) {
@@ -534,9 +534,9 @@ const EXERCISES = [
           { label: 'Origin', sub: 'the one reference that never moves' },
           { label: 'Sketch 1 — plate outline', sub: 'left edge sits on the wall' },
           path === 'a'
-            ? { label: 'Sketch 2 — bolt hole', sub: '60 mm off the wall edge · a linear dimension', active: true }
+            ? { label: 'Sketch 2 — bolt hole', sub: `${fmtLen(60)} off the wall edge · a linear dimension`, active: true }
             : { label: 'Sketch 2 — bolt hole', sub: 'held to the midline · a symmetric constraint', active: true },
-          { label: 'Extrude 1', sub: '6 mm thick' },
+          { label: 'Extrude 1', sub: `${fmtLen(6)} thick` },
         ];
       },
       moral: 'Edge-anchoring — the “accident” from a minute ago — is exactly right here, because the intent flipped. The rule was never “edges are bad.” It’s: dimension from the thing your intent points at. Sometimes that’s an edge.',
@@ -555,7 +555,7 @@ const EXERCISES = [
       heading: 'One bracket, two holes, one promise',
       body: 'This bracket bolts onto two standoffs. Two mounting holes — and the whole point of them is symmetry. They must sit the same distance either side of the center, or the bracket goes on crooked.',
       intent: 'Keep the two holes perfectly symmetric about the center.',
-      change: 'The spacing between them. It’s 80 mm today, and the client is already muttering about moving the standoffs — the dashed circles are where the holes are headed.',
+      get change() { return `The spacing between them. It’s ${fmtLen(80)} today, and the client is already muttering about moving the standoffs — the dashed circles are where the holes are headed.`; },
     },
 
     predict: {
@@ -577,16 +577,16 @@ const EXERCISES = [
       },
       b: {
         label: 'Place two holes, one dimension each',
-        sub: 'Left hole: 40 mm from center. Right hole: 40 mm from center. Two dimensions, perfectly symmetric today.',
+        get sub() { return `Left hole: ${fmtLen(40)} from center. Right hole: ${fmtLen(40)} from center. Two dimensions, perfectly symmetric today.`; },
         short: 'two copies',
         kind: 'accident',
       },
     },
 
     change: {
-      request: '“The standoffs moved — take the hole spacing from 80 mm out to 140. The pair still has to be dead symmetric.”',
+      get request() { return `“The standoffs moved — take the hole spacing from ${fmtLen(80)} out to 140. The pair still has to be dead symmetric.”`; },
       sliderLabel: 'Hole spacing',
-      format: (t) => `${Math.round(lerp(80, 140, t))} mm`,
+      format: (t) => fmtLen(lerp(80, 140, t)),
       hint: 'Drag the spacing first — feel it before we name it.',
     },
 
@@ -605,14 +605,14 @@ const EXERCISES = [
         if (off < 5) {
           return {
             tone: 'warn',
-            headline: `right hole is ${off} mm behind`,
+            headline: `right hole is ${fmtLen(off)} behind`,
             note: 'Barely visible yet — but notice only one hole is listening to you.',
           };
         }
         return {
           tone: 'bad',
-          headline: `right hole is ${off} mm out of place`,
-          note: 'You dutifully updated the left dimension. The right one is a separate copy, still sitting at 40 mm — nobody told it. Two copies means two edits, every time, forever.',
+          headline: `right hole is ${fmtLen(off)} out of place`,
+          note: `You dutifully updated the left dimension. The right one is a separate copy, still sitting at ${fmtLen(40)} — nobody told it. Two copies means two edits, every time, forever.`,
         };
       }
       return {
@@ -625,7 +625,7 @@ const EXERCISES = [
     features(path) {
       const base = [
         { label: 'Origin', sub: 'the one reference that never moves' },
-        { label: 'Sketch 1 — bracket outline', sub: '160 mm wide, and staying that way' },
+        { label: 'Sketch 1 — bracket outline', sub: `${fmtLen(160)} wide, and staying that way` },
       ];
       if (path === null) {
         base.push({ label: 'Sketch 2 — mounting holes', sub: 'two holes. how they stay symmetric is your call', active: true });
@@ -633,9 +633,9 @@ const EXERCISES = [
         base.push({ label: 'Sketch 2 — left hole', sub: 'the only hole you actually drew', active: true });
         base.push({ label: 'Mirror 1 — right hole', sub: 'reflected across the centerline · a sketch mirror', active: true });
       } else {
-        base.push({ label: 'Sketch 2 — mounting holes', sub: 'two holes, two separate 40 mm dimensions', active: true });
+        base.push({ label: 'Sketch 2 — mounting holes', sub: `two holes, two separate ${fmtLen(40)} dimensions`, active: true });
       }
-      base.push({ label: 'Extrude 1', sub: '6 mm thick' });
+      base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
       return base;
     },
 
@@ -650,7 +650,7 @@ const EXERCISES = [
       defaultPath: 'a',
       scene: e2CounterScene,
       sliderLabel: 'Connector position',
-      format: (t) => `${Math.round(lerp(40, 70, t))} mm right of center`,
+      format: (t) => `${fmtLen(lerp(40, 70, t))} right of center`,
       hint: 'Move the connector — this pair has a different job.',
       pathLabels: {
         a: 'One hole, mirrored',
@@ -667,11 +667,11 @@ const EXERCISES = [
         }
         if (path === 'a') {
           if (off < 5) {
-            return { tone: 'warn', headline: `sensor hole dragged ${off} mm`, note: 'The left hole is moving. Nobody asked it to.' };
+            return { tone: 'warn', headline: `sensor hole dragged ${fmtLen(off)}`, note: 'The left hole is moving. Nobody asked it to.' };
           }
           return {
             tone: 'bad',
-            headline: `sensor hole dragged ${off} mm off its pad`,
+            headline: `sensor hole dragged ${fmtLen(off)} off its pad`,
             note: 'The mirror is doing its one job: keeping the two identical. But these holes were never twins — they only matched by coincidence on day one.',
           };
         }
@@ -684,16 +684,16 @@ const EXERCISES = [
       features(path) {
         const base = [
           { label: 'Origin', sub: 'the one reference that never moves' },
-          { label: 'Sketch 1 — plate outline', sub: '160 mm wide' },
+          { label: 'Sketch 1 — plate outline', sub: `${fmtLen(160)} wide` },
         ];
         if (path === 'a') {
           base.push({ label: 'Sketch 2 — connector hole', sub: 'the one you drew', active: true });
           base.push({ label: 'Mirror 1 — sensor hole', sub: 'a reflected copy — moves whenever the connector moves', active: true });
         } else {
-          base.push({ label: 'Sketch 2 — sensor hole', sub: '40 mm left of center · its own dimension', active: true });
+          base.push({ label: 'Sketch 2 — sensor hole', sub: `${fmtLen(40)} left of center · its own dimension`, active: true });
           base.push({ label: 'Sketch 3 — connector hole', sub: 'its own dimension · free to move alone', active: true });
         }
-        base.push({ label: 'Extrude 1', sub: '6 mm thick' });
+        base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
         return base;
       },
       moral: 'Mirroring — the hero a minute ago — is wrong here, because the intent changed. The rule was never “always mirror.” It’s: things that must stay related get one source; things that must move apart stay separate.',
@@ -743,7 +743,7 @@ const EXERCISES = [
     change: {
       request: '“Stress-test that sketch before we build on it. Grab the apex and pull — if it can drift, I want to find out today, not five features from now.”',
       sliderLabel: 'Pull on the apex',
-      format: (t) => `${Math.round(lerp(0, 27, t))} mm of pull`,
+      format: (t) => `${fmtLen(lerp(0, 27, t))} of pull`,
       hint: 'Drag the pull slider first — that’s your hand on the apex.',
     },
 
@@ -766,11 +766,11 @@ const EXERCISES = [
         };
       }
       if (off < 4) {
-        return { tone: 'warn', headline: `apex is ${off} mm adrift`, note: 'It moved. Nothing stopped it.' };
+        return { tone: 'warn', headline: `apex is ${fmtLen(off)} adrift`, note: 'It moved. Nothing stopped it.' };
       }
       return {
         tone: 'bad',
-        headline: `apex is ${off} mm adrift`,
+        headline: `apex is ${fmtLen(off)} adrift`,
         note: 'The sketch was never wrong — it was unlocked. Under-defined geometry keeps looking right until the day something touches it, and then it moves without asking.',
       };
     },
@@ -847,13 +847,13 @@ const EXERCISES = [
 
     brief: {
       heading: 'A lid with one job',
-      body: 'This box gets a snap-on lid. The lid must overhang the box by 2 mm on each side — enough to grab, not enough to snag. The box is 100 mm wide today, so the correct lid is 104.',
-      intent: 'Keep the lid exactly 2 mm past the box on each side.',
+      get body() { return `This box gets a snap-on lid. The lid must overhang the box by ${fmtLen(2)} on each side — enough to grab, not enough to snag. The box is ${fmtLen(100)} wide today, so the correct lid is ${fmtLen(104)}.`; },
+      get intent() { return `Keep the lid exactly ${fmtLen(2)} past the box on each side.`; },
       change: 'The box. A bigger version keeps coming up in meetings — the dashed outline is where it’s headed.',
     },
 
     predict: {
-      prompt: 'Two ways to size the lid, and both come out to 104 mm today. The box is about to grow. Which lid still fits the day it does?',
+      get prompt() { return `Two ways to size the lid, and both come out to ${fmtLen(104)} today. The box is about to grow. Which lid still fits the day it does?`; },
       note: 'Just a guess — you’ll test both in a minute.',
       answer: 'b',
     },
@@ -864,7 +864,7 @@ const EXERCISES = [
 
     paths: {
       a: {
-        label: 'Type the lid at 104 mm',
+        get label() { return `Type the lid at ${fmtLen(104)}`; },
         sub: 'Box is 100, plus 2 per side. Do the math once, type the answer.',
         short: 'hardcoded',
         kind: 'accident',
@@ -878,9 +878,9 @@ const EXERCISES = [
     },
 
     change: {
-      request: '“The bigger version is approved — take the box out toward 160 mm. And yes, the lid still owes us its 2 mm.”',
+      get request() { return `“The bigger version is approved — take the box out toward ${fmtLen(160)}. And yes, the lid still owes us its ${fmtLen(2)}.”`; },
       sliderLabel: 'Box width',
-      format: (t) => `${Math.round(lerp(100, 160, t))} mm`,
+      format: (t) => fmtLen(lerp(100, 160, t)),
       hint: 'Grow the box first — feel it before we name it.',
     },
 
@@ -899,26 +899,26 @@ const EXERCISES = [
         if (over > 0.3) {
           return {
             tone: 'warn',
-            headline: `overhang down to ${over.toFixed(1)} mm`,
-            note: 'The lid isn’t growing. Its 2 mm of grace is being spent.',
+            headline: `overhang down to ${fmtLen(over, { mmDecimals: 1 })}`,
+            note: `The lid isn’t growing. Its ${fmtLen(2)} of grace is being spent.`,
           };
         }
         if (over > -1.5) {
           return {
             tone: 'bad',
-            headline: 'the lid is flush — 0 mm to grab',
+            headline: `the lid is flush — ${fmtLen(0)} to grab`,
             note: 'The overhang is gone. Keep going.',
           };
         }
         return {
           tone: 'bad',
-          headline: `box sticks out ${Math.abs(over).toFixed(0)} mm past the lid`,
+          headline: `box sticks out ${fmtLen(Math.abs(over))} past the lid`,
           note: '104 was the right answer to a question the box stopped asking. The number didn’t drift — the world did, and a typed number never hears about it.',
         };
       }
       return {
         tone: 'good',
-        headline: 'always 2 mm past the box',
+        headline: `always ${fmtLen(2)} past the box`,
         note: 'The lid doesn’t know a number — it knows a relationship. The box grew, the lid heard about it, and nobody edited anything.',
       };
     },
@@ -931,9 +931,9 @@ const EXERCISES = [
         path === null
           ? { label: 'Sketch 2 — lid plate', sub: 'how wide? that’s your call', active: true }
           : path === 'a'
-            ? { label: 'Sketch 2 — lid plate', sub: 'width typed in: 104 mm', active: true }
-            : { label: 'Sketch 2 — lid plate', sub: 'width = box width + 4 mm · a linked dimension', active: true },
-        { label: 'Extrude 2 — lid', sub: '7 mm thick' },
+            ? { label: 'Sketch 2 — lid plate', sub: `width typed in: ${fmtLen(104)}`, active: true }
+            : { label: 'Sketch 2 — lid plate', sub: `width = box width + ${fmtLen(4)} · a linked dimension`, active: true },
+        { label: 'Extrude 2 — lid', sub: `${fmtLen(7)} thick` },
       ];
     },
 
@@ -944,14 +944,14 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
-      body: 'Same instinct, different hole. This control panel takes a standard ⌀20 mm push-button switch. The switch comes off a shelf and will never change — but the panel is about to get wider.',
+      get body() { return `Same instinct, different hole. This control panel takes a standard ⌀${fmtLen(20)} push-button switch. The switch comes off a shelf and will never change — but the panel is about to get wider.`; },
       defaultPath: 'b',
       scene: e4CounterScene,
       sliderLabel: 'Panel width',
-      format: (t) => `${Math.round(lerp(80, 160, t))} mm`,
+      format: (t) => fmtLen(lerp(80, 160, t)),
       hint: 'Grow the panel — this hole answers to a standard, not a neighbor.',
       pathLabels: {
-        a: 'Type the hole at ⌀20 mm',
+        get a() { return `Type the hole at ⌀${fmtLen(20)}`; },
         b: 'Link the hole to the panel width',
       },
       outcome(path, t) {
@@ -965,11 +965,11 @@ const EXERCISES = [
         }
         if (path === 'b') {
           if (g < 4) {
-            return { tone: 'warn', headline: `hole is ${g} mm oversize`, note: 'The hole is growing with the panel. The switch is not.' };
+            return { tone: 'warn', headline: `hole is ${fmtLen(g)} oversize`, note: 'The hole is growing with the panel. The switch is not.' };
           }
           return {
             tone: 'bad',
-            headline: `hole is ⌀${20 + g} mm — the switch is ⌀20`,
+            headline: `hole is ⌀${fmtLen(20 + g)} — the switch is ⌀${fmtLen(20)}`,
             note: 'The link is doing what links do: passing the change along. But the switch doesn’t scale with your panel. This dimension answers to a standard, not to a neighbor.',
           };
         }
@@ -986,7 +986,7 @@ const EXERCISES = [
           path === 'a'
             ? { label: 'Sketch 2 — switch hole', sub: '⌀20 typed in — quoting the standard', active: true }
             : { label: 'Sketch 2 — switch hole', sub: '⌀ linked to panel width ÷ 4', active: true },
-          { label: 'Extrude 1', sub: '3 mm panel' },
+          { label: 'Extrude 1', sub: `${fmtLen(3)} panel` },
         ];
       },
       moral: 'Linking — the lesson you just banked — becomes the mistake the moment a dimension answers to a standard instead of a neighbor. The rule was never “never type numbers.” Link what varies together; hardcode what a standard has already decided.',

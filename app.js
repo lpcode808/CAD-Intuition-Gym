@@ -6,6 +6,28 @@
 const STORE_KEY = 'cad-gym.v1';
 const appRoot = document.getElementById('app');
 
+/* ------------------------------------------------------------ unit toggle
+   A single fixed control, outside #app so re-rendering the home screen or
+   the player never wipes it out. Toggling re-runs whatever is on screen
+   right now (without resetting exercise progress). */
+
+let rerenderCurrent = () => {};
+
+function unitToggleLabel() {
+  return getUnit() === 'in' ? 'in' : 'mm';
+}
+
+const unitToggleBtn = h('button', {
+  class: 'unit-toggle',
+  title: 'Switch between millimeters and inches',
+  onclick: () => {
+    toggleUnit();
+    unitToggleBtn.textContent = unitToggleLabel();
+    rerenderCurrent();
+  },
+}, unitToggleLabel());
+document.body.appendChild(unitToggleBtn);
+
 const STEP_NAMES = ['Intent', 'Predict', 'Choose', 'The change', 'Flip it'];
 const TONE_MARK = { good: '✓', bad: '✕', warn: '△', idle: '' };
 
@@ -36,6 +58,7 @@ function h(tag, attrs = {}, ...children) {
 
 function renderHome() {
   document.title = 'CAD Intuition Gym';
+  rerenderCurrent = renderHome;
   const prog = loadProgress();
   const anyDone = EXERCISES.some((ex) => prog[ex.id] && prog[ex.id].done);
 
@@ -474,6 +497,7 @@ function renderPlayer(ex) {
     location.hash = '#/';
   }
 
+  rerenderCurrent = render;
   render();
 }
 
