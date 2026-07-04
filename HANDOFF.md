@@ -1,6 +1,52 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-03 by Claude Code (mm/inch unit toggle, plus a code-review pass that caught and fixed mixed-unit display bugs).
+Last updated: 2026-07-03 by Claude Code (Fable orchestration round: post-MVP polish, durable QA harness, v2 scoping — see `_planning/FABLE-2026-07-03.md`).
+
+## What changed in this round (Fable orchestration, 2026-07-03 evening)
+
+Planner/evaluator round per `_planning/FABLE-2026-07-03.md` — polish and
+scoping only, no new exercises (deliberately: Justin's human review of E1–E4
+gates any new content, see `_planning/V2-SCOPE.md`).
+
+- **Favicon** (`index.html`): inline SVG data-URI of the app's own
+  intent-mark motif (dashed ring + crosshair, accent blue). Kills the
+  `/favicon.ico` 404 with zero extra network requests. Note: Safari ignores
+  SVG favicons and may still quietly request `favicon.ico` — cosmetic,
+  Chromium-verified clean.
+- **Unit-copy footgun, resolved as policy + tooling** (the architecture call
+  the brief flagged): the getter convention stays — no restructuring — but it
+  no longer depends on authors remembering. (1) An AUTHORING CONTRACT comment
+  now sits at the top of `exercises.js` with a ✓/✗ example; (2) the new QA
+  harness audits it mechanically (below). A gpt-5.5 sweep of all ~995 lines
+  found zero remaining getter violations and two borderline strings — E4's
+  "box width + 4" label and its `#box_width + 4` takeaway equation — both now
+  converted (`${fmtLen(4)}`), which also reads better in mm mode ("+ 4 mm").
+- **`qa/qa-check.mjs` — durable Playwright QA harness** (new, committed):
+  `node qa/qa-check.mjs`, no repo deps (resolves Playwright from a scratch
+  install outside the repo — see `qa/README.md`). Covers the full E1–E4 loop
+  at 1400×900 and 390×844, slider gating, compare panes, counter morals,
+  done-marking, reset, zero-console-error bar, favicon, overflow, and a
+  two-direction unit-staleness audit (cold-load mm → flip to in and vice
+  versa, deep-walking `EXERCISES` incl. getters). Validated with a
+  negative-control run (deliberately frozen getter → correctly flagged by
+  exact property path). Current state: **98/98 pass.**
+- **Storage guards** (`app.js`, `svg.js`): all `localStorage` access is now
+  try/catch-guarded. Previously the unguarded read at `svg.js` script load
+  could take the whole app down in browsers that block storage (locked-down
+  classroom machines, strict privacy modes). Now the app degrades to
+  session-only progress/unit preference instead of failing to render.
+- **localStorage wrapper duplication — resolved: leave as-is.** The progress
+  blob (`app.js`, JSON) and unit cache (`svg.js`, string, per-frame read
+  pressure) have genuinely different shapes; unifying two tiny helpers adds
+  abstraction without payoff.
+- **Deploy readiness — confirmed.** Relative asset paths only, hash routing
+  (subpath-safe), no fetches/CDN scripts; the only external requests are the
+  Google Fonts stylesheet + preconnects. GitHub-Pages-ready as-is.
+- **v2 scoped, not built:** `_planning/V2-SCOPE.md` — bridge-to-Onshape
+  cards, the commit-a-guess predict dial (gated on Justin's playthrough
+  verdict), and E5 shaped into the full template with its real cost named
+  (a small feature-tree visualization is new scene vocabulary — that's the
+  lift, not the copy). Recommended order is in the doc.
 
 ## What changed in this session (unit toggle)
 
@@ -143,12 +189,15 @@ Automated Playwright run against a real Chromium, `file://` cold load, at
 
 ## What remains (post-MVP / v2 candidates)
 
-- Human final review: Justin plays E1–E4 end-to-end (build-brief checkpoint 3)
-  before deploying anywhere public.
-- Deploy target: the repo is GitHub-Pages-ready as-is (static root).
-- v2 items per PRD §11: bridge-to-real-Onshape micro-tasks, fuller
-  commit-a-guess predict interaction if the light tap proves too breezy, E5
-  (sketch-level vs. part-level features).
+- **Human final review: Justin plays E1–E4 end-to-end (build-brief
+  checkpoint 3) before deploying anywhere public.** This is now the only
+  thing between the repo and deploy — everything below it is gated on it.
+- Deploy target: GitHub Pages, confirmed ready as-is (static root, relative
+  paths, hash routing). One-time post-deploy check: fonts load on a normal
+  connection (the sandboxed QA box couldn't reach Google Fonts once).
+- v2 items: scoped with recommendations and decision points in
+  `_planning/V2-SCOPE.md` (bridge cards → predict-friction call → E5, in
+  that order, all after human review).
 
 ## QA checklist (verified this session)
 
