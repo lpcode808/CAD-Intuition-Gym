@@ -18,4 +18,4 @@ Hard rules:
 - Copy stays plain-language-first, CAD-term-second.
 - Progress stays in browser `localStorage` only.
 
-Before declaring done, run the app in a browser at desktop and mobile widths, complete all available exercises, check there are no console errors, and update `HANDOFF.md` with what changed and what remains.
+Before declaring done, run the app in a browser at desktop and mobile widths, complete all available exercises, check there are no console errors, and update `HANDOFF.md` with what changed and what remains. `node qa/qa-check.mjs` automates most of that bar (full E1–E4 loop at both widths, zero-console-error check, and the unit-copy staleness audit — see the authoring contract at the top of `exercises.js`); run it after any change, but it doesn't replace looking at the app yourself for visual/copy work.
