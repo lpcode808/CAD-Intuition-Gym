@@ -1,7 +1,22 @@
 /* exercises.js — the content objects. Each exercise carries the full loop:
    intent brief → predict → choose → change request (pre-authored outcomes)
    → takeaway → counter-context. Hard rule from the PRD: no exercise ships
-   without its counter-context. */
+   without its counter-context.
+
+   AUTHORING CONTRACT — unit-bearing copy:
+   These objects are built once at script load, but the mm/inch toggle can
+   flip at any time. Any property whose TEXT embeds a converted length —
+   anything calling fmtLen() in a template literal — must be a getter:
+
+       get sub() { return `It sits ${fmtLen(60)} from the edge.`; },   // ✓
+       sub: `It sits ${fmtLen(60)} from the edge.`,                    // ✗ freezes
+
+   A plain string bakes in whichever unit was active at page load and never
+   updates — no error, just silent staleness next to converted siblings.
+   Text produced inside functions the player calls fresh per render
+   (outcome(), features(), the scene functions) is naturally reactive and
+   needs no getter. `qa/qa-check.mjs` audits this mechanically — run it
+   after touching copy. */
 'use strict';
 
 /* ---------------------------------------------------------------- E1 scenes
@@ -870,7 +885,7 @@ const EXERCISES = [
         kind: 'accident',
       },
       b: {
-        label: 'Make the lid “box width + 4”',
+        get label() { return `Make the lid “box width + ${fmtLen(4)}”`; },
         sub: 'No number of its own — the lid asks the box how wide to be.',
         short: 'linked',
         kind: 'intent',
@@ -939,7 +954,7 @@ const EXERCISES = [
 
     takeaway: {
       line: 'A relationship is intent made durable. When two dimensions belong together, link them — don’t make one memorize the other.',
-      term: 'Plain words: “the lid asks the box.” Onshape’s tools for it: a variable, or an equation typed right into the dimension (#box_width + 4).',
+      get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable, or an equation typed right into the dimension (#box_width + ${fmtLen(4)}).`; },
     },
 
     counter: {
