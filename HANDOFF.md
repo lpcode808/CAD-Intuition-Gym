@@ -1,6 +1,16 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-03 by Claude Code (small polish batch: E2 letter-order flip, mobile compare-pane label sizing, home first-visit cue).
+Last updated: 2026-07-03 by Claude Code (mm/inch unit toggle, plus a code-review pass that caught and fixed mixed-unit display bugs).
+
+## What changed in this session (unit toggle)
+
+Added a persistent mm/inch toggle (`.unit-toggle`, fixed pill top-right, `localStorage` key `cad-gym.unit`) that switches every dimension label, slider readout, and outcome note between millimeters and inches. Geometry stays in mm internally — a `fmtLen(mm, opts)` helper in `svg.js` is the single place that converts for display, and `getUnit()`/`setUnit()`/`toggleUnit()` live there too, backed by an in-memory cache (not a bare `localStorage.getItem()` per call) since scene draws hit `fmtLen()` many times per slider-drag frame.
+
+Toggling calls `rerenderCurrent()` (a module-level function reference in `app.js`, reassigned by `renderHome()` and `renderPlayer()`) so it repaints whatever's on screen without resetting exercise progress or slider position.
+
+**A real gotcha, worth knowing before touching `exercises.js` again:** most exercise-copy fields (`brief`, `predict`, `paths`, `change`, `counter`) are plain object literals built once when the script loads. A field like `label: fmtLen(60)` bakes in whichever unit was active at page load and **never updates again** — no error, just silent staleness. Any field whose text embeds a converted length must be a **getter** (`get label() { return \`...${fmtLen(60)}...\`; }`), not a plain string, so it re-evaluates on every read. Fields inside functions that are already called fresh per render (`outcome()`, `features()`, the `eNMainScene`/`eNCounterScene` scene functions) don't need this — they're naturally reactive.
+
+A code-review pass (8-angle diff review, medium effort) on the first cut of this feature caught exactly this failure mode live in the field: `paths.a.sub` in E1 and E4, an `outcome()` note in E4, and two `⌀20`-quoting strings in E4's counter-context had unconverted mm numbers sitting next to correctly-converted siblings. All fixed and re-verified with a Playwright pass showing consistent units across the same screen in inch mode. If a future edit adds a new unit-bearing string to these objects, check whether it needs `get`.
 
 ## Status: MVP complete
 

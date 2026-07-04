@@ -423,7 +423,7 @@ const EXERCISES = [
     paths: {
       a: {
         get label() { return `Measure ${fmtLen(60)} from the left edge`; },
-        sub: '60 is half of 120, so it’s perfectly centered today.',
+        get sub() { return `${fmtLen(60)} is half of ${fmtLen(120)}, so it’s perfectly centered today.`; },
         short: 'edge-anchored',
         kind: 'accident',
       },
@@ -584,7 +584,7 @@ const EXERCISES = [
     },
 
     change: {
-      get request() { return `“The standoffs moved — take the hole spacing from ${fmtLen(80)} out to 140. The pair still has to be dead symmetric.”`; },
+      get request() { return `“The standoffs moved — take the hole spacing from ${fmtLen(80)} out to ${fmtLen(140)}. The pair still has to be dead symmetric.”`; },
       sliderLabel: 'Hole spacing',
       format: (t) => fmtLen(lerp(80, 140, t)),
       hint: 'Drag the spacing first — feel it before we name it.',
@@ -865,7 +865,7 @@ const EXERCISES = [
     paths: {
       a: {
         get label() { return `Type the lid at ${fmtLen(104)}`; },
-        sub: 'Box is 100, plus 2 per side. Do the math once, type the answer.',
+        get sub() { return `Box is ${fmtLen(100)}, plus ${fmtLen(2)} per side. Do the math once, type the answer.`; },
         short: 'hardcoded',
         kind: 'accident',
       },
@@ -913,7 +913,7 @@ const EXERCISES = [
         return {
           tone: 'bad',
           headline: `box sticks out ${fmtLen(Math.abs(over))} past the lid`,
-          note: '104 was the right answer to a question the box stopped asking. The number didn’t drift — the world did, and a typed number never hears about it.',
+          note: `${fmtLen(104)} was the right answer to a question the box stopped asking. The number didn’t drift — the world did, and a typed number never hears about it.`,
         };
       }
       return {
@@ -975,7 +975,7 @@ const EXERCISES = [
         }
         return {
           tone: 'good',
-          headline: '⌀20 at every panel size',
+          headline: `⌀${fmtLen(20)} at every panel size`,
           note: 'A typed number — the villain a minute ago — is exactly right here, because the real reference is a standard that never moves.',
         };
       },
@@ -984,7 +984,7 @@ const EXERCISES = [
           { label: 'Origin', sub: 'the one reference that never moves' },
           { label: 'Sketch 1 — panel outline', sub: 'its width is the thing that will change' },
           path === 'a'
-            ? { label: 'Sketch 2 — switch hole', sub: '⌀20 typed in — quoting the standard', active: true }
+            ? { label: 'Sketch 2 — switch hole', sub: `⌀${fmtLen(20)} typed in — quoting the standard`, active: true }
             : { label: 'Sketch 2 — switch hole', sub: '⌀ linked to panel width ÷ 4', active: true },
           { label: 'Extrude 1', sub: `${fmtLen(3)} panel` },
         ];

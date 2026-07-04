@@ -31,11 +31,18 @@ const MM = 1.6; // px per mm — one scale for every exercise keeps proportions 
 
 const UNIT_KEY = 'cad-gym.unit';
 
+// Cached in memory — a slider drag can call fmtLen() dozens of times per
+// second, and localStorage reads are synchronous. Only localStorage itself
+// is the source of truth across page loads; this variable just avoids
+// re-reading it on every draw.
+let cachedUnit = localStorage.getItem(UNIT_KEY) === 'in' ? 'in' : 'mm';
+
 function getUnit() {
-  return localStorage.getItem(UNIT_KEY) === 'in' ? 'in' : 'mm';
+  return cachedUnit;
 }
 function setUnit(unit) {
-  localStorage.setItem(UNIT_KEY, unit === 'in' ? 'in' : 'mm');
+  cachedUnit = unit === 'in' ? 'in' : 'mm';
+  localStorage.setItem(UNIT_KEY, cachedUnit);
 }
 function toggleUnit() {
   setUnit(getUnit() === 'in' ? 'mm' : 'in');
