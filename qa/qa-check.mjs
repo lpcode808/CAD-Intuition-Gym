@@ -1,0 +1,476 @@
+#!/usr/bin/env node
+/* qa/qa-check.mjs — durable QA harness for CAD Intuition Gym.
+   Run: node qa/qa-check.mjs
+   See qa/README.md for how Playwright is resolved on this machine and what
+   "cold load" / "drag the slider" mean operationally here.
+
+   This file is the ONLY thing this harness is allowed to touch besides:
+     - screenshots written under the scratch dir (never the repo)
+     - a Playwright install under the scratch dir if none is found on the
+       machine already (never the repo — no package.json/node_modules here)
+
+   Exit code: 0 on full pass, 1 on any failure. */
+
+'use strict';
+
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.dirname(__dirname);
+const APP_URL = pathToFileURL(path.join(REPO_ROOT, 'index.html')).href;
+
+const SCRATCH_DIR = process.env.QA_SCRATCH_DIR
+  || path.join(os.tmpdir(), 'cad-gym-qa');
+const SHOT_DIR = path.join(SCRATCH_DIR, 'qa-screenshots');
+const FALLBACK_INSTALL_DIR = path.join(SCRATCH_DIR, 'qa-playwright');
+const PLAYWRIGHT_PIN = '1.58.2'; // matches an already-cached Chromium revision on this machine
+
+const STORE_KEY = 'cad-gym.v1';
+const UNIT_KEY = 'cad-gym.unit';
+const EXERCISE_IDS = ['e1', 'e2', 'e3', 'e4'];
+
+const VIEWPORTS = [
+  { label: '1400x900', width: 1400, height: 900 },
+  { label: '390x844', width: 390, height: 844 },
+];
+
+const MM_RE = /\b\d+(?:\.\d+)?\s*mm\b/;
+const IN_RE = /\b\d+(?:\.\d+)?\s*in\b/;
+const FONT_HOST_RE = /fonts\.(googleapis|gstatic)\.com/;
+
+/* ------------------------------------------------------- Playwright resolution */
+
+async function resolvePlaywright() {
+  const attempts = [];
+
+  try {
+    const mod = await import('playwright');
+    const chromium = mod.chromium ?? mod.default?.chromium;
+    if (chromium) return { chromium, how: 'bare import("playwright") — found on Node\'s module path' };
+    attempts.push('bare import("playwright") resolved but had no .chromium export');
+  } catch (e) {
+    attempts.push(`bare import("playwright") failed: ${e.message}`);
+  }
+
+  for (const [cmd, args] of [['npm', ['root', '-g']], ['pnpm', ['root', '-g']]]) {
+    try {
+      const root = execFileSync(cmd, args, { encoding: 'utf8' }).trim();
+      const dir = path.join(root, 'playwright');
+      if (fs.existsSync(path.join(dir, 'package.json'))) {
+        const require = createRequire(import.meta.url);
+        const pw = require(dir);
+        if (pw?.chromium) return { chromium: pw.chromium, how: `${cmd} root -g → ${dir}` };
+      }
+      attempts.push(`${cmd} root -g (${root}) had no playwright package`);
+    } catch (e) {
+      attempts.push(`${cmd} root -g failed: ${e.message}`);
+    }
+  }
+
+  // Fallback: install into a directory OUTSIDE the repo (the scratch dir).
+  // Re-runnable: only installs once, reused on subsequent runs.
+  const pkgDir = path.join(FALLBACK_INSTALL_DIR, 'node_modules', 'playwright');
+  if (!fs.existsSync(path.join(pkgDir, 'package.json'))) {
+    fs.mkdirSync(FALLBACK_INSTALL_DIR, { recursive: true });
+    if (!fs.existsSync(path.join(FALLBACK_INSTALL_DIR, 'package.json'))) {
+      execFileSync('npm', ['init', '-y'], { cwd: FALLBACK_INSTALL_DIR, stdio: 'ignore' });
+    }
+    console.log(`[qa] installing playwright@${PLAYWRIGHT_PIN} into ${FALLBACK_INSTALL_DIR} (outside the repo)…`);
+    execFileSync('npm', ['install', `playwright@${PLAYWRIGHT_PIN}`], {
+      cwd: FALLBACK_INSTALL_DIR,
+      stdio: 'inherit',
+    });
+  }
+  const require = createRequire(import.meta.url);
+  const pw = require(pkgDir);
+  if (!pw?.chromium) {
+    throw new Error(`Playwright unavailable. Tried:\n  - ${attempts.join('\n  - ')}\n  - scratch install at ${pkgDir} also failed to expose chromium`);
+  }
+  return { chromium: pw.chromium, how: `scratch install at ${FALLBACK_INSTALL_DIR} (outside the repo)` };
+}
+
+/* ------------------------------------------------------------------- helpers */
+
+function rec(bucket, name, pass, detail = '') {
+  bucket.push({ name, pass, detail });
+}
+
+async function pollUntil(fn, { timeout = 3000, interval = 30 } = {}) {
+  const start = Date.now();
+  let last;
+  while (Date.now() - start < timeout) {
+    last = await fn();
+    if (last) return last;
+    await new Promise((r) => setTimeout(r, interval));
+  }
+  return last;
+}
+
+function attachErrorListeners(page, label, collectors) {
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      collectors.consoleErrors.push({ label, text: msg.text(), location: msg.location() });
+    }
+  });
+  page.on('pageerror', (err) => {
+    collectors.pageErrors.push({ label, message: err.message });
+  });
+  page.on('requestfailed', (req) => {
+    collectors.requestFailures.push({ label, url: req.url(), error: req.failure()?.errorText });
+  });
+  page.on('response', (res) => {
+    if (res.status() >= 400) collectors.httpErrors.push({ label, url: res.url(), status: res.status() });
+  });
+}
+
+function isFontRelated(entry) {
+  return FONT_HOST_RE.test(entry.url || '') || FONT_HOST_RE.test(entry.text || '') || FONT_HOST_RE.test(entry.message || '');
+}
+
+/* Simulate "drag the slider" on a native <input type=range>. Real pixel-drag
+   math on a bare range input is unreliable across platforms/headless modes;
+   setting .value and dispatching a real 'input' event exercises the exact
+   same listener (`input.addEventListener('input', ...)`) a physical drag
+   would trigger, so it is a faithful stand-in for this app's logic. */
+async function setSlider(page, t) {
+  const input = page.locator('.rail input.slider');
+  await input.evaluate((el, tt) => {
+    el.value = String(Math.round(tt * 1000));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }, t);
+}
+
+async function checkOverflow(page) {
+  return page.evaluate(() => ({
+    scrollWidth: document.scrollingElement.scrollWidth,
+    innerWidth: window.innerWidth,
+  }));
+}
+
+async function collectUnitStrings(page) {
+  return page.evaluate(() => {
+    const out = [];
+    const seen = new Set();
+    function walk(val, p) {
+      if (val === null || val === undefined) return;
+      const t = typeof val;
+      if (t === 'string') { out.push({ path: p, value: val }); return; }
+      if (t === 'function') return; // per-render; can't be called generically
+      if (t !== 'object') return; // number, boolean, etc — not unit-bearing text
+      if (seen.has(val)) return;
+      seen.add(val);
+      if (Array.isArray(val)) {
+        val.forEach((v, i) => walk(v, `${p}[${i}]`));
+        return;
+      }
+      for (const key of Object.getOwnPropertyNames(val)) {
+        const desc = Object.getOwnPropertyDescriptor(val, key);
+        const childPath = `${p}.${key}`;
+        if (desc.get) {
+          let v;
+          try { v = val[key]; } catch (e) { out.push({ path: childPath, value: `<getter threw: ${e.message}>` }); continue; }
+          walk(v, childPath);
+        } else if (typeof desc.value === 'function') {
+          continue; // skip — per-render functions, not static copy
+        } else {
+          walk(desc.value, childPath);
+        }
+      }
+    }
+    // eslint-disable-next-line no-undef
+    walk(EXERCISES, 'EXERCISES');
+    return out;
+  });
+}
+
+/* ------------------------------------------------------------- exercise loop */
+
+async function runExercise(page, exId, { capture, shotDir, vpLabel }) {
+  const steps = [];
+  const primaryBtn = page.locator('.rail button.btn.primary');
+
+  const row = page.locator(`a.ex-row[href="#/${exId}"]`);
+  await row.waitFor({ state: 'visible' });
+  await row.click();
+  await page.locator('.player').waitFor({ state: 'visible' });
+
+  /* step 0 — intent brief */
+  await primaryBtn.waitFor({ state: 'visible' }); // "Make a prediction →"
+  await primaryBtn.click();
+
+  /* step 1 — predict */
+  await page.locator('.rail .options .option').first().waitFor({ state: 'visible' });
+  const noContinueYet = await page.locator('.rail button.btn.primary').count();
+  rec(steps, `${exId}: predict step shows no Continue before a guess`, noContinueYet === 0, `count=${noContinueYet}`);
+  await page.locator('.rail .options .option').first().click(); // the predict tap
+  await primaryBtn.waitFor({ state: 'visible' }); // "Lock it in →"
+  await primaryBtn.click();
+
+  /* step 2 — choose a path */
+  await page.locator('.rail .options .option').first().waitFor({ state: 'visible' });
+  await page.locator('.rail .options .option').first().click(); // choosing a path
+  await primaryBtn.waitFor({ state: 'visible' }); // "Send in the change request →"
+  await primaryBtn.click();
+
+  /* step 3 — the change lands */
+  await page.locator('.rail input.slider').waitFor({ state: 'visible' });
+  const disabledBefore = await primaryBtn.isDisabled();
+  rec(steps, `${exId}: change-request Continue disabled before slider moves`, disabledBefore === true, `disabled=${disabledBefore}`);
+
+  await setSlider(page, 0.6); // drag the change-request slider
+  const enabledAfter = await pollUntil(async () => !(await primaryBtn.isDisabled()));
+  rec(steps, `${exId}: change-request Continue enabled after slider moves`, enabledAfter === true, `enabled=${enabledAfter}`);
+
+  const hintGone = await pollUntil(async () => (await page.locator('[data-ref="movehint"]').count()) === 0);
+  rec(steps, `${exId}: "drag first" hint removed after slider moves`, hintGone === true);
+
+  if (capture) {
+    await fs.promises.mkdir(shotDir, { recursive: true });
+    await page.screenshot({ path: path.join(shotDir, `${exId}-consequence-${vpLabel}.png`) });
+  }
+
+  const compareBtn = page.locator('.rail button.btn.ghost');
+  await compareBtn.click(); // the compare/toggle step
+  await page.locator('.viewport .compare').waitFor({ state: 'visible' });
+  const paneCount = await page.locator('.viewport .compare .pane').count();
+  rec(steps, `${exId}: compare view shows two panes`, paneCount === 2, `panes=${paneCount}`);
+
+  if (capture) {
+    await page.screenshot({ path: path.join(shotDir, `${exId}-compare-${vpLabel}.png`) });
+  }
+
+  await compareBtn.click(); // back to one view before continuing
+  await page.locator('.viewport .compare').waitFor({ state: 'detached' });
+  await primaryBtn.click(); // "Name the lesson →"
+
+  /* step 4 — takeaway + counter-context */
+  const moral = page.locator('.rail .moral');
+  await moral.waitFor({ state: 'attached' });
+  const moralHiddenBefore = await moral.isHidden();
+  const doneDisabledBefore = await primaryBtn.isDisabled();
+  rec(steps, `${exId}: counter moral hidden before counter slider moves`, moralHiddenBefore === true, `hidden=${moralHiddenBefore}`);
+  rec(steps, `${exId}: counter Done button disabled before counter slider moves`, doneDisabledBefore === true, `disabled=${doneDisabledBefore}`);
+
+  const segs = page.locator('.rail .segmented .seg');
+  const onIndex = await segs.evaluateAll((nodes) => nodes.findIndex((n) => n.classList.contains('is-on')));
+  await segs.nth(onIndex === 0 ? 1 : 0).click(); // use its scheme toggle
+
+  await setSlider(page, 0.5); // drag its slider
+  const moralVisibleAfter = await pollUntil(async () => !(await moral.isHidden()));
+  const doneEnabledAfter = await pollUntil(async () => !(await primaryBtn.isDisabled()));
+  rec(steps, `${exId}: counter moral appears only after counter slider moves`, moralVisibleAfter === true, `visible=${moralVisibleAfter}`);
+  rec(steps, `${exId}: counter Done button enabled after counter slider moves`, doneEnabledAfter === true, `enabled=${doneEnabledAfter}`);
+
+  if (capture) {
+    await page.screenshot({ path: path.join(shotDir, `${exId}-counter-${vpLabel}.png`) });
+  }
+
+  await primaryBtn.click(); // "Mark Exercise N done ✓"
+  await page.locator('.home').waitFor({ state: 'visible' });
+
+  const status = (await page.locator(`a.ex-row[href="#/${exId}"] .ex-status`).innerText()).trim();
+  rec(steps, `${exId}: marked done on home screen`, /done/i.test(status), `status="${status}"`);
+
+  return steps;
+}
+
+async function verifyResetProgress(page) {
+  const steps = [];
+
+  const allDoneBefore = await page.evaluate((key) => {
+    try {
+      const p = JSON.parse(localStorage.getItem(key) || '{}');
+      return ['e1', 'e2', 'e3', 'e4'].every((id) => p[id] && p[id].done);
+    } catch { return false; }
+  }, STORE_KEY);
+  rec(steps, 'all four exercises marked done before reset', allDoneBefore === true);
+
+  page.once('dialog', (d) => d.accept());
+  await page.locator('.home-foot button.linklike', { hasText: 'Reset progress' }).click();
+  await pollUntil(async () => (await page.evaluate((key) => localStorage.getItem(key), STORE_KEY)) === null);
+
+  const storeAfter = await page.evaluate((key) => localStorage.getItem(key), STORE_KEY);
+  rec(steps, `reset progress clears localStorage key "${STORE_KEY}"`, storeAfter === null, `value=${storeAfter}`);
+
+  const statuses = await page.locator('a.ex-row .ex-status').allInnerTexts();
+  const allStartable = statuses.length === 4 && statuses.every((s) => !/done/i.test(s));
+  rec(steps, 'reset progress returns all four to startable', allStartable, `statuses=${JSON.stringify(statuses)}`);
+
+  return steps;
+}
+
+/* --------------------------------------------------------------- unit audit */
+
+async function runUnitAudit(browser, vp, { loadUnit, toggleTo, flagRe, label }, collectors) {
+  const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+  await ctx.addInitScript((unit) => {
+    try { localStorage.setItem('cad-gym.unit', unit); } catch { /* ignore */ }
+  }, loadUnit);
+  const page = await ctx.newPage();
+  attachErrorListeners(page, `${vp.label} unit-audit(${label})`, collectors);
+  await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.locator('.home').waitFor({ state: 'visible', timeout: 10000 });
+
+  // eslint-disable-next-line no-undef
+  await page.evaluate((u) => { setUnit(u); }, toggleTo);
+  const strings = await collectUnitStrings(page);
+  await ctx.close();
+
+  const violations = strings.filter((s) => flagRe.test(s.value)).map((s) => ({ ...s, viewport: vp.label, check: label }));
+  return { violations, scanned: strings.length };
+}
+
+/* -------------------------------------------------------------------- main */
+
+async function main() {
+  console.log('[qa] resolving Playwright…');
+  const { chromium, how } = await resolvePlaywright();
+  console.log(`[qa] Playwright resolved via: ${how}`);
+
+  await fs.promises.mkdir(SHOT_DIR, { recursive: true });
+
+  const collectors = { consoleErrors: [], pageErrors: [], requestFailures: [], httpErrors: [] };
+  const allChecks = [];
+  const shotPaths = [];
+  const unitAuditSummaries = [];
+  const allUnitViolations = [];
+
+  const browser = await chromium.launch();
+  try {
+    for (const vp of VIEWPORTS) {
+      console.log(`\n[qa] === viewport ${vp.label} ===`);
+
+      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+      const page = await ctx.newPage();
+      attachErrorListeners(page, `${vp.label} main`, collectors);
+
+      await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.locator('.home').waitFor({ state: 'visible', timeout: 10000 });
+
+      const faviconHref = await page.evaluate(() => document.querySelector('link[rel="icon"]')?.getAttribute('href') || '');
+      rec(allChecks, `[${vp.label}] favicon is an inline data URI (no /favicon.ico request)`, faviconHref.startsWith('data:image/svg+xml'), faviconHref.slice(0, 50) + (faviconHref.length > 50 ? '…' : ''));
+
+      const ovHome = await checkOverflow(page);
+      const overflowPassHome = vp.width !== 390 || ovHome.scrollWidth <= ovHome.innerWidth;
+      rec(allChecks, `[${vp.label}] no horizontal overflow — home`, overflowPassHome, `scrollWidth=${ovHome.scrollWidth} innerWidth=${ovHome.innerWidth}`);
+
+      const homeShot = path.join(SHOT_DIR, `home-${vp.label}.png`);
+      await page.screenshot({ path: homeShot });
+      shotPaths.push(homeShot);
+
+      for (const exId of EXERCISE_IDS) {
+        const capture = exId === 'e1';
+        console.log(`[qa]   running ${exId}${capture ? ' (with screenshots)' : ''}…`);
+        const exSteps = await runExercise(page, exId, { capture, shotDir: SHOT_DIR, vpLabel: vp.label });
+        allChecks.push(...exSteps);
+        if (capture) {
+          shotPaths.push(
+            path.join(SHOT_DIR, `e1-consequence-${vp.label}.png`),
+            path.join(SHOT_DIR, `e1-compare-${vp.label}.png`),
+            path.join(SHOT_DIR, `e1-counter-${vp.label}.png`),
+          );
+        }
+      }
+
+      // Layout re-check inside a busy exercise view (compare pane), the most
+      // likely place for a mobile overflow bug to show up.
+      await page.locator(`a.ex-row[href="#/e2"]`).click();
+      await page.locator('.player').waitFor({ state: 'visible' });
+      const ovPlayer = await checkOverflow(page);
+      const overflowPassPlayer = vp.width !== 390 || ovPlayer.scrollWidth <= ovPlayer.innerWidth;
+      rec(allChecks, `[${vp.label}] no horizontal overflow — inside player`, overflowPassPlayer, `scrollWidth=${ovPlayer.scrollWidth} innerWidth=${ovPlayer.innerWidth}`);
+      await page.locator('.backlink').click();
+      await page.locator('.home').waitFor({ state: 'visible' });
+
+      console.log('[qa]   verifying reset progress…');
+      const resetSteps = await verifyResetProgress(page);
+      allChecks.push(...resetSteps);
+
+      await ctx.close();
+
+      console.log('[qa]   running unit-copy staleness audit…');
+      const auditA = await runUnitAudit(browser, vp, { loadUnit: 'mm', toggleTo: 'in', flagRe: MM_RE, label: 'frozen-mm-while-in' }, collectors);
+      rec(allChecks, `[${vp.label}] unit audit: no frozen "NN mm" strings while unit=in`, auditA.violations.length === 0, `${auditA.violations.length} violation(s) out of ${auditA.scanned} strings scanned`);
+
+      const auditB = await runUnitAudit(browser, vp, { loadUnit: 'in', toggleTo: 'mm', flagRe: IN_RE, label: 'frozen-in-while-mm' }, collectors);
+      rec(allChecks, `[${vp.label}] unit audit: no frozen "NN in" strings while unit=mm`, auditB.violations.length === 0, `${auditB.violations.length} violation(s) out of ${auditB.scanned} strings scanned`);
+
+      unitAuditSummaries.push({ vp: vp.label, scannedA: auditA.scanned, scannedB: auditB.scanned });
+      allUnitViolations.push(...auditA.violations, ...auditB.violations);
+    }
+  } finally {
+    await browser.close();
+  }
+
+  /* ---- console/page error gate ---- */
+  const rawErrors = [...collectors.consoleErrors, ...collectors.pageErrors];
+  const realErrors = rawErrors.filter((e) => !isFontRelated(e));
+  const environmentalErrors = rawErrors.filter(isFontRelated);
+  rec(allChecks, 'zero console/page errors across the whole run', realErrors.length === 0, `${realErrors.length} real, ${environmentalErrors.length} environmental (fonts)`);
+
+  const faviconNetworkIssues = [...collectors.requestFailures, ...collectors.httpErrors].filter((e) => /favicon/i.test(e.url || ''));
+  rec(allChecks, 'no /favicon.ico network failure anywhere in the run', faviconNetworkIssues.length === 0, `${faviconNetworkIssues.length} favicon-related network issue(s)`);
+
+  /* ---------------------------------------------------------------- report */
+  console.log('\n' + '='.repeat(78));
+  console.log('CAD Intuition Gym — QA report');
+  console.log('='.repeat(78));
+  console.log(`Playwright resolved via: ${how}`);
+  console.log(`Screenshots written to: ${SHOT_DIR}`);
+  for (const s of unitAuditSummaries) {
+    console.log(`Unit audit @ ${s.vp}: scanned ${s.scannedA} strings (mm-load pass), ${s.scannedB} strings (in-load pass)`);
+  }
+  console.log('');
+
+  const width = Math.min(100, Math.max(...allChecks.map((c) => c.name.length)) + 2);
+  let passCount = 0;
+  for (const c of allChecks) {
+    const mark = c.pass ? 'PASS' : 'FAIL';
+    if (c.pass) passCount++;
+    console.log(`[${mark}] ${c.name.padEnd(width)} ${c.detail || ''}`);
+  }
+  console.log('');
+  console.log(`${passCount}/${allChecks.length} checks passed.`);
+
+  if (allUnitViolations.length) {
+    console.log('\n--- Unit-copy staleness violations (verbatim) ---');
+    for (const v of allUnitViolations) {
+      console.log(`  [${v.viewport} / ${v.check}] ${v.path}\n    → "${v.value}"`);
+    }
+  }
+
+  if (realErrors.length) {
+    console.log('\n--- Real console/page errors (verbatim) ---');
+    for (const e of realErrors) {
+      console.log(`  [${e.label}] ${e.text || e.message}`);
+    }
+  }
+  if (environmentalErrors.length) {
+    console.log('\n--- Environmental (Google Fonts network) — not counted as failures ---');
+    for (const e of environmentalErrors) {
+      console.log(`  [${e.label}] ${e.text || e.message}`);
+    }
+  }
+
+  console.log('\nScreenshots:');
+  for (const p of shotPaths) console.log(`  ${p}`);
+
+  const failed = allChecks.filter((c) => !c.pass);
+  console.log('\n' + '='.repeat(78));
+  console.log(failed.length ? `RESULT: FAIL (${failed.length} failing check(s))` : 'RESULT: PASS');
+  console.log('='.repeat(78));
+
+  process.exitCode = failed.length ? 1 : 0;
+}
+
+main().catch((err) => {
+  console.error('\n[qa] harness crashed:', err);
+  process.exitCode = 1;
+});
