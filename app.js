@@ -37,7 +37,11 @@ function loadProgress() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; }
   catch { return {}; }
 }
-function saveProgress(p) { localStorage.setItem(STORE_KEY, JSON.stringify(p)); }
+function saveProgress(p) {
+  // Storage can be blocked (locked-down classroom browsers, strict privacy
+  // modes) — progress just won't survive a reload, which beats crashing.
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(p)); } catch { /* session-only */ }
+}
 
 function h(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -96,7 +100,7 @@ function renderHome() {
 
 function resetProgress() {
   if (confirm('Clear your progress on this device?')) {
-    localStorage.removeItem(STORE_KEY);
+    try { localStorage.removeItem(STORE_KEY); } catch { /* nothing stored anyway */ }
     route();
   }
 }

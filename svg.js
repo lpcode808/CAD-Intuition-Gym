@@ -34,15 +34,18 @@ const UNIT_KEY = 'cad-gym.unit';
 // Cached in memory — a slider drag can call fmtLen() dozens of times per
 // second, and localStorage reads are synchronous. Only localStorage itself
 // is the source of truth across page loads; this variable just avoids
-// re-reading it on every draw.
-let cachedUnit = localStorage.getItem(UNIT_KEY) === 'in' ? 'in' : 'mm';
+// re-reading it on every draw. Storage access is guarded because this read
+// runs at script load — a locked-down classroom browser that blocks storage
+// shouldn't take the whole app down, just forget the preference.
+let cachedUnit = 'mm';
+try { if (localStorage.getItem(UNIT_KEY) === 'in') cachedUnit = 'in'; } catch { /* default mm */ }
 
 function getUnit() {
   return cachedUnit;
 }
 function setUnit(unit) {
   cachedUnit = unit === 'in' ? 'in' : 'mm';
-  localStorage.setItem(UNIT_KEY, cachedUnit);
+  try { localStorage.setItem(UNIT_KEY, cachedUnit); } catch { /* session-only */ }
 }
 function toggleUnit() {
   setUnit(getUnit() === 'in' ? 'mm' : 'in');
