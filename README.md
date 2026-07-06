@@ -8,19 +8,17 @@ The product spine is:
 
 ## Status
 
-Prototype in progress. E1 is playable. E2-E4 are still locked in authoring and need to be built from the same primitives.
+MVP complete. E1-E4 are authored, playable end-to-end, and covered by the QA harness at desktop and mobile widths.
 
-Recovered Claude Code session:
-
-- Session id: `96090277-aebf-44cd-a5bc-d63914531188`
-- Local source: `/Users/justinlai/.claude/projects/-Users-justinlai-Coding/96090277-aebf-44cd-a5bc-d63914531188.jsonl`
-- End state: hit Claude session limit after adding the `dimV` helper in `svg.js`
+Current gate: Justin should play E1-E4 before public deploy or v2 build work.
+The v2 scope is captured in `_planning/V2-SCOPE.md`; the Claude/Fable pickup
+prompt is `_planning/FABLE-PROMPT-2026-07-05.md`.
 
 GitHub:
 
 - Repo: https://github.com/lpcode808/CAD-Intuition-Gym
 
-See `HANDOFF.md` for the continuation prompt and checklist.
+See `HANDOFF.md` for the current state, QA notes, and continuation checklist.
 
 ## Run Locally
 
@@ -36,8 +34,11 @@ Then open `http://localhost:8000`.
 
 - `PRD.md` — product spec and resolved scope decisions.
 - `_planning/FABLE-BUILD-BRIEF.md` — original build dispatch brief.
-- `HANDOFF.md` — current continuation state for Claude Code Cloud.
+- `_planning/V2-SCOPE.md` — scoped v2 candidates after Justin's playthrough.
+- `_planning/FABLE-PROMPT-2026-07-05.md` — ready-to-paste prompt for the next Fable/Opus thread.
+- `HANDOFF.md` — current continuation state.
 - `index.html`, `style.css`, `app.js`, `svg.js`, `exercises.js` — static app.
+- `qa/qa-check.mjs` — Playwright QA harness for the full E1-E4 loop.
 
 ## Persistence
 
@@ -45,6 +46,7 @@ Progress is stored only in this browser under:
 
 ```txt
 cad-gym.v1
+cad-gym.unit
 ```
 
 No data leaves the browser.

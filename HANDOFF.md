@@ -1,6 +1,23 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-03 by Claude Code (Fable orchestration round: post-MVP polish, durable QA harness, v2 scoping — see `_planning/FABLE-2026-07-03.md`).
+Last updated: 2026-07-05 by Codex (Claude/Fable pickup prompt checked and repo docs refreshed).
+
+## What changed in this round (handoff prompt check, 2026-07-05)
+
+Claude Code added `_planning/FABLE-PROMPT-2026-07-05.md`, a ready-to-paste
+orchestration prompt for the next Fable/Opus thread. It does not change app
+behavior. The prompt correctly treats Justin's E1-E4 playthrough as the gate
+before public deploy or v2 build work, points the next thread at
+`AGENTS.md`, `HANDOFF.md`, and `_planning/V2-SCOPE.md`, and preserves the
+Fable/Codex role split for future mechanical implementation.
+
+Codex also refreshed `README.md`, which was stale and still described the
+older "E1 playable, E2-E4 locked" state. The README now matches this handoff:
+MVP complete, E1-E4 covered by QA, v2 gated on Justin's playthrough.
+
+What remains unchanged: no v2 app work has started yet; bridge cards,
+predict-friction changes, E5, and GitHub Pages deploy still wait on Justin's
+playthrough/ship decision.
 
 ## What changed in this round (Fable orchestration, 2026-07-03 evening)
 
