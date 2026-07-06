@@ -130,7 +130,9 @@ function attachErrorListeners(page, label, collectors) {
 }
 
 function isFontRelated(entry) {
-  return FONT_HOST_RE.test(entry.url || '') || FONT_HOST_RE.test(entry.text || '') || FONT_HOST_RE.test(entry.message || '');
+  // A failed-stylesheet console error's text is just "Failed to load resource: …";
+  // the fonts URL is only in msg.location().url, so location must be checked too.
+  return FONT_HOST_RE.test(entry.url || '') || FONT_HOST_RE.test(entry.text || '') || FONT_HOST_RE.test(entry.message || '') || FONT_HOST_RE.test(entry.location?.url || '');
 }
 
 /* Simulate "drag the slider" on a native <input type=range>. Real pixel-drag
