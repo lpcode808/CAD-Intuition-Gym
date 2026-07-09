@@ -1,6 +1,26 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-05 by Codex (Claude/Fable pickup prompt checked and repo docs refreshed).
+Last updated: 2026-07-09 by Claude (gate cleared, new Fable pickup prompt written).
+
+## What changed in this round (gate cleared, 2026-07-09)
+
+Justin played E1–E4 end-to-end and said **"yes, ship it."** This clears the
+human-review gate that HANDOFF.md and `_planning/V2-SCOPE.md` both named as
+the blocker on v2 build work and public deploy. It also resolves the
+predict-friction open call from PRD §11.5 / V2-SCOPE.md §2: the light "which
+do you think?" tap feels like enough friction as shipped — **`railPredict()`
+is not being upgraded to a commit-a-guess lock-in.** Treat V2-SCOPE.md §2 as
+closed, not just deferred.
+
+No app code changed this round. What did change: `_planning/FABLE-PROMPT-2026-07-09.md`,
+a new orchestration prompt for the next Fable/Opus thread that skips the now-
+cleared gate check and goes straight to the v2 build order — GitHub Pages
+deploy, then bridge-to-Onshape cards, then E5 (in that order, per
+V2-SCOPE.md's recommendation). The prior prompt, `_planning/FABLE-PROMPT-2026-07-05.md`,
+is now superseded but left in place as a record of the gate-check round.
+
+What remains unchanged: no v2 app work has started yet. Next thread's first
+real task is the GitHub Pages deploy, then bridge cards, then E5.
 
 ## What changed in this round (handoff prompt check, 2026-07-05)
 
@@ -206,15 +226,17 @@ Automated Playwright run against a real Chromium, `file://` cold load, at
 
 ## What remains (post-MVP / v2 candidates)
 
-- **Human final review: Justin plays E1–E4 end-to-end (build-brief
-  checkpoint 3) before deploying anywhere public.** This is now the only
-  thing between the repo and deploy — everything below it is gated on it.
+- **Human final review: cleared 2026-07-09.** Justin played E1–E4 end-to-end
+  and said "yes, ship it." Predict-friction stays as the light tap; no
+  `railPredict()` change. See `_planning/FABLE-PROMPT-2026-07-09.md` for the
+  next thread's build order.
 - Deploy target: GitHub Pages, confirmed ready as-is (static root, relative
-  paths, hash routing). One-time post-deploy check: fonts load on a normal
-  connection (the sandboxed QA box couldn't reach Google Fonts once).
+  paths, hash routing), now authorized. One-time post-deploy check: fonts
+  load on a normal connection (the sandboxed QA box couldn't reach Google
+  Fonts once).
 - v2 items: scoped with recommendations and decision points in
-  `_planning/V2-SCOPE.md` (bridge cards → predict-friction call → E5, in
-  that order, all after human review).
+  `_planning/V2-SCOPE.md` (bridge cards → E5, in that order, now that
+  predict-friction and deploy are both resolved).
 
 ## QA checklist (verified this session)
 
