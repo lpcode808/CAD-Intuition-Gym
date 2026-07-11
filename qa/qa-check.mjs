@@ -73,16 +73,19 @@ async function resolvePlaywright() {
     }
   }
 
-  // Fallback: install into a directory OUTSIDE the repo (the scratch dir).
-  // Re-runnable: only installs once, reused on subsequent runs.
+  // Optional fallback: install into a directory OUTSIDE the repo (the scratch
+  // dir). Network mutation must be explicit; lifecycle scripts stay disabled.
   const pkgDir = path.join(FALLBACK_INSTALL_DIR, 'node_modules', 'playwright');
   if (!fs.existsSync(path.join(pkgDir, 'package.json'))) {
+    if (process.env.QA_ALLOW_INSTALL !== '1') {
+      throw new Error(`Playwright is unavailable. Tried:\n  - ${attempts.join('\n  - ')}\nSet QA_ALLOW_INSTALL=1 to install the pinned playwright@${PLAYWRIGHT_PIN} into ${FALLBACK_INSTALL_DIR} with lifecycle scripts disabled.`);
+    }
     fs.mkdirSync(FALLBACK_INSTALL_DIR, { recursive: true });
     if (!fs.existsSync(path.join(FALLBACK_INSTALL_DIR, 'package.json'))) {
       execFileSync('npm', ['init', '-y'], { cwd: FALLBACK_INSTALL_DIR, stdio: 'ignore' });
     }
     console.log(`[qa] installing playwright@${PLAYWRIGHT_PIN} into ${FALLBACK_INSTALL_DIR} (outside the repo)…`);
-    execFileSync('npm', ['install', `playwright@${PLAYWRIGHT_PIN}`], {
+    execFileSync('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', `playwright@${PLAYWRIGHT_PIN}`], {
       cwd: FALLBACK_INSTALL_DIR,
       stdio: 'inherit',
     });
@@ -152,6 +155,41 @@ async function checkOverflow(page) {
     scrollWidth: document.scrollingElement.scrollWidth,
     innerWidth: window.innerWidth,
   }));
+}
+
+async function runStorageAndIdHardeningChecks(browser, vp, collectors) {
+  const checks = [];
+  for (const stored of ['"hello"', '42', '[]', 'null']) {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+    await ctx.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: STORE_KEY, value: stored });
+    const page = await ctx.newPage();
+    attachErrorListeners(page, `${vp.label} malformed-storage(${stored})`, collectors);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    const statuses = await page.locator('a.ex-row .ex-status').allInnerTexts();
+    rec(checks, `[${vp.label}] malformed progress ${stored} falls back safely`, statuses.length === EXERCISE_IDS.length && statuses.every((s) => !/done/i.test(s)));
+    await ctx.close();
+  }
+
+  const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+  const page = await ctx.newPage();
+  attachErrorListeners(page, `${vp.label} unique-svg-ids`, collectors);
+  await page.goto(`${APP_URL}#/e1`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.locator('.rail button.btn.primary').click();
+  await page.locator('.rail .option').first().click();
+  await page.locator('.rail button.btn.primary').click();
+  await page.locator('.rail .option').first().click();
+  await page.locator('.rail button.btn.primary').click();
+  await setSlider(page, 0.6);
+  await page.locator('.rail button.btn.ghost').click();
+  const duplicates = await page.evaluate(() => {
+    const ids = [...document.querySelectorAll('[id]')].map((el) => el.id);
+    return ids.filter((id, i) => ids.indexOf(id) !== i);
+  });
+  rec(checks, `[${vp.label}] compare mode has no duplicate document IDs`, duplicates.length === 0, `duplicates=${JSON.stringify(duplicates)}`);
+  const unnamedScenes = await page.evaluate(() => [...document.querySelectorAll('svg[role="img"]')].filter((svg) => !svg.getAttribute('aria-label')).length);
+  rec(checks, `[${vp.label}] compare scenes have accessible names`, unnamedScenes === 0, `unnamed=${unnamedScenes}`);
+  await ctx.close();
+  return checks;
 }
 
 async function collectUnitStrings(page) {
@@ -357,6 +395,12 @@ async function main() {
       const faviconHref = await page.evaluate(() => document.querySelector('link[rel="icon"]')?.getAttribute('href') || '');
       rec(allChecks, `[${vp.label}] favicon is an inline data URI (no /favicon.ico request)`, faviconHref.startsWith('data:image/svg+xml'), faviconHref.slice(0, 50) + (faviconHref.length > 50 ? '…' : ''));
 
+      const unitA11y = await page.evaluate(() => {
+        const btn = document.querySelector('.unit-toggle');
+        return btn && btn.getAttribute('aria-label') === 'Units: millimeters. Switch to inches.' && btn.getAttribute('aria-pressed') === 'false';
+      });
+      rec(allChecks, `[${vp.label}] unit toggle has an explicit accessible name and state`, unitA11y === true);
+
       const ovHome = await checkOverflow(page);
       const overflowPassHome = vp.width !== 390 || ovHome.scrollWidth <= ovHome.innerWidth;
       rec(allChecks, `[${vp.label}] no horizontal overflow — home`, overflowPassHome, `scrollWidth=${ovHome.scrollWidth} innerWidth=${ovHome.innerWidth}`);
@@ -404,6 +448,9 @@ async function main() {
 
       unitAuditSummaries.push({ vp: vp.label, scannedA: auditA.scanned, scannedB: auditB.scanned });
       allUnitViolations.push(...auditA.violations, ...auditB.violations);
+
+      console.log('[qa]   running storage/SVG hardening checks…');
+      allChecks.push(...await runStorageAndIdHardeningChecks(browser, vp, collectors));
     }
   } finally {
     await browser.close();

@@ -1,24 +1,33 @@
 # V2 scope — CAD Intuition Gym
 
 Written 2026-07-03 (Fable orchestration round, see `FABLE-2026-07-03.md`).
-Scoping only — **none of this is built.** The MVP (E1–E4) is complete and QA'd;
-Justin's end-to-end human review is the gate before any of this starts, and
-before anything deploys publicly.
 
-## Why nothing here was built this round
+## Status update — 2026-07-10
 
-The build-brief's checkpoint 3 (Justin plays E1–E4) is still outstanding.
-Stacking new content on an unreviewed base risks compounding on a foundation
-that his playthrough might revise — especially the predict-friction call,
-which E5 would inherit. So this round polished the existing app and shaped
-the v2 candidates to be buildable immediately after his review.
+Justin cleared the E1–E4 review gate on 2026-07-09: **“yes, ship it.”** The
+GitHub Pages site is live from `main` at
+`https://lpcode808.github.io/CAD-Intuition-Gym/`; its root/subpath, live font
+stylesheet, clean console, and desktop-width layout were smoke-checked on
+2026-07-10. The light predict tap is now a settled decision — keep it; do not
+build the commit-a-guess variant below.
 
-## Recommended order (after human review)
+None of the product additions in this document are built yet. The next scoped
+product item is the per-exercise bridge card, then E5. Treat the “why nothing
+was built” section as historical context, not an active gate.
 
-1. **Deploy to GitHub Pages** — repo is static-root ready; zero build work.
-2. **Predict-friction decision** — needs Justin's playthrough verdict first
-   (it's a feel call, not a code call).
-3. **Bridge-to-Onshape cards** — cheapest lift, highest connective value.
+## Historical: why nothing here was built in the original round
+
+At the time, the build-brief's checkpoint 3 (Justin plays E1–E4) was
+outstanding. Stacking new content on an unreviewed base risked compounding on
+a foundation his playthrough might revise — especially the predict-friction
+call, which E5 would inherit. That round therefore polished the existing app
+and shaped the v2 candidates to be buildable immediately after review.
+
+## Recommended order (post-gate)
+
+1. ~~**Deploy to GitHub Pages**~~ — complete; live smoke-checked 2026-07-10.
+2. ~~**Predict-friction decision**~~ — complete; keep the light tap.
+3. **Bridge-to-Onshape cards** — next; cheapest lift, highest connective value.
 4. **E5** — the real authoring lift; do it last, with the footgun tooling
    (getter contract + `qa/qa-check.mjs` audit) already in place.
 
@@ -45,7 +54,7 @@ words don't). Card is skippable and doesn't gate progress.
 block on the completion screen. Per-exercise is more actionable; one block is
 quieter. Recommend per-exercise.
 
-## 2. Fuller commit-a-guess predict (PRD §11.5, the open dial)
+## 2. Closed: fuller commit-a-guess predict (PRD §11.5)
 
 **Current state:** light "which do you think?" tap, deliberately low-friction.
 HANDOFF confirms an upgrade only touches `railPredict()` in `app.js`.
@@ -56,10 +65,7 @@ against what happened ("You bet on A. Watch."). Optionally count predict
 accuracy in `cad-gym.v1` (note: progress-shape change — keep the reader
 tolerant of the old shape, don't migrate).
 
-**Gate:** only do this if the light tap proves too breezy — that is exactly
-what Justin's E1–E4 playthrough should judge. Signal to watch: does the
-reveal land as *felt* ("I was wrong!") or merely *shown*. If the taps
-already sting, ship v1 as-is.
+**Decision (2026-07-09):** the light tap is enough. Do not build this.
 
 ## 3. E5 — sketch-level vs. part-level features (PRD §7, stretch)
 

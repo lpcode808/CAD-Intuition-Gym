@@ -84,7 +84,8 @@ function e1CounterScene(stage, { t, path }) {
   const right = wallX + Wpx;
 
   // The wall (and the anchor bolt already set in it, 60 mm over).
-  svgEl('rect', { x: wallX - 30, y: 50, width: 30, height: 200, fill: 'url(#hatch)', class: 'wall' }, stage);
+  const hatchId = stage.ownerSVGElement.querySelector('[data-pattern="hatch"]').id;
+  svgEl('rect', { x: wallX - 30, y: 50, width: 30, height: 200, fill: `url(#${hatchId})`, class: 'wall' }, stage);
   svgEl('line', { x1: wallX, y1: 50, x2: wallX, y2: 250, class: 'wall-face' }, stage);
   sceneLabel(stage, wallX - 15, 42, 'wall', 'muted');
 

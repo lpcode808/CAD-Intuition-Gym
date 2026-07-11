@@ -1,6 +1,50 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-09 by Claude (gate cleared, new Fable pickup prompt written).
+Last updated: 2026-07-10 by Codex (sync, reliability hardening, and live smoke check).
+
+## What changed in this round (reliability hardening, 2026-07-10)
+
+Synced `main` to `origin/main` (fast-forward to `2d6773f`) while preserving
+the pre-existing local edit to `_planning/FABLE-PROMPT-2026-07-05.md`.
+Three independent read-only audits covered code/accessibility, browser QA,
+and roadmap state; the concrete findings below were implemented.
+
+- **Progress storage is defensive** (`app.js`): valid JSON with the wrong
+  shape (a string, number, array, or `null`) now safely falls back to empty
+  progress instead of crashing on completion. When browser storage is blocked,
+  progress now survives for the active session rather than disappearing on the
+  first re-render.
+- **Compare SVGs are deterministic** (`svg.js`, `exercises.js`): every scene
+  now has unique pattern IDs, including the E1 wall hatch. Two side-by-side
+  scenes no longer create duplicate document IDs or browser-dependent pattern
+  references.
+- **Accessibility basics tightened**: the unit toggle announces its current
+  unit and action via an explicit accessible label/state; consequence scenes
+  are named images rather than anonymous `role="img"` elements.
+- **QA bootstrap is explicit and safer** (`qa/qa-check.mjs`, `qa/README.md`):
+  an absent Playwright no longer triggers a surprise network install. A clean
+  machine must opt in with `QA_ALLOW_INSTALL=1`; the pinned install runs with
+  lifecycle scripts, audit, and funding requests disabled.
+- **QA coverage expanded to 112 checks**: malformed saved-progress values,
+  duplicate SVG IDs in compare mode, named scene images, and unit-control
+  accessibility now run at both 1400×900 and 390×844. Full result: **112/112
+  pass**, zero console/page errors, no horizontal overflow, and no stale unit
+  strings. Visual mobile compare review also passed.
+
+**Live status:** GitHub Pages was already configured from `main` at
+https://lpcode808.github.io/CAD-Intuition-Gym/. A live browser smoke check
+confirmed the root/subpath, four-exercise home screen, Google Fonts stylesheet,
+no console errors, and no desktop overflow. These local hardening edits are
+not live until they are committed and pushed.
+
+**Next:** build the approved per-exercise, skippable bridge-to-Onshape cards;
+then E5. Do not reopen predict friction — Justin approved the shipped light
+tap. E5 needs its own human visual/playthrough check because it adds new
+feature-tree scene vocabulary. `_planning/V2-SCOPE.md` was updated to reflect
+the cleared gate and live deployment, rather than leaving the old gate active.
+`_planning/FABLE-PROMPT-2026-07-10.md` is the Claude Code Web orchestration
+prompt for that two-PR sequence. It assumes this hardening batch has first been
+committed and pushed so the web runner can see the 112-check baseline.
 
 ## What changed in this round (gate cleared, 2026-07-09)
 

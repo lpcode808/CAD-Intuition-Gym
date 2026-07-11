@@ -61,26 +61,32 @@ function fmtLen(mm, { mmDecimals = 0, inDecimals = 2 } = {}) {
 }
 
 /* A scene viewport: grid background + a stage group that scenes draw into. */
+let sceneSvgId = 0;
+
 function makeSceneSvg() {
+  const id = ++sceneSvgId;
+  const gridId = `grid-${id}`;
+  const hatchId = `hatch-${id}`;
   const svg = svgEl('svg', {
     viewBox: `0 0 ${SCENE_W} ${SCENE_H}`,
     class: 'scene',
     role: 'img',
+    'aria-label': 'CAD modeling consequence scene',
   });
   const defs = svgEl('defs', {}, svg);
 
   const grid = svgEl('pattern', {
-    id: 'grid', width: 16, height: 16, patternUnits: 'userSpaceOnUse',
+    id: gridId, width: 16, height: 16, patternUnits: 'userSpaceOnUse',
   }, defs);
   svgEl('path', { d: 'M 16 0 H 0 V 16', class: 'grid-line' }, grid);
 
   const hatch = svgEl('pattern', {
-    id: 'hatch', width: 7, height: 7,
+    id: hatchId, 'data-pattern': 'hatch', width: 7, height: 7,
     patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)',
   }, defs);
   svgEl('line', { x1: 0, y1: 0, x2: 0, y2: 7, class: 'hatch-line' }, hatch);
 
-  svgEl('rect', { x: 0, y: 0, width: SCENE_W, height: SCENE_H, fill: 'url(#grid)' }, svg);
+  svgEl('rect', { x: 0, y: 0, width: SCENE_W, height: SCENE_H, fill: `url(#${gridId})` }, svg);
   const stage = svgEl('g', {}, svg);
   return { svg, stage };
 }

@@ -5,6 +5,7 @@
 
 const STORE_KEY = 'cad-gym.v1';
 const appRoot = document.getElementById('app');
+let sessionProgress = {};
 
 /* ------------------------------------------------------------ unit toggle
    A single fixed control, outside #app so re-rendering the home screen or
@@ -16,13 +17,22 @@ let rerenderCurrent = () => {};
 function unitToggleLabel() {
   return getUnit() === 'in' ? 'in' : 'mm';
 }
+function unitToggleA11yLabel() {
+  return getUnit() === 'in'
+    ? 'Units: inches. Switch to millimeters.'
+    : 'Units: millimeters. Switch to inches.';
+}
 
 const unitToggleBtn = h('button', {
   class: 'unit-toggle',
   title: 'Switch between millimeters and inches',
+  'aria-label': unitToggleA11yLabel(),
+  'aria-pressed': getUnit() === 'in' ? 'true' : 'false',
   onclick: () => {
     toggleUnit();
     unitToggleBtn.textContent = unitToggleLabel();
+    unitToggleBtn.setAttribute('aria-label', unitToggleA11yLabel());
+    unitToggleBtn.setAttribute('aria-pressed', getUnit() === 'in' ? 'true' : 'false');
     rerenderCurrent();
   },
 }, unitToggleLabel());
@@ -34,12 +44,16 @@ const TONE_MARK = { good: '✓', bad: '✕', warn: '△', idle: '' };
 /* ------------------------------------------------------------- utilities */
 
 function loadProgress() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; }
-  catch { return {}; }
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : sessionProgress;
+  }
+  catch { return sessionProgress; }
 }
 function saveProgress(p) {
   // Storage can be blocked (locked-down classroom browsers, strict privacy
-  // modes) — progress just won't survive a reload, which beats crashing.
+  // modes) — retain it for this session rather than failing to render.
+  sessionProgress = p;
   try { localStorage.setItem(STORE_KEY, JSON.stringify(p)); } catch { /* session-only */ }
 }
 
@@ -100,6 +114,7 @@ function renderHome() {
 
 function resetProgress() {
   if (confirm('Clear your progress on this device?')) {
+    sessionProgress = {};
     try { localStorage.removeItem(STORE_KEY); } catch { /* nothing stored anyway */ }
     route();
   }
