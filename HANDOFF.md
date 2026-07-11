@@ -65,6 +65,42 @@ is now superseded but left in place as a record of the gate-check round.
 
 What remains unchanged: no v2 app work has started yet. Next thread's first
 real task is the GitHub Pages deploy, then bridge cards, then E5.
+## What changed in this round (gate check + QA re-run, 2026-07-06)
+
+This was a scheduled Fable pickup in a cloud container. Per the gate in
+`_planning/FABLE-PROMPT-2026-07-05.md`, **no v2 work was started** — Justin's
+E1–E4 playthrough answer (and his predict-friction verdict) is still
+outstanding, and this run could only ask, not wait for an answer. Bridge
+cards, E5, predict changes, and public deploy all remain untouched and gated.
+
+What did happen:
+
+- **`qa/qa-check.mjs` re-run in a fresh environment: 98/98 pass** (real
+  headless Chromium, `file://` cold load, both widths). First re-run since
+  the harness was written, on a different machine than authored it — good
+  signal the harness is genuinely portable (it resolved Playwright from the
+  container's global install, resolution path 2 in `qa/README.md`, which had
+  never been exercised before).
+- **One-line harness fix, `isFontRelated()` in `qa/qa-check.mjs`:** the
+  documented Google-Fonts environmental exception never actually matched
+  failed-stylesheet console errors, because Chromium puts the fonts URL in
+  `msg.location().url` while the error *text* is just "Failed to load
+  resource: net::ERR_CONNECTION_RESET" — and the classifier only checked
+  `text`/`message`/`url`, never `location.url`. On the authoring machine
+  fonts always loaded, so the gap was latent; this sandbox's network policy
+  resets `fonts.googleapis.com` and surfaced it as a spurious 97/98 FAIL.
+  The classifier now also checks `entry.location?.url`. Verified: the fonts
+  reset is the *only* failing network request in the whole run (probed
+  directly via `requestfailed` listeners), so nothing real is being masked —
+  a genuine app error would still have a non-fonts location and still fail
+  the run.
+- **Visual spot-check from the harness screenshots** at 1400×900 and
+  390×844: home screen, E1 consequence, compare, and counter-context all
+  render correctly; system-font fallback (fonts blocked here) is fully
+  legible. This supplements but does not replace Justin's human playthrough.
+
+No app files (`index.html`, `app.js`, `exercises.js`, `svg.js`,
+`style.css`) were touched this round.
 
 ## What changed in this round (handoff prompt check, 2026-07-05)
 
