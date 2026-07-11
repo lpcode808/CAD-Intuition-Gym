@@ -27,32 +27,23 @@ and shaped the v2 candidates to be buildable immediately after review.
 
 1. ~~**Deploy to GitHub Pages**~~ — complete; live smoke-checked 2026-07-10.
 2. ~~**Predict-friction decision**~~ — complete; keep the light tap.
-3. **Bridge-to-Onshape cards** — next; cheapest lift, highest connective value.
-4. **E5** — the real authoring lift; do it last, with the footgun tooling
+3. ~~**Bridge-to-Onshape cards**~~ — complete 2026-07-11; see below.
+4. **E5** — next; the real authoring lift, with the footgun tooling
    (getter contract + `qa/qa-check.mjs` audit) already in place.
 
 ---
 
 ## 1. Bridge-to-real-Onshape micro-tasks (PRD §4 step 6, deferred 2026-07-02)
 
-**Shape:** a small optional card after each exercise's takeaway — "try the
-real thing" — with one concrete micro-task phrased in the exercise's own
-vocabulary, e.g.:
+**Status: shipped 2026-07-11.** One optional "Try the real thing" card per
+exercise, rendered at the bottom of the takeaway step (after the Done
+button). Copy + an outbound link to `https://cad.onshape.com` only — no
+integration, no accounts. Skippable, never gates the Done button or saved
+progress (QA-asserted). See `HANDOFF.md` for the full round writeup.
 
-- E1: "In any Onshape sketch, dimension a circle from an edge, then drag that
-  edge. Now delete the dimension and anchor it to the origin instead."
-- E3: "Open a sketch that shows blue lines. Drag one. That's the squirm."
-
-**Constraints:** copy + an outbound link only. No Onshape integration, no
-accounts, no screenshots to maintain (screenshots rot with Onshape's UI;
-words don't). Card is skippable and doesn't gate progress.
-
-**Cost:** one new rail card type in `app.js`, four `bridge` content blocks in
-`exercises.js`. Small.
-
-**Decision for Justin:** card after each takeaway vs. a single "go try it"
-block on the completion screen. Per-exercise is more actionable; one block is
-quieter. Recommend per-exercise.
+Decision made: per-exercise cards, not a single completion-screen block —
+per-exercise reads as more actionable and keeps the task in the exercise's
+own vocabulary.
 
 ## 2. Closed: fuller commit-a-guess predict (PRD §11.5)
 

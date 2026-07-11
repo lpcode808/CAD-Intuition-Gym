@@ -125,6 +125,16 @@ harness explicitly seeds it):
 7. **Accessible controls.** Verifies that the unit toggle has an explicit
    current-state label and that compare scenes are named images.
 
+8. **Bridge cards.** On each exercise's takeaway step, the optional "try
+   the real thing" card is present and carries that exercise's own task
+   copy (checked by a distinctive phrase per exercise, e.g. "Mirror tool"
+   for E2). Its link must parse as `https://cad.onshape.com` and open in
+   a new tab with both `noopener` and `noreferrer`. The card must not
+   loosen the gate — the Done button is asserted still disabled while the
+   card is already showing — and finishing the exercise must store exactly
+   the original progress keys (`done`, `predicted`, `predictedRight`,
+   `finishedAt`), nothing bridge-related.
+
 ## A note on "dragging" the slider
 
 The change-request and counter sliders are native `<input type="range">`

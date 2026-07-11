@@ -508,6 +508,11 @@ const EXERCISES = [
       term: 'Plain words: “tie it to the midline.” Onshape’s word for it: a symmetric constraint. (A midpoint constraint gets you there too.)',
     },
 
+    bridge: {
+      task: 'In a new sketch, draw a rectangle with a circle inside it. Dimension the circle from one side of the rectangle, then drag that side — the circle rides along with the edge. Now delete that dimension and anchor the circle to the origin instead (a dimension from the origin, or Onshape’s Symmetric constraint), and drag the side again. It holds.',
+      href: 'https://cad.onshape.com',
+    },
+
     counter: {
       heading: 'Now flip it',
       get body() { return `Same plate, same two schemes — different job. This one hangs on a wall, and its hole must land on an anchor bolt already set in that wall, ${fmtLen(60)} over. The client still wants the plate wider.`; },
@@ -660,6 +665,11 @@ const EXERCISES = [
       term: 'Plain words: “draw one, reflect it.” Onshape’s word for it: a mirror — here a sketch mirror; there’s a feature-level Mirror too.',
     },
 
+    bridge: {
+      task: 'Sketch a vertical centerline, draw one circle to its left, and make its twin with the sketch Mirror tool. Then edit the original once — move it or resize it. The mirrored copy follows on its own; there was only ever one source to maintain.',
+      href: 'https://cad.onshape.com',
+    },
+
     counter: {
       heading: 'Now flip it',
       body: 'Same plate, same two schemes — but now the holes have different jobs. The left one sits over a sensor that’s already glued in place. The right one holds a connector the client keeps moving. The request: “shift the connector outward — and don’t you dare touch my sensor.”',
@@ -806,6 +816,11 @@ const EXERCISES = [
     takeaway: {
       line: 'If it can move, eventually it will. Looking right isn’t being right — lock the sketch until nothing is left to chance.',
       term: 'Plain words: “no slack left.” Onshape’s phrase: a fully defined sketch — entities draw blue while they’re free, black once they’re locked.',
+    },
+
+    bridge: {
+      task: 'Open any sketch and hunt for blue — blue is Onshape’s color for “this can still move.” Drag a blue line and feel the slack. Then add dimensions and constraints until everything turns black, and drag again: nothing gives.',
+      href: 'https://cad.onshape.com',
     },
 
     counter: {
@@ -956,6 +971,11 @@ const EXERCISES = [
     takeaway: {
       line: 'A relationship is intent made durable. When two dimensions belong together, link them — don’t make one memorize the other.',
       get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable, or an equation typed right into the dimension (#box_width + ${fmtLen(4)}).`; },
+    },
+
+    bridge: {
+      task: 'In a Part Studio, create a variable — call it #base — and use it in one sketch dimension. Type a matching plain number into a second dimension. Now change #base and watch: the linked dimension follows, the typed one just sits there.',
+      href: 'https://cad.onshape.com',
     },
 
     counter: {
