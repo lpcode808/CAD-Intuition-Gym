@@ -27,16 +27,19 @@ in order:
 1. **Bare `import('playwright')`** — works if Playwright is already
    hoisted somewhere on Node's module resolution path.
 2. **`npm root -g` / `pnpm root -g`** — checks for a global install.
-3. **Fallback: install into the scratch dir, outside this repo.**
-   If neither of the above finds anything, the script runs
-   `npm install playwright@1.58.2` inside `<os tmpdir>/cad-gym-qa/qa-playwright`
+3. **Opt-in fallback: install into the scratch dir, outside this repo.**
+   If neither of the above finds anything, rerun with `QA_ALLOW_INSTALL=1`.
+   The script then runs
+   `npm install --ignore-scripts --no-audit --no-fund playwright@1.58.2` inside `<os tmpdir>/cad-gym-qa/qa-playwright`
    (overridable via `QA_SCRATCH_DIR`) — never inside this repo. That
    version is pinned because this machine already had a matching Chromium
    build cached under `~/Library/Caches/ms-playwright` (revision 1208), so
    the fallback install doesn't need to download a browser, only the
    small `playwright`/`playwright-core` npm packages.
    Subsequent runs detect the existing install and reuse it (no
-   reinstall, no re-download).
+   reinstall, no re-download). Without `QA_ALLOW_INSTALL=1`, the harness
+   stops with setup instructions rather than silently making a network or
+   package-manager change.
 
 Whichever path is used is printed at the top of the run, e.g.:
 
@@ -113,6 +116,14 @@ harness explicitly seeds it):
    (never in this repo) — the home screen, one mid-exercise consequence
    moment, one compare view, and one counter-context view, at each width
    (captured on Exercise 1 as the representative run).
+
+6. **Storage and SVG hardening.** Seeds valid JSON values with the wrong
+   shape (`"hello"`, `42`, `[]`, and `null`) and confirms the home screen
+   treats each as empty progress. Compare mode is also checked for duplicate
+   document IDs so SVG pattern references remain deterministic.
+
+7. **Accessible controls.** Verifies that the unit toggle has an explicit
+   current-state label and that compare scenes are named images.
 
 ## A note on "dragging" the slider
 
