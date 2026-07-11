@@ -1,6 +1,68 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-10 by Codex (sync, reliability hardening, and live smoke check).
+Last updated: 2026-07-11 by Fable (orchestrated: branch cleanup, then v2 item 1 — bridge cards).
+
+## What changed in this round (branch cleanup + bridge cards, 2026-07-11)
+
+Two pieces of housekeeping landed first, both stranded on unmerged branches
+from prior rounds: PR #2 merged the 2026-07-10 reliability-hardening commit
+(defensive progress parsing, unique compare-SVG pattern IDs, named scene
+images, accessible unit toggle, opt-in Playwright bootstrap — the baseline
+this round's build brief assumed as its starting state) and PR #3 merged a
+2026-07-06 QA-harness fix (the Google-Fonts environmental-error classifier
+needed to also check `msg.location().url`) that had never made it off its
+branch. Both are now on `main`; the five now-fully-merged branches are inert
+and safe to delete from GitHub's UI.
+
+Then, v2 item 1 from `_planning/V2-SCOPE.md` §1: an optional, skippable
+"Try the real thing" card on each exercise's takeaway step (step 5), linking
+out to `https://cad.onshape.com` with one concrete micro-task per exercise,
+phrased in that exercise's own vocabulary and verified against current
+Onshape help-center terminology (Symmetric constraint, sketch Mirror tool,
+blue-vs-black sketch entities, `#variable` dimension autofill):
+
+- **E1:** dimension a circle from a rectangle edge, drag the edge, then
+  redo it anchored to the origin (Symmetric constraint) and drag again.
+- **E2:** sketch one circle, mirror it with the sketch Mirror tool, then
+  edit the source once and watch the copy follow.
+- **E3:** find blue (under-defined) sketch geometry, drag it, then add
+  constraints until it's black and drag again — nothing gives.
+- **E4:** create a `#base` variable, use it in one dimension, type a plain
+  number into a second, then change `#base` and watch only the linked one
+  move.
+
+Card copy and the placement decision (one card per exercise, not a single
+completion-screen block) were mine; the repeatable implementation — four
+`bridge` content blocks in `exercises.js`, the card's rendering in
+`railTakeaway()` in `app.js`, `.bridge-card` styling in `style.css`, and 40
+new QA assertions (card presence + correct per-exercise copy, official
+`https://cad.onshape.com` link with safe `target="_blank"` /
+`rel="noopener noreferrer"`, Done-gate unaffected, saved-progress schema
+unchanged — all at both 1400×900 and 390×844) — was delegated to a
+subagent in an isolated worktree and graded before merging: full diff read
+(four files touched, no scope creep, no unit-bearing text so no getter
+violations), `node qa/qa-check.mjs` independently re-run
+(**152/152 pass**, up from 112), and the complete E1–E4 flow driven in a
+real headless-Chromium browser at both widths — slider, compare toggle,
+counter-context, unit toggle, Done gate, and the new card and its outbound
+link (confirmed via direct attribute read: `https://cad.onshape.com`,
+`target="_blank"`, `rel="noopener noreferrer"`; the popup itself couldn't
+render past a blank tab in this sandbox's no-network environment, same
+class of limitation as the Google Fonts stylesheet, not an app bug).
+Screenshots at both widths for all four exercises show no clipping,
+overflow, or register mismatch — the card reads as a quiet postscript
+(dashed border, muted kicker) consistent with `.intent-card`/`.change-card`.
+
+What was deliberately excluded, per scope: no Onshape API/login/screenshots,
+no per-task deep links (all four cards point at the same
+`https://cad.onshape.com` landing page — safer than betting on a specific
+Onshape URL staying valid), no change to `railPredict()` or any exercise's
+core loop.
+
+Remaining uncertainty: the Onshape wording was checked against current
+help-center docs but not against a live Onshape session (this environment
+has no outbound network) — worth a quick human skim on next login. E5 is
+next per `_planning/V2-SCOPE.md`.
 
 ## What changed in this round (reliability hardening, 2026-07-10)
 
