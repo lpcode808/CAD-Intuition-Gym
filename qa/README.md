@@ -62,17 +62,17 @@ All checks run at both **1400×900** and **390×844**, in a fresh cold
 context per concern, so localStorage always starts empty unless the
 harness explicitly seeds it):
 
-1. **Full loop, all four exercises (E1–E4).** From the home screen: opens
+1. **Full loop, all five exercises (E1–E5).** From the home screen: opens
    each exercise, does the predict tap, chooses a path, drags the
    change-request slider (asserting the Continue button is disabled
    beforehand and enabled after), toggles compare/side-by-side (asserts
    two panes render), names the takeaway, then in the counter-context
    drags its slider and uses its scheme toggle (asserting the moral text
    stays hidden until the slider moves, then appears). Confirms finishing
-   an exercise marks it "done ✓" on the home screen. After all four are
+   an exercise marks it "done ✓" on the home screen. After all five are
    done, clicks **Reset progress** (auto-accepting the `confirm()`
    dialog), and confirms `localStorage["cad-gym.v1"]` is cleared and all
-   four rows return to startable.
+   five rows return to startable.
 
 2. **Console/page errors.** Every `console.error` and uncaught `pageerror`
    across the *entire* run is collected. The bar is zero. The one
@@ -134,6 +134,25 @@ harness explicitly seeds it):
    card is already showing — and finishing the exercise must store exactly
    the original progress keys (`done`, `predicted`, `predictedRight`,
    `finishedAt`), nothing bridge-related.
+
+9. **E5's in-scene feature tree.** E5 is the one exercise whose consequence
+   lives partly in the feature tree itself — the tree is drawn inside the
+   scene (`svg.js`'s `featureTree`/`leaderLine`), not just in the left
+   Features panel, so it gets its own scene-level pass on top of the
+   generic loop above. In single view, path A ("draw the holes inside the
+   base sketch"), it confirms exactly one in-scene feature tree renders
+   with exactly one active row, a `.leader` line tying that row to a
+   violet `.edit-scope` halo, and a two-row tree. After dragging the hole
+   rework through and opening compare, it confirms pane A (one shared
+   sketch) keeps its two-row tree and shows the outline gouged "out of
+   true," while pane B (holes filed on their own feature) grows to four
+   rows and never shows that gouge — both panes drawing their own tree.
+   In the counter-context, whose default scheme files the notch as its
+   own feature, it confirms reshaping the silhouette strands the notch
+   feature "off the bead" and flags its row red (`.ftree-row.is-error`);
+   switching to the other scheme (the notch folded into the outline
+   sketch) confirms the error row and the "off the bead" text both
+   disappear and the tree collapses back to two rows.
 
 ## A note on "dragging" the slider
 

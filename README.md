@@ -15,7 +15,8 @@ work and public deploy, which is now live at
 https://lpcode808.github.io/CAD-Intuition-Gym/. Per-exercise "try it in
 Onshape" bridge cards (v2 item 1) shipped 2026-07-11. The v2 scope is
 captured in `_planning/V2-SCOPE.md`; E5 (sketch-level vs. part-level
-features) is next.
+features) is built and on an open PR, awaiting Justin's playthrough before
+merge — it adds new feature-tree scene vocabulary that needs human eyes.
 
 GitHub:
 
@@ -41,7 +42,7 @@ Then open `http://localhost:8000`.
 - `_planning/FABLE-PROMPT-2026-07-10.md` — ready-to-paste prompt for the next Fable/Opus thread (current, bridge cards + E5). Earlier dated prompts in `_planning/` are superseded prior rounds.
 - `HANDOFF.md` — current continuation state.
 - `index.html`, `style.css`, `app.js`, `svg.js`, `exercises.js` — static app.
-- `qa/qa-check.mjs` — Playwright QA harness for the full E1-E4 loop.
+- `qa/qa-check.mjs` — Playwright QA harness for the full E1-E5 loop.
 
 ## Persistence
 

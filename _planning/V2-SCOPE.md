@@ -28,8 +28,9 @@ and shaped the v2 candidates to be buildable immediately after review.
 1. ~~**Deploy to GitHub Pages**~~ — complete; live smoke-checked 2026-07-10.
 2. ~~**Predict-friction decision**~~ — complete; keep the light tap.
 3. ~~**Bridge-to-Onshape cards**~~ — complete 2026-07-11; see below.
-4. **E5** — next; the real authoring lift, with the footgun tooling
-   (getter contract + `qa/qa-check.mjs` audit) already in place.
+4. ~~**E5**~~ — built 2026-07-11 (PR opened, not merged); **gated on
+   Justin's human playthrough**, since it introduces the new feature-tree
+   scene vocabulary. See §3 below and `HANDOFF.md` for the round writeup.
 
 ---
 
@@ -59,6 +60,21 @@ tolerant of the old shape, don't migrate).
 **Decision (2026-07-09):** the light tap is enough. Do not build this.
 
 ## 3. E5 — sketch-level vs. part-level features (PRD §7, stretch)
+
+**Status: built 2026-07-11, PR open and awaiting Justin's playthrough.**
+Shipped as "Give it its own line" (`e5` in `exercises.js`), following the
+draft shape below with two authored refinements: the change request became
+"four holes down to two, moved — and do not move my outline" (so path (a)'s
+consequence is a visible gouge in the settled outline, not just a crowded
+sketch), and the counter-context became a one-off bracket whose notch is
+intrinsic to the silhouette — filing the notch as its own feature lets the
+reshape leave it behind ("off the bead"), so one-sketch simplicity wins.
+The predicted "real cost" was accurate: the new scene vocabulary is an
+in-scene mini feature tree (`featureTree()`/`leaderLine()` in `svg.js`, 2–4
+rows, active/error row states) plus a violet "edit scope" wash linking the
+edited row to exactly the geometry that edit session can touch. QA extended
+to cover E5 at both widths. **Do not start E6 or anything beyond this
+document without sign-off.**
 
 **The judgment:** put each decision at the level where you'll want to change
 it later. Features are future edits, filed in advance.
