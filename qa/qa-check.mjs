@@ -35,6 +35,19 @@ const STORE_KEY = 'cad-gym.v1';
 const UNIT_KEY = 'cad-gym.unit';
 const EXERCISE_IDS = ['e1', 'e2', 'e3', 'e4'];
 
+/* One distinctive phrase from each exercise's bridge task, so the takeaway
+   step can be checked for the right card (not just any card). */
+const BRIDGE_MARKERS = {
+  e1: 'Symmetric constraint',
+  e2: 'Mirror tool',
+  e3: 'turns black',
+  e4: '#base',
+};
+
+/* The saved-progress schema `finish()` writes — the bridge card must add
+   nothing to it. */
+const PROGRESS_KEYS = ['done', 'finishedAt', 'predicted', 'predictedRight'];
+
 const VIEWPORTS = [
   { label: '1400x900', width: 1400, height: 900 },
   { label: '390x844', width: 390, height: 844 },
@@ -298,6 +311,39 @@ async function runExercise(page, exId, { capture, shotDir, vpLabel }) {
   rec(steps, `${exId}: counter moral hidden before counter slider moves`, moralHiddenBefore === true, `hidden=${moralHiddenBefore}`);
   rec(steps, `${exId}: counter Done button disabled before counter slider moves`, doneDisabledBefore === true, `disabled=${doneDisabledBefore}`);
 
+  /* bridge card — the optional real-Onshape postscript on the takeaway step */
+  const bridge = page.locator('.rail .bridge-card');
+  const bridgeCount = await bridge.count();
+  rec(steps, `${exId}: bridge card present on the takeaway step`, bridgeCount === 1, `count=${bridgeCount}`);
+
+  const bridgeText = bridgeCount === 1 ? await bridge.innerText() : '';
+  rec(steps, `${exId}: bridge card carries this exercise's task ("${BRIDGE_MARKERS[exId]}")`,
+    bridgeText.includes(BRIDGE_MARKERS[exId]));
+
+  let linkOk = false;
+  let linkDetail = 'no bridge card';
+  if (bridgeCount === 1) {
+    const link = await bridge.locator('a').evaluate((a) => ({
+      href: a.getAttribute('href'),
+      target: a.getAttribute('target'),
+      rel: a.getAttribute('rel'),
+    }));
+    let parsed = null;
+    try { parsed = new URL(link.href); } catch { /* linkOk stays false */ }
+    linkOk = parsed !== null
+      && parsed.protocol === 'https:'
+      && parsed.hostname === 'cad.onshape.com'
+      && link.target === '_blank'
+      && /\bnoopener\b/.test(link.rel || '')
+      && /\bnoreferrer\b/.test(link.rel || '');
+    linkDetail = JSON.stringify(link);
+  }
+  rec(steps, `${exId}: bridge link opens https://cad.onshape.com in a safe new tab`, linkOk, linkDetail);
+
+  rec(steps, `${exId}: Done stays gated while the bridge card is already showing`,
+    doneDisabledBefore === true && bridgeCount === 1,
+    `disabled=${doneDisabledBefore} bridge=${bridgeCount}`);
+
   const segs = page.locator('.rail .segmented .seg');
   const onIndex = await segs.evaluateAll((nodes) => nodes.findIndex((n) => n.classList.contains('is-on')));
   await segs.nth(onIndex === 0 ? 1 : 0).click(); // use its scheme toggle
@@ -317,6 +363,16 @@ async function runExercise(page, exId, { capture, shotDir, vpLabel }) {
 
   const status = (await page.locator(`a.ex-row[href="#/${exId}"] .ex-status`).innerText()).trim();
   rec(steps, `${exId}: marked done on home screen`, /done/i.test(status), `status="${status}"`);
+
+  const storedKeys = await page.evaluate(({ key, id }) => {
+    try {
+      const p = JSON.parse(localStorage.getItem(key) || '{}');
+      return p[id] ? Object.keys(p[id]).sort() : null;
+    } catch { return null; }
+  }, { key: STORE_KEY, id: exId });
+  rec(steps, `${exId}: saved progress keeps its schema (no bridge-related keys)`,
+    JSON.stringify(storedKeys) === JSON.stringify(PROGRESS_KEYS),
+    `keys=${JSON.stringify(storedKeys)}`);
 
   return steps;
 }

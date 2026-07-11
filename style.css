@@ -632,3 +632,29 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
     scroll-behavior: auto !important;
   }
 }
+
+/* ---- bridge card (the optional real-Onshape postscript) ---- */
+
+.bridge-card {
+  border: 1px dashed var(--border-strong);
+  background: var(--panel-2);
+  border-radius: 6px;
+  padding: 13px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+.bridge-kicker {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bridge-card .prose { font-size: 14px; line-height: 1.55; }
+.bridge-link {
+  display: inline-block;
+  align-self: flex-start;
+  text-decoration: none;
+}

@@ -494,6 +494,19 @@ function renderPlayer(ex) {
         ex.counter.hint || 'Run the change one more time — this part has a different job.'));
     }
 
+    if (ex.bridge) {
+      out.push(h('aside', { class: 'bridge-card' },
+        h('span', { class: 'bridge-kicker' }, 'Try the real thing'),
+        h('p', { class: 'prose' }, ex.bridge.task),
+        h('a', {
+          class: 'btn ghost bridge-link',
+          href: ex.bridge.href,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        }, 'Open Onshape ↗'),
+        h('p', { class: 'fine' }, 'Optional — the gym taught the judgment; the real cockpit is one tab away.')));
+    }
+
     updateCounterNote();
     return out;
   }
