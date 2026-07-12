@@ -156,3 +156,34 @@ function sceneLabel(parent, x, y, text, cls = '', anchor = 'middle') {
     x, y, class: `scenelabel ${cls}`.trim(), 'text-anchor': anchor, text,
   }, parent);
 }
+
+/* ---------------------------------------------------------------- feature tree
+   E5's consequence lives partly in the feature tree, so the tree is drawn
+   inside the scene itself (each compare pane needs its own copy — the left
+   Features panel can only show one). Rows: { label, state } where state is
+   '' | 'active' (open in the editor right now) | 'error' (broken reference).
+   Returns one { x, y } anchor per row (right edge, mid-height) so a leader
+   line can tie the edited row to the geometry it puts on the table. */
+function featureTree(parent, x, y, rows) {
+  const ROW_W = 146, ROW_H = 21, GAP = 4;
+  const g = svgEl('g', { class: 'ftree' }, parent);
+  sceneLabel(g, x, y - 8, 'feature tree', 'muted', 'start');
+  return rows.map((row, i) => {
+    const ry = y + i * (ROW_H + GAP);
+    const state = row.state ? ` is-${row.state}` : '';
+    const r = svgEl('g', { class: `ftree-row${state}` }, g);
+    svgEl('rect', { x, y: ry, width: ROW_W, height: ROW_H, rx: 4, class: 'ftree-box' }, r);
+    svgEl('rect', { x: x + 7, y: ry + ROW_H / 2 - 3, width: 6, height: 6, rx: 1.5, class: 'ftree-dot' }, r);
+    svgEl('text', { x: x + 19, y: ry + ROW_H / 2 + 3.5, class: 'ftree-text', text: row.label }, r);
+    if (row.state === 'error') {
+      svgEl('text', { x: x + ROW_W - 10, y: ry + ROW_H / 2 + 3.5, class: 'ftree-glyph', 'text-anchor': 'middle', text: '!' }, r);
+    }
+    return { x: x + ROW_W, y: ry + ROW_H / 2 };
+  });
+}
+
+/* Curved leader tying an edited tree row to its edit scope in the geometry. */
+function leaderLine(parent, x1, y1, x2, y2) {
+  const mx = (x1 + x2) / 2;
+  return svgEl('path', { d: `M ${x1} ${y1} C ${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`, class: 'leader' }, parent);
+}

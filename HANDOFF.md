@@ -1,6 +1,72 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-11 by Fable (orchestrated: branch cleanup, then v2 item 1 — bridge cards).
+Last updated: 2026-07-11 by Fable (v2 item 2 — E5, on an open PR awaiting
+Justin's playthrough).
+
+## What changed in this round (E5, 2026-07-11, second round of the day)
+
+Baseline verified first: PR #4 (bridge cards) merged on `main`, and
+`node qa/qa-check.mjs` re-run clean at 152/152 before any new work.
+
+Then E5 — **"Give it its own line"** (sketch-level vs. part-level features,
+`_planning/V2-SCOPE.md` §3), authored in full on the E1–E4 template:
+
+- **Main scene:** a plate whose outline is settled forever, carrying four
+  bezel holes marketing keeps redrawing. Path A draws the holes inside the
+  base sketch; path B files them as their own sketch + cut. The change
+  request ("four holes down to two, moved — do not move my outline") plays
+  out as: path A's rework gouges a visible red bite out of the settled
+  outline (against a blue dashed intent outline, with a "N mm out of true"
+  dimension) because everything shares one crowded sketch; path B reworks
+  the holes while the outline is never even in the room.
+- **Counter-context:** a one-off bracket, shipping Friday, whose notch is
+  intrinsic to the silhouette. Filing the notch as its own feature (the
+  main lesson's hero move) lets the final reshape leave it behind — the
+  stale cut floats off the moved edge, "N mm off the bead," and its tree
+  row flags red with a `!` glyph. One sketch wins: the notch was never a
+  separate decision. Moral: one line per decision you'll revisit on its own.
+- **New scene vocabulary** (the real lift V2-SCOPE predicted): an in-scene
+  mini feature tree — `featureTree()` and `leaderLine()` in `svg.js`, 2–4
+  rows with `''`/`active`/`error` states — drawn inside each scene SVG so
+  both compare panes carry their own tree (the left Features panel can only
+  show one). A new violet "edit scope" hue (`--scope` in `style.css`,
+  deliberately distinct from intent-blue and consequence-red) links the
+  edited row, via a curved leader line, to a wash over exactly the geometry
+  that edit session can touch: the whole plate in path A, per-hole halos in
+  path B. The 2-row vs 4-row tree contrast side-by-side in compare mode is
+  the structural argument made visible.
+- **app.js:** one line — the home section label is now "Five decisions."
+- **Getter contract:** E5's static copy embeds no converted lengths, so no
+  new getters were needed; all unit-bearing strings live in scene functions
+  and `outcome()` calls, which are naturally reactive. The two-direction QA
+  unit audit (now walking E5 too) confirms zero violations.
+
+Division of labor: scene design, all copy, and the interaction shape were
+authored directly; only the mechanical QA extension was delegated to a
+subagent and its diff reviewed line-by-line before running. QA now stands
+at **212/212** (up from 152): E5 gets the full generic loop (predict/choose
+gating, compare panes, counter moral gating, done-marking, bridge card,
+progress schema, reset now asserting five exercises) plus 15 new
+E5-specific scene checks per viewport (tree presence/row counts, exactly
+one active row, leader + edit scope present, "out of true" only in pane A,
+error row + "off the bead" only under the counter's scheme B). Independently
+re-run after review: 212/212, exit 0, zero real console/page errors (the
+16–18 Google Fonts entries are the documented environmental bucket), no
+horizontal overflow at 390 px.
+
+Visual verification: the complete E5 flow was driven in real headless
+Chromium at 1400×900 and 390×844 — brief, both paths at high slider travel,
+compare, both counter schemes — and every screenshot read back. Two visual
+defects were caught and fixed this way before the PR: the "where the
+pattern is headed" ghost label sat on top of the fading holes (moved above
+the plate), and the gouge dimension text crossed a hole (moved to the top
+corner with extension lines).
+
+**Status: PR open, deliberately NOT merged.** E5 introduces new scene
+vocabulary, and the standing rule from the 2026-07-10 round is that it
+needs Justin's own visual playthrough before it lands. Do not merge, do
+not start E6, public analytics, or anything beyond `_planning/V2-SCOPE.md`
+without his sign-off.
 
 ## What changed in this round (branch cleanup + bridge cards, 2026-07-11)
 

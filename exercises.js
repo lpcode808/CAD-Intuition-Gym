@@ -408,6 +408,158 @@ function e4CounterScene(stage, { t, path }) {
   dimH(stage, { x1: cx - Ppx / 2, x2: cx + Ppx / 2, y: pBot + 26, ext1: pBot, ext2: pBot, label: fmtLen(P), cls: 'live' });
 }
 
+/* ---------------------------------------------------------------- E5 scenes
+   A plate whose outline is settled but whose hole pattern keeps changing.
+   The decision is structural: where in the tree does the hole pattern live?
+   Main scene: the rework lands — in one crowded sketch the outline catches
+   a stray edit; as its own feature, the outline is never even in the room.
+   Counter scene: a one-off bracket whose notch IS the silhouette — filing
+   it as a separate feature lets the part disagree with itself. */
+
+function e5MainScene(stage, { t, path }) {
+  const cx = 340, cy = 163;
+  const Wpx = 130 * MM, Hpx = 70 * MM;
+  const left = cx - Wpx / 2, right = cx + Wpx / 2;
+  const top = cy - Hpx / 2, bot = cy + Hpx / 2;
+  const r = 4 * MM;
+  const gouge = path === 'a' ? 12 * t : 0;       // mm bitten out of the right edge
+  const gpx = gouge * MM;
+
+  const rows = path === 'a'
+    ? [{ label: 'Sketch 1 · plate', state: 'active' }, { label: 'Extrude 1' }]
+    : path === 'b'
+      ? [{ label: 'Sketch 1 · outline' }, { label: 'Extrude 1' },
+         { label: 'Sketch 2 · holes', state: 'active' }, { label: 'Extrude 2 · cut' }]
+      : [{ label: 'Sketch 1 · outline' }, { label: 'Extrude 1' }];
+  const anchors = featureTree(stage, 14, 30, rows);
+  if (path === null) sceneLabel(stage, 14, 92, '+ four holes — where?', 'muted', 'start');
+
+  // The plate, with the path-a bite taken out of its right edge.
+  svgEl('path', {
+    d: `M ${left} ${top} L ${right} ${top} L ${right} ${top + 28} L ${right - gpx} ${cy} ` +
+       `L ${right} ${bot - 28} L ${right} ${bot} L ${left} ${bot} Z`,
+    class: 'part',
+  }, stage);
+
+  // Where the outline is supposed to be — the promise, visible when broken.
+  svgEl('rect', { x: left, y: top, width: Wpx, height: Hpx, class: 'intent-outline' }, stage);
+  svgEl('text', {
+    x: cx, y: bot + 26, class: 'intent-label', 'text-anchor': 'middle',
+    text: 'intent: the outline is settled — it never moves',
+  }, stage);
+
+  // Four holes reworking into two: two travel to the new pattern, two fade out.
+  const k1 = [lerp(cx - 30 * MM, cx - 45 * MM, t), lerp(cy - 16 * MM, cy, t)];
+  const k2 = [lerp(cx + 30 * MM, cx + 45 * MM, t), lerp(cy + 16 * MM, cy, t)];
+  const faders = [[cx + 30 * MM, cy - 16 * MM], [cx - 30 * MM, cy + 16 * MM]];
+
+  if (path === null) {
+    for (const gx of [cx - 45 * MM, cx + 45 * MM]) {
+      svgEl('circle', { cx: gx, cy, r, class: 'ghost' }, stage);
+    }
+    sceneLabel(stage, right, top - 10, 'where the pattern is headed', 'ghost-label', 'end');
+  }
+
+  const scoped = path === 'b';                   // scope halos on the holes only
+  for (const [hx, hy] of [k1, k2]) {
+    if (scoped) svgEl('circle', { cx: hx, cy: hy, r: r + 5, class: 'edit-scope' }, stage);
+    svgEl('circle', { cx: hx, cy: hy, r, class: 'hole' + (path ? ' is-good' : '') }, stage);
+  }
+  for (const [hx, hy] of faders) {
+    if (t < 0.98) {
+      const g = svgEl('g', { opacity: String(1 - t) }, stage);
+      if (scoped) svgEl('circle', { cx: hx, cy: hy, r: r * (1 - t) + 5, class: 'edit-scope' }, g);
+      svgEl('circle', { cx: hx, cy: hy, r: r * (1 - t), class: 'hole' }, g);
+    }
+  }
+
+  if (path === 'a') {
+    svgEl('rect', {
+      x: left - 12, y: top - 12, width: Wpx + 24, height: Hpx + 24, rx: 8, class: 'edit-scope',
+    }, stage);
+    svgEl('text', {
+      x: left - 12, y: top - 20, class: 'scope-label', 'text-anchor': 'start',
+      text: 'open for edit: everything — outline included',
+    }, stage);
+    leaderLine(stage, anchors[0].x, anchors[0].y, left - 14, 130);
+  } else if (path === 'b') {
+    svgEl('text', {
+      x: left - 12, y: top - 20, class: 'scope-label', 'text-anchor': 'start',
+      text: 'open for edit: just the holes',
+    }, stage);
+    leaderLine(stage, anchors[2].x, anchors[2].y, k1[0] - r - 8, k1[1]);
+  }
+
+  if (path === 'a' && gouge >= 1) {
+    svgEl('path', {
+      d: `M ${right} ${top + 28} L ${right - gpx} ${cy} L ${right} ${bot - 28} Z`,
+      class: 'gap-bad',
+    }, stage);
+  }
+  if (path === 'a' && gouge >= 3) {
+    dimH(stage, {
+      x1: right - gpx, x2: right, y: 123, ext1: cy, ext2: top + 28,
+      label: `${fmtLen(Math.round(gouge))} out of true`, cls: 'bad',
+    });
+  }
+}
+
+function e5CounterScene(stage, { t, path }) {
+  const bot = 216;
+  const L = lerp(234, 210, t), R = lerp(426, 450, t);  // the silhouette, reshaping
+  const top = lerp(152, 164.8, t);
+  const nHalf = 7 * MM, nDeep = 12 * MM;         // the notch: 14 mm wide, 12 mm deep
+  const oldX = 362, oldTop = 152;                // where the notch was on day one
+  const beadX = lerp(oldX, 402, t);              // the weld bead the notch must clear
+  const offMm = Math.round(25 * t);
+  const bad = offMm >= 4;
+
+  const rows = path === 'a'
+    ? [{ label: 'Sketch 1 · bracket', state: 'active' }, { label: 'Extrude 1' }]
+    : [{ label: 'Sketch 1 · outline', state: 'active' }, { label: 'Extrude 1' },
+       { label: 'Sketch 2 · notch', state: bad ? 'error' : '' }, { label: 'Extrude 2 · cut' }];
+  const anchors = featureTree(stage, 14, 30, rows);
+
+  sceneLabel(stage, 330, 86, 'one-off — ships friday, never opens again', 'muted');
+
+  if (path === 'a') {
+    // One sketch: the notch is part of the silhouette, so it rides the reshape.
+    svgEl('path', {
+      d: `M ${L} ${top} L ${beadX - nHalf} ${top} L ${beadX - nHalf} ${top + nDeep} ` +
+         `L ${beadX + nHalf} ${top + nDeep} L ${beadX + nHalf} ${top} L ${R} ${top} ` +
+         `L ${R} ${bot} L ${L} ${bot} Z`,
+      class: 'part',
+    }, stage);
+  } else {
+    svgEl('rect', { x: L, y: top, width: R - L, height: bot - top, class: 'part' }, stage);
+    // The notch feature, still cutting where the old edge used to be.
+    svgEl('rect', {
+      x: oldX - nHalf, y: oldTop, width: nHalf * 2, height: nDeep,
+      class: 'hole' + (bad ? ' is-bad' : ''),
+    }, stage);
+    if (bad) {
+      svgEl('rect', { x: beadX - nHalf, y: top, width: nHalf * 2, height: nDeep, class: 'ghost' }, stage);
+      svgEl('line', { x1: oldX, y1: oldTop + nDeep / 2, x2: beadX, y2: top + nDeep / 2, class: 'offline' }, stage);
+      dimH(stage, {
+        x1: oldX, x2: beadX, y: 128, ext1: oldTop, ext2: top,
+        label: `${fmtLen(offMm)} off the bead`, cls: 'bad',
+      });
+    }
+  }
+
+  svgEl('circle', { cx: beadX, cy: top + 8, r: 7, class: 'switch-part' }, stage);
+  intentMark(stage, beadX, top + 8, 'intent: clear the bead', 96 - top);
+
+  svgEl('rect', {
+    x: L - 10, y: top - 10, width: R - L + 20, height: bot - top + 20, rx: 8, class: 'edit-scope',
+  }, stage);
+  svgEl('text', {
+    x: L - 10, y: bot + 28, class: 'scope-label', 'text-anchor': 'start',
+    text: path === 'a' ? 'open for edit: the whole story' : 'open for edit: outline only',
+  }, stage);
+  leaderLine(stage, anchors[0].x, anchors[0].y, L - 12, top + 20);
+}
+
 /* ---------------------------------------------------------------- exercises */
 
 const EXERCISES = [
@@ -1026,6 +1178,171 @@ const EXERCISES = [
         ];
       },
       moral: 'Linking — the lesson you just banked — becomes the mistake the moment a dimension answers to a standard instead of a neighbor. The rule was never “never type numbers.” Link what varies together; hardcode what a standard has already decided.',
+    },
+  },
+
+  {
+    id: 'e5',
+    num: 5,
+    available: true,
+    title: 'Give it its own line',
+    tagline: 'a feature is a future edit, filed in advance',
+    principle: 'Put each decision at the level where you’ll want to change it later.',
+
+    brief: {
+      heading: 'One part, two schedules',
+      body: 'This mounting plate is two things at once. The outline already fits its enclosure — signed off, settled, done. The four bezel holes are the opposite: marketing redraws that bezel every other sprint. Two parts of one part, on very different schedules.',
+      intent: 'The outline never moves. The holes stay easy to rework.',
+      change: 'The hole pattern — count and positions. A two-hole bezel is already circulating in meetings, and when it lands, someone opens this part and reworks the holes.',
+    },
+
+    predict: {
+      prompt: 'Two reasonable places for four circles to live. The hole pattern is about to be reworked — count, positions, everything. Which structure lets that rework land without putting the outline at risk?',
+      note: 'Just a guess — you’ll test both in a minute.',
+      answer: 'b',
+    },
+
+    choose: {
+      prompt: 'Now build it. Pick either structure — including the one you suspect fails. You’ll flip between them and watch the rework land.',
+    },
+
+    paths: {
+      a: {
+        label: 'Draw the holes inside the base sketch',
+        sub: 'One sketch carries everything — outline and holes together. One line in the tree. Feels tidy.',
+        short: 'one sketch',
+        kind: 'accident',
+      },
+      b: {
+        label: 'Give the holes their own feature',
+        sub: 'The base sketch stays a clean outline. The holes get their own sketch and cut, one line further down the tree.',
+        short: 'own feature',
+        kind: 'intent',
+      },
+    },
+
+    change: {
+      request: '“The two-hole bezel is approved — rework the pattern: four holes down to two, moved out toward the ends. And the outline is signed off. Do not move my outline.”',
+      sliderLabel: 'Hole rework',
+      format: (t) => `${Math.round(t * 100)}% reworked`,
+      hint: 'Drag the rework through first — feel it before we name it.',
+    },
+
+    scene: e5MainScene,
+
+    outcome(path, t) {
+      const off = Math.round(12 * t);
+      if (t < 0.02) {
+        return {
+          tone: 'idle',
+          headline: 'rework not started',
+          note: 'Drag the rework through and watch two things: the holes, and the outline.',
+        };
+      }
+      if (path === 'a') {
+        if (off < 4) {
+          return {
+            tone: 'warn',
+            headline: `outline nicked — ${fmtLen(off)} out of true`,
+            note: 'You’re inside the base sketch to touch holes — and every line of the outline is within reach of every click.',
+          };
+        }
+        return {
+          tone: 'bad',
+          headline: `outline gouged ${fmtLen(off)} out of true`,
+          note: 'The holes came out right. But they shared a sketch with the outline, and deleting them took a stray edge along. In a crowded sketch, everything is on the operating table, every time.',
+        };
+      }
+      return {
+        tone: 'good',
+        headline: 'holes reworked — the outline never flinched',
+        note: 'The rework happened one line down the tree, in a sketch whose only job is holes. The outline wasn’t just safe — it was never even in the room.',
+      };
+    },
+
+    features(path) {
+      const base = [
+        { label: 'Origin', sub: 'the one reference that never moves' },
+      ];
+      if (path === 'a') {
+        base.push({ label: 'Sketch 1 — outline + four holes', sub: 'one crowded sketch — the outline and the holes share every edit', active: true });
+        base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
+      } else if (path === 'b') {
+        base.push({ label: 'Sketch 1 — plate outline', sub: 'clean — nothing in it but the part’s identity' });
+        base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
+        base.push({ label: 'Sketch 2 — hole pattern', sub: 'the part that keeps changing, on its own line', active: true });
+        base.push({ label: 'Extrude 2 — cut', sub: 'removes the holes, through all' });
+      } else {
+        base.push({ label: 'Sketch 1 — plate outline', sub: 'settled — it already fits the enclosure' });
+        base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
+        base.push({ label: 'the four holes', sub: 'marketing keeps moving them. where they live is your call', active: true });
+      }
+      return base;
+    },
+
+    takeaway: {
+      line: 'The base sketch is the part’s identity — keep it clean. Anything you expect to revisit deserves its own line in the tree: a feature is a future edit, filed in advance.',
+      term: 'Plain words: “give the holes their own drawer.” Onshape’s shape for it: a second sketch plus an Extrude set to Remove — or a Hole feature — stacked after the base extrude in the feature list.',
+    },
+
+    bridge: {
+      task: 'Extrude a simple plate from one rectangle sketch. Add two holes the filed-in-advance way: a new sketch on the plate’s face, two circles, then an Extrude set to Remove. Now edit that hole sketch and move a circle — watch the feature list: only your hole feature rebuilds, and the base sketch never opens.',
+      href: 'https://cad.onshape.com',
+    },
+
+    counter: {
+      heading: 'Now flip it',
+      body: 'A one-off spacer bracket, shipping Friday, never to be opened again. Its silhouette has a notch that clears a weld bead — and the notch isn’t a bolt-on decision, it is the silhouette. One last request lands: reshape the whole thing for the new bead. Same two structures. Which serves you now?',
+      defaultPath: 'b',
+      scene: e5CounterScene,
+      sliderLabel: 'Reshape the silhouette',
+      format: (t) => `${Math.round(t * 100)}% toward the new shape`,
+      hint: 'Reshape it — this part has a different job.',
+      pathLabels: {
+        a: 'Keep the notch in the outline sketch',
+        b: 'File the notch as its own feature',
+      },
+      outcome(path, t) {
+        const off = Math.round(25 * t);
+        if (t < 0.02) {
+          return {
+            tone: 'idle',
+            headline: 'nothing reshaped yet',
+            note: 'Drag the reshape through and watch the notch.',
+          };
+        }
+        if (path === 'b') {
+          if (off < 4) {
+            return { tone: 'warn', headline: `notch is ${fmtLen(off)} off the bead`, note: 'The outline is moving. The notch feature isn’t.' };
+          }
+          return {
+            tone: 'bad',
+            headline: `notch is ${fmtLen(off)} off the bead`,
+            note: 'You filed the notch as its own future edit — but it was never a separate decision. It belongs to the silhouette, and the silhouette just left without it. That extra line in the tree wasn’t organization; it was a place for the part to disagree with itself.',
+          };
+        }
+        return {
+          tone: 'good',
+          headline: 'notch rides the outline — still on the bead',
+          note: 'One sketch, one identity. The notch was never a separate decision, so the reshape can’t leave it behind. For a one-off, the short tree is the honest tree.',
+        };
+      },
+      features(path) {
+        const base = [
+          { label: 'Origin', sub: 'the one reference that never moves' },
+        ];
+        if (path === 'a') {
+          base.push({ label: 'Sketch 1 — bracket + notch', sub: 'one sketch — the notch is part of the silhouette', active: true });
+          base.push({ label: 'Extrude 1', sub: `${fmtLen(5)} thick` });
+        } else {
+          base.push({ label: 'Sketch 1 — bracket outline', sub: 'the silhouette, being reshaped', active: true });
+          base.push({ label: 'Extrude 1', sub: `${fmtLen(5)} thick` });
+          base.push({ label: 'Sketch 2 — notch', sub: 'still drawn against the old edge' });
+          base.push({ label: 'Extrude 2 — cut', sub: 'cuts where the notch used to belong' });
+        }
+        return base;
+      },
+      moral: 'Filing things on their own line — the habit you just built — turns the tree to noise when the decision was never separate. The notch changes with the outline, so it belongs to the outline. The rule was never “more features.” It’s: one line per decision you’ll revisit on its own.',
     },
   },
 ];

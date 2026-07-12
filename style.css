@@ -22,6 +22,8 @@
   --warn: #91650e;
   --warn-soft: #faf1dc;
   --grid: #e9eef3;
+  --scope: #6c55c8;
+  --scope-soft: #efeafb;
   --radius: 8px;
   --ui: 'Sora', system-ui, sans-serif;
   --serif: 'Source Serif 4', georgia, serif;
@@ -577,6 +579,31 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   stroke-width: 3;
 }
 
+/* E5 vocabulary: the in-scene feature tree and the violet "edit scope" —
+   what this edit session can touch. Violet on purpose: it must read as its
+   own idea, not intent-blue and not consequence-red. */
+.ftree-box { fill: var(--panel-2); stroke: var(--border-strong); stroke-width: 1; }
+.ftree-text { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+.ftree-dot { fill: var(--faint); }
+.ftree-row.is-active .ftree-box { fill: var(--scope-soft); stroke: var(--scope); stroke-width: 1.4; }
+.ftree-row.is-active .ftree-text { fill: var(--scope); font-weight: 600; }
+.ftree-row.is-active .ftree-dot { fill: var(--scope); }
+.ftree-row.is-error .ftree-box { fill: var(--bad-soft); stroke: var(--bad); stroke-width: 1.4; }
+.ftree-row.is-error .ftree-text { fill: var(--bad); font-weight: 600; }
+.ftree-row.is-error .ftree-dot { fill: var(--bad); }
+.ftree-glyph { font-family: var(--mono); font-size: 12px; font-weight: 700; fill: var(--bad); }
+.edit-scope { fill: rgba(108, 85, 200, 0.07); stroke: var(--scope); stroke-width: 1.1; stroke-dasharray: 6 4; }
+.scope-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  fill: var(--scope);
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3;
+}
+.leader { fill: none; stroke: var(--scope); stroke-width: 1.1; stroke-dasharray: 6 4; }
+.intent-outline { fill: none; stroke: var(--accent); stroke-width: 1.1; stroke-dasharray: 3 3; }
+
 .centerline { stroke: #7b8ba0; stroke-width: 1; stroke-dasharray: 14 4 3 4; }
 .centerline.bolt-line { stroke: var(--accent); }
 
@@ -622,6 +649,12 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   }
   .compare .dimtext {
     font-size: 13px;
+  }
+  /* Tree rows are fixed-width boxes (146px in the viewBox), so this bump is
+     capped where the longest row label still fits inside its box. */
+  .compare .ftree-text,
+  .compare .scope-label {
+    font-size: 11px;
   }
 }
 

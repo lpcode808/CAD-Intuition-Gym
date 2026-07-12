@@ -33,7 +33,7 @@ const PLAYWRIGHT_PIN = '1.58.2'; // matches an already-cached Chromium revision 
 
 const STORE_KEY = 'cad-gym.v1';
 const UNIT_KEY = 'cad-gym.unit';
-const EXERCISE_IDS = ['e1', 'e2', 'e3', 'e4'];
+const EXERCISE_IDS = ['e1', 'e2', 'e3', 'e4', 'e5'];
 
 /* One distinctive phrase from each exercise's bridge task, so the takeaway
    step can be checked for the right card (not just any card). */
@@ -42,6 +42,7 @@ const BRIDGE_MARKERS = {
   e2: 'Mirror tool',
   e3: 'turns black',
   e4: '#base',
+  e5: 'Remove',
 };
 
 /* The saved-progress schema `finish()` writes — the bridge card must add
@@ -203,6 +204,100 @@ async function runStorageAndIdHardeningChecks(browser, vp, collectors) {
   rec(checks, `[${vp.label}] compare mode has no duplicate document IDs`, duplicates.length === 0, `duplicates=${JSON.stringify(duplicates)}`);
   const unnamedScenes = await page.evaluate(() => [...document.querySelectorAll('svg[role="img"]')].filter((svg) => !svg.getAttribute('aria-label')).length);
   rec(checks, `[${vp.label}] compare scenes have accessible names`, unnamedScenes === 0, `unnamed=${unnamedScenes}`);
+  await ctx.close();
+  return checks;
+}
+
+/* E5 is the one exercise whose consequence lives partly in the feature tree
+   itself (drawn inside the scene via svg.js's featureTree/leaderLine — see
+   the comment above e5MainScene). These checks are grounded in that scene
+   vocabulary and don't apply to E1–E4, so they run as their own pass rather
+   than folding into the generic per-exercise loop. */
+async function runE5SceneChecks(browser, vp, collectors) {
+  const checks = [];
+  const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+  const page = await ctx.newPage();
+  attachErrorListeners(page, `${vp.label} e5-scene`, collectors);
+  const primaryBtn = page.locator('.rail button.btn.primary');
+
+  await page.goto(`${APP_URL}#/e5`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.locator('.player').waitFor({ state: 'visible' });
+
+  /* step 0-2 — predict, then build path A ("draw the holes inside the base sketch") */
+  await primaryBtn.click(); // "Make a prediction →"
+  await page.locator('.rail .option').first().click(); // the predict tap
+  await primaryBtn.click(); // "Lock it in →"
+  await page.locator('.rail .option').first().click(); // build path A
+  await primaryBtn.click(); // "Send in the change request →"
+  await page.locator('.rail input.slider').waitFor({ state: 'visible' });
+
+  /* single view, path A, before compare — one in-scene feature tree with one
+     active row, a leader tying it to its edit scope, and path A's two-row tree */
+  const ftreeGroups = await page.locator('.viewport svg .ftree').count();
+  rec(checks, `[${vp.label}] e5: single view draws exactly one in-scene feature tree`, ftreeGroups === 1, `ftree groups=${ftreeGroups}`);
+
+  const activeRows = await page.locator('.viewport svg .ftree-row.is-active').count();
+  rec(checks, `[${vp.label}] e5: exactly one feature-tree row is active in single view`, activeRows === 1, `active rows=${activeRows}`);
+
+  const leaderCount = await page.locator('.viewport svg .leader').count();
+  rec(checks, `[${vp.label}] e5: a leader line ties the active row to its edit scope`, leaderCount > 0, `leaders=${leaderCount}`);
+
+  const rowCountA = await page.locator('.viewport svg .ftree-row').count();
+  rec(checks, `[${vp.label}] e5: path A's crowded sketch shows only two tree rows`, rowCountA === 2, `rows=${rowCountA}`);
+
+  const editScopeCount = await page.locator('.viewport svg .edit-scope').count();
+  rec(checks, `[${vp.label}] e5: an edit-scope halo marks what path A's edit can touch`, editScopeCount > 0, `edit-scope=${editScopeCount}`);
+
+  /* drive the rework through, then compare — pane A (one shared sketch)
+     gouges the outline; pane B (holes on their own feature) never does */
+  await setSlider(page, 0.8);
+  const compareBtn = page.locator('.rail button.btn.ghost');
+  await compareBtn.click();
+  await page.locator('.viewport .compare').waitFor({ state: 'visible' });
+
+  const paneA = page.locator('.compare .pane:nth-child(1)');
+  const paneB = page.locator('.compare .pane:nth-child(2)');
+
+  const paneAText = await paneA.locator('svg').evaluate((el) => el.textContent);
+  const paneBText = await paneB.locator('svg').evaluate((el) => el.textContent);
+  rec(checks, `[${vp.label}] e5: compare pane A shows the outline gouged "out of true"`, paneAText.includes('out of true'), `paneA snippet="${paneAText.slice(0, 120)}"`);
+  rec(checks, `[${vp.label}] e5: compare pane B never gouges the outline`, !paneBText.includes('out of true'), `paneB snippet="${paneBText.slice(0, 120)}"`);
+
+  const paneARows = await paneA.locator('svg .ftree-row').count();
+  const paneBRows = await paneB.locator('svg .ftree-row').count();
+  rec(checks, `[${vp.label}] e5: compare pane A's tree stays at two rows (outline and holes share one sketch)`, paneARows === 2, `rows=${paneARows}`);
+  rec(checks, `[${vp.label}] e5: compare pane B's tree grows to four rows (outline, extrude, holes, cut)`, paneBRows === 4, `rows=${paneBRows}`);
+
+  const paneAFtree = await paneA.locator('svg .ftree').count();
+  const paneBFtree = await paneB.locator('svg .ftree').count();
+  rec(checks, `[${vp.label}] e5: both compare panes draw their own feature tree`, paneAFtree >= 1 && paneBFtree >= 1, `paneA ftree=${paneAFtree} paneB ftree=${paneBFtree}`);
+
+  await compareBtn.click(); // back to one view before continuing
+  await page.locator('.viewport .compare').waitFor({ state: 'detached' });
+  await primaryBtn.click(); // "Name the lesson →"
+
+  /* step 4 — counter-context. Default scheme is b ("File the notch as its
+     own feature"); reshaping under b strands the notch feature off the bead
+     and flags its row red. Scheme a folds the notch into the outline sketch,
+     so it rides the reshape and never drifts. */
+  await setSlider(page, 0.8);
+  const errorRowsBefore = await page.locator('.viewport svg .ftree-row.is-error').count();
+  rec(checks, `[${vp.label}] e5 counter: the notch filed as its own feature flags red once the outline reshapes without it`, errorRowsBefore > 0, `error rows=${errorRowsBefore}`);
+
+  const counterTextBefore = await page.locator('.viewport svg').evaluate((el) => el.textContent);
+  rec(checks, `[${vp.label}] e5 counter: scheme B drifts "off the bead"`, counterTextBefore.includes('off the bead'), `snippet="${counterTextBefore.slice(0, 120)}"`);
+
+  await page.locator('.rail .segmented .seg').first().click(); // switch to scheme A
+
+  const errorRowsAfter = await page.locator('.viewport svg .ftree-row.is-error').count();
+  rec(checks, `[${vp.label}] e5 counter: scheme A folds the notch into the outline — no error row`, errorRowsAfter === 0, `error rows=${errorRowsAfter}`);
+
+  const counterTextAfter = await page.locator('.viewport svg').evaluate((el) => el.textContent);
+  rec(checks, `[${vp.label}] e5 counter: scheme A never drifts "off the bead"`, !counterTextAfter.includes('off the bead'), `snippet="${counterTextAfter.slice(0, 120)}"`);
+
+  const rowCountAfter = await page.locator('.viewport svg .ftree-row').count();
+  rec(checks, `[${vp.label}] e5 counter: scheme A's tree collapses back to two rows`, rowCountAfter === 2, `rows=${rowCountAfter}`);
+
   await ctx.close();
   return checks;
 }
@@ -383,10 +478,10 @@ async function verifyResetProgress(page) {
   const allDoneBefore = await page.evaluate((key) => {
     try {
       const p = JSON.parse(localStorage.getItem(key) || '{}');
-      return ['e1', 'e2', 'e3', 'e4'].every((id) => p[id] && p[id].done);
+      return ['e1', 'e2', 'e3', 'e4', 'e5'].every((id) => p[id] && p[id].done);
     } catch { return false; }
   }, STORE_KEY);
-  rec(steps, 'all four exercises marked done before reset', allDoneBefore === true);
+  rec(steps, 'all five exercises marked done before reset', allDoneBefore === true);
 
   page.once('dialog', (d) => d.accept());
   await page.locator('.home-foot button.linklike', { hasText: 'Reset progress' }).click();
@@ -396,8 +491,8 @@ async function verifyResetProgress(page) {
   rec(steps, `reset progress clears localStorage key "${STORE_KEY}"`, storeAfter === null, `value=${storeAfter}`);
 
   const statuses = await page.locator('a.ex-row .ex-status').allInnerTexts();
-  const allStartable = statuses.length === 4 && statuses.every((s) => !/done/i.test(s));
-  rec(steps, 'reset progress returns all four to startable', allStartable, `statuses=${JSON.stringify(statuses)}`);
+  const allStartable = statuses.length === 5 && statuses.every((s) => !/done/i.test(s));
+  rec(steps, 'reset progress returns all five to startable', allStartable, `statuses=${JSON.stringify(statuses)}`);
 
   return steps;
 }
@@ -509,6 +604,9 @@ async function main() {
 
       console.log('[qa]   running storage/SVG hardening checks…');
       allChecks.push(...await runStorageAndIdHardeningChecks(browser, vp, collectors));
+
+      console.log('[qa]   running E5 feature-tree scene checks…');
+      allChecks.push(...await runE5SceneChecks(browser, vp, collectors));
     }
   } finally {
     await browser.close();
