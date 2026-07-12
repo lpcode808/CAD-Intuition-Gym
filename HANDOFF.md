@@ -1,7 +1,64 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-11 by Fable (v2 item 2 — E5, on an open PR awaiting
-Justin's playthrough).
+Last updated: 2026-07-12 by Fable (v2 closeout + sub-agent setup round).
+
+## What changed in this round (v2 closeout + sub-agent setup, 2026-07-12)
+
+**E5 is merged.** PR #5 landed on `main` on 2026-07-11 (merged by Justin
+after his playthrough — the human-review gate on the feature-tree scene
+vocabulary is cleared). That closes out `_planning/V2-SCOPE.md` entirely:
+deploy, predict decision, bridge cards, and E5 are all shipped. No app code
+(`index.html`, `app.js`, `exercises.js`, `svg.js`, `style.css`, `qa/`) was
+touched this round.
+
+Baseline verified first in this fresh container: `node qa/qa-check.mjs` on
+the merged `main` passed **212/212, exit 0** — zero real console/page
+errors (the 18 Google-Fonts entries are the documented environmental
+bucket), no favicon failures, and the home-screen screenshot read back
+clean with all five exercises and the "start here →" cue intact.
+
+Then this round's actual deliverable — durable sub-agent infrastructure so
+future rounds don't re-improvise the orchestrator/executor split that the
+bridge-card and E5 rounds proved out ad hoc:
+
+- **`.claude/agents/slice-builder.md`** — the bounded mechanical execution
+  seat (content-object wiring, rail rendering, scene primitives, styling,
+  QA extensions). Encodes the hard rules it kept needing to be told: exact
+  scope only, getter contract, no invented copy, no `railPredict()` or
+  progress-schema changes, run QA before reporting, report shaped for
+  line-by-line grading.
+- **`.claude/agents/qa-verifier.md`** — the independent grading seat: rerun
+  the harness itself, drive the full flow at 1400×900 and 390×844, read
+  screenshots back, report PASS/FAIL with evidence and an explicit
+  "unverified in this environment" list. Never edits the app.
+- **`.claude/agents/copy-auditor.md`** — read-only content sweep of
+  `exercises.js`: getter-contract borderline cases, plain-language-first
+  register, counter-context integrity, option-letter bias (the E2-flip
+  lesson), intent-first briefs.
+- **`CLAUDE.md`** (new, repo root) — points Claude Code at `AGENTS.md` as
+  canonical, documents when to use each subagent, and restates the standing
+  do-not-reopen decisions. Prior FABLE prompts had to say "there is no
+  CLAUDE.md, don't wait for one"; now there is one.
+- **`_planning/V3-SCOPE.md`** — v3 candidates scoped but NOT built, exactly
+  like the 2026-07-03 v2 scoping move: E6-order (the tree is a sequence;
+  newly cheap because E5's `featureTree()`/`leaderLine()` vocabulary
+  exists), a completion recap screen, and share meta/OG polish. Ends with
+  the three yes/no decisions Justin needs to make. **Nothing in it is
+  approved.**
+- **`_planning/FABLE-PROMPT-2026-07-12.md`** — the next-round orchestration
+  prompt (supersedes the 2026-07-10 one, whose two PRs both merged). Its
+  core gate: if Justin has answered V3-SCOPE's decision points, build the
+  approved items smallest-first, one PR each, using the committed
+  subagents; if not, the round is maintenance-only and must not guess an
+  approval.
+- **Doc truth restored:** `README.md` (was still "E1-E4, E5 on an open
+  PR") and `_planning/V2-SCOPE.md` (was still "PR open, gated") now state
+  the merged reality.
+
+**Next:** Justin answers the three decision points at the bottom of
+`_planning/V3-SCOPE.md` (E6-order? recap screen? share polish?). Until
+then, nothing new gets built — the standing hard stop on E6/analytics/
+anything-beyond-approved-scope remains in force.
 
 ## What changed in this round (E5, 2026-07-11, second round of the day)
 
