@@ -62,17 +62,18 @@ All checks run at both **1400×900** and **390×844**, in a fresh cold
 context per concern, so localStorage always starts empty unless the
 harness explicitly seeds it):
 
-1. **Full loop, all five exercises (E1–E5).** From the home screen: opens
+1. **Full loop, all six exercises (E1–E6).** From the home screen: opens
    each exercise, does the predict tap, chooses a path, drags the
    change-request slider (asserting the Continue button is disabled
    beforehand and enabled after), toggles compare/side-by-side (asserts
    two panes render), names the takeaway, then in the counter-context
    drags its slider and uses its scheme toggle (asserting the moral text
    stays hidden until the slider moves, then appears). Confirms finishing
-   an exercise marks it "done ✓" on the home screen. After all five are
-   done, clicks **Reset progress** (auto-accepting the `confirm()`
-   dialog), and confirms `localStorage["cad-gym.v1"]` is cleared and all
-   five rows return to startable.
+   an exercise marks it "done ✓" on the home screen. After all six are
+   done, verifies the completion recap (below), then clicks **Reset
+   progress** (auto-accepting the `confirm()` dialog), and confirms
+   `localStorage["cad-gym.v1"]` is cleared, all six rows return to
+   startable, and the recap disappears.
 
 2. **Console/page errors.** Every `console.error` and uncaught `pageerror`
    across the *entire* run is collected. The bar is zero. The one
@@ -153,6 +154,26 @@ harness explicitly seeds it):
    switching to the other scheme (the notch folded into the outline
    sketch) confirms the error row and the "off the bead" text both
    disappear and the tree collapses back to two rows.
+
+10. **E6's tree order.** E6's consequence is the ORDER of the same four
+    tree rows, so its scene pass asserts the order itself: path A files
+    `Cut 1 · opening` above `Holes · screws`, path B the reverse, and in
+    compare mode both panes carry the same four rows with only the order
+    differing. Geometric fallout is asserted structurally — pane A ends
+    the spec change with zero breached screws while pane B shows exactly
+    two `.hole.is-bad` circles with two `.offline` drift lines, and the
+    outcome chips read "gap held" vs. "into the screws". In the
+    counter-context (default scheme: the label chained to the hole),
+    dragging the hole inboard must produce the "off center" dimension and
+    a drift line; scheme B must show neither, and the tree must keep the
+    same four rows in both schemes.
+
+11. **Completion recap.** The recap section must be absent on a fresh
+    home screen, present exactly once after all exercises are completed —
+    with one row per available exercise carrying that exercise's
+    `takeaway.line` and `takeaway.flip` verbatim (compared against the
+    page's own `EXERCISES` values, not hardcoded copy) — and gone again
+    after Reset progress.
 
 ## A note on "dragging" the slider
 

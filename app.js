@@ -108,7 +108,7 @@ function renderHome() {
         'A gym for the CAD decisions that don’t have a button. You can sketch and extrude — but nothing you’ve modeled has ever broken on you. Here, it will. On purpose, a few minutes per exercise.'),
       h('p', { class: 'sim-note' },
         'This is a flight simulator: there’s no CAD engine behind it, and every consequence is hand-built so the lesson lands clean. The real cockpit — Onshape — is one tab away.'),
-      h('h2', { class: 'section-label' }, 'Five decisions'),
+      h('h2', { class: 'section-label' }, 'Six decisions'),
       h('div', { class: 'ex-list' }, rows),
       allDone && h('section', { class: 'recap' },
         h('h2', { class: 'section-label' }, 'What you leave with'),
