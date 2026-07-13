@@ -494,6 +494,9 @@ async function verifyResetProgress(page) {
   const allStartable = statuses.length === 5 && statuses.every((s) => !/done/i.test(s));
   rec(steps, 'reset progress returns all five to startable', allStartable, `statuses=${JSON.stringify(statuses)}`);
 
+  const recapAfterReset = await page.locator('.recap').count();
+  rec(steps, 'reset progress removes the completion recap', recapAfterReset === 0, `count=${recapAfterReset}`);
+
   return steps;
 }
 
@@ -558,6 +561,9 @@ async function main() {
       const overflowPassHome = vp.width !== 390 || ovHome.scrollWidth <= ovHome.innerWidth;
       rec(allChecks, `[${vp.label}] no horizontal overflow — home`, overflowPassHome, `scrollWidth=${ovHome.scrollWidth} innerWidth=${ovHome.innerWidth}`);
 
+      const recapFresh = await page.locator('.recap').count();
+      rec(allChecks, `[${vp.label}] completion recap absent on fresh home screen`, recapFresh === 0, `count=${recapFresh}`);
+
       const homeShot = path.join(SHOT_DIR, `home-${vp.label}.png`);
       await page.screenshot({ path: homeShot });
       shotPaths.push(homeShot);
@@ -575,6 +581,22 @@ async function main() {
           );
         }
       }
+
+      console.log('[qa]   verifying completion recap…');
+      const recapCount = await page.locator('.recap').count();
+      rec(allChecks, `[${vp.label}] completion recap present once all exercises are done`, recapCount === 1, `count=${recapCount}`);
+
+      // eslint-disable-next-line no-undef
+      const recapExpected = await page.evaluate(() => EXERCISES.filter((ex) => ex.available)
+        .map((ex) => ({ id: ex.id, line: ex.takeaway.line, flip: ex.takeaway.flip })));
+      const recapRows = await page.locator('.recap .recap-row').count();
+      rec(allChecks, `[${vp.label}] recap row count matches available exercises`, recapRows === recapExpected.length, `rows=${recapRows} expected=${recapExpected.length}`);
+
+      const recapText = recapCount === 1 ? await page.locator('.recap').innerText() : '';
+      const recapMissing = recapExpected
+        .filter((ex) => !recapText.includes(ex.line) || !recapText.includes(ex.flip))
+        .map((ex) => ex.id);
+      rec(allChecks, `[${vp.label}] recap carries every takeaway line and flip verbatim`, recapCount === 1 && recapMissing.length === 0, `missing=${JSON.stringify(recapMissing)}`);
 
       // Layout re-check inside a busy exercise view (compare pane), the most
       // likely place for a mobile overflow bug to show up.

@@ -658,6 +658,7 @@ const EXERCISES = [
     takeaway: {
       line: 'Dimension to the thing that expresses your intent — here, the center — not to whatever edge is closest.',
       term: 'Plain words: “tie it to the midline.” Onshape’s word for it: a symmetric constraint. (A midpoint constraint gets you there too.)',
+      flip: 'Unless the intent points at an edge — then edge-anchoring is exactly right.',
     },
 
     bridge: {
@@ -815,6 +816,7 @@ const EXERCISES = [
     takeaway: {
       line: 'One source of truth. If two things must stay related, don’t maintain them separately — make one drive the other.',
       term: 'Plain words: “draw one, reflect it.” Onshape’s word for it: a mirror — here a sketch mirror; there’s a feature-level Mirror too.',
+      flip: 'Unless the two must move independently — sometimes separateness is the intent.',
     },
 
     bridge: {
@@ -968,6 +970,7 @@ const EXERCISES = [
     takeaway: {
       line: 'If it can move, eventually it will. Looking right isn’t being right — lock the sketch until nothing is left to chance.',
       term: 'Plain words: “no slack left.” Onshape’s phrase: a fully defined sketch — entities draw blue while they’re free, black once they’re locked.',
+      flip: 'Unless you’re still exploring — an early sketch earns its slack.',
     },
 
     bridge: {
@@ -1123,6 +1126,7 @@ const EXERCISES = [
     takeaway: {
       line: 'A relationship is intent made durable. When two dimensions belong together, link them — don’t make one memorize the other.',
       get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable, or an equation typed right into the dimension (#box_width + ${fmtLen(4)}).`; },
+      flip: 'Unless a standard already decided the number — then typing it is correct.',
     },
 
     bridge: {
@@ -1283,6 +1287,7 @@ const EXERCISES = [
     takeaway: {
       line: 'The base sketch is the part’s identity — keep it clean. Anything you expect to revisit deserves its own line in the tree: a feature is a future edit, filed in advance.',
       term: 'Plain words: “give the holes their own drawer.” Onshape’s shape for it: a second sketch plus an Extrude set to Remove — or a Hole feature — stacked after the base extrude in the feature list.',
+      flip: 'Unless the decision was never separate — then one clean sketch wins.',
     },
 
     bridge: {
