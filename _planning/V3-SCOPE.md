@@ -1,11 +1,22 @@
 # V3 scope — CAD Intuition Gym
 
-Written 2026-07-12 (sub-agent-setup round). **Nothing in this document is
-approved.** Every item is gated on Justin's explicit sign-off, per the
-standing hard stop ("do not start E6, public analytics, or anything beyond
-the approved scope doc without sign-off"). This doc exists so the next
-build round starts from shaped candidates instead of a blank page — the
-same move `V2-SCOPE.md` made on 2026-07-03.
+Written 2026-07-12 (sub-agent-setup round).
+
+## Status update — 2026-07-12, same day: approved and built
+
+Justin approved all three items ("Triple yes. Let's build this"). All three
+are built on branch `claude/sub-agent-setup-favz3d`, smallest-first as
+recommended: §3 share polish, then §2 recap, then §1 E6. One authored
+deviation from the draft below: E6's main scene was reshaped from
+fillet-vs-holes to a growing connector opening with cover screws — the
+fillet geometry proved visually weak at the app's fixed 1.6 px/mm scale (a
+corner round only ever removes ~0.4 r of material along the diagonal, a
+few px), which would have violated the "visually undeniable" hard rule.
+The judgment taught is exactly the drafted one. **The branch stays
+unmerged until Justin plays E6 and the recap** — new exercise content and
+scene states are gated on his playthrough, per the standing rule.
+
+Original scoping (historical) below.
 
 ## Where v2 ended
 

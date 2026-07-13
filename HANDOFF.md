@@ -1,6 +1,82 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-12 by Fable (v2 closeout + sub-agent setup round).
+Last updated: 2026-07-13 by Fable (v3 build round — all three approved
+items, on the branch awaiting Justin's playthrough).
+
+## What changed in this round (v3 build, 2026-07-13)
+
+Justin answered the three `_planning/V3-SCOPE.md` decision points with
+"Triple yes." All three items are built on `claude/sub-agent-setup-favz3d`,
+smallest-first, one commit each, **deliberately not merged**: E6 and the
+recap are new content/scene material, and the standing rule gates those on
+Justin's own playthrough.
+
+- **Share/OG polish** (`index.html`, `og-preview.png`): meta description +
+  Open Graph/Twitter card with absolute URLs to the live Pages site. The
+  preview image is a real 1200×630 screenshot of E1's compare moment
+  ("hole is 34 mm off center" vs. "dead center, at every width"), captured
+  from the app itself, per the scope's "real screenshot, not a logo".
+- **Completion recap** (`app.js`, `exercises.js`, `style.css`, QA): once
+  every available exercise is done, the home screen gains a quiet "What
+  you leave with" card — each exercise's `takeaway.line` beside a new
+  one-sentence `takeaway.flip` ("Unless…"), the counter-moral distilled.
+  Reads live from `EXERCISES`, so it inherited E6 automatically when E6
+  landed one commit later; no progress-schema change; flips are digit-free
+  so the getter contract is untouched; gone on reset. Implementation was
+  delegated to the committed `slice-builder` subagent from exact authored
+  copy (the agent's environment died on a session limit mid-verification;
+  its finished diff was recovered from its worktree, graded line-by-line,
+  and verified here — the two-seat rule held even with a dead builder).
+- **E6 — "Put it downstream"** (`exercises.js`, `app.js` home label "Six
+  decisions", QA): feature order and dependency, the full E1–E5 template
+  with both scenes reusing E5's `featureTree()`/`leaderLine()` vocabulary.
+  Main scene: a faceplate's connector opening keeps growing; two cover
+  screws either hang off the opening's edge (downstream — they ride every
+  spec change) or sit above it in the tree (upstream — the opening
+  swallows them, red, with drift lines, while "the tree still reads
+  clean"). The compare view shows the same four rows in both panes with
+  only the ORDER different — the structural argument made visible.
+  Counter-context: a nameplate whose label gets chained to a mounting
+  hole "for organization"; moving the hole drags the label off center —
+  a false dependency deputizes every edit to vandalize a bystander.
+  Predict answers now balance 3 A / 3 B across the six exercises.
+- **One authored deviation from V3-SCOPE §1's draft**, recorded there too:
+  the drafted fillet-vs-holes scene was reshaped to the connector opening
+  — at the app's fixed 1.6 px/mm scale a growing corner round removes only
+  a few visible px of material (tangent geometry cuts ~0.414 r along the
+  diagonal), which would have violated the "visually undeniable" rule.
+  Same judgment, stronger scene.
+
+Division of labor: all copy, both E6 scenes, and the interaction shape
+were authored in the orchestrating seat; the recap implementation ran
+through `slice-builder`; the E6 QA extension was implemented inline
+because subagent capacity was exhausted this session (deviation from the
+usual split, noted). The copy-audit sweep (getter contract, letter bias,
+register, counter integrity) also ran inline against the committed
+`copy-auditor` checklist.
+
+QA now stands at **282/282** (up from 212 on `main`): the generic loop
+walks all six exercises plus recap presence/absence/verbatim-copy and
+six-exercise reset at both widths, and E6 gets its own scene pass per
+viewport — tree presence, exactly one active row, leader line, the
+four-row ORDER swap asserted from the row text itself, pane-A-holds vs.
+pane-B-breached (two `.hole.is-bad` + two `.offline` in B only), chip
+verdicts, counter "off center" drift under the chained scheme only. The
+first full run FAILED 4 checks — my own new order assertions used
+`allInnerTexts()`, which returns empty for SVG nodes — fixed to
+`textContent` and re-run clean; the app itself never had a defect. The E6
+flow was also driven by hand at 1400×900 and 390×844 across two
+authoring iterations; screenshots caught six real layout collisions
+(clipped breach dimension, size-dim/label collisions, scope-label
+overflow, ghost-label run-on, tree-row text overflow, intent/dim overlap)
+that were fixed before the harness ever ran. Zero real console errors; no
+horizontal overflow at 390 px.
+
+**Status: pushed to `claude/sub-agent-setup-favz3d`, NOT merged.** Justin
+should play E6 and the all-done recap, then merge; the live Pages site
+updates from `main` on merge. After merge, `og-preview.png` becomes
+reachable at its absolute URL — worth one card-validator check on the
+next login.
 
 ## What changed in this round (v2 closeout + sub-agent setup, 2026-07-12)
 
