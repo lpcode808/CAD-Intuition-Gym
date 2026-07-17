@@ -1,7 +1,8 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-13 by Fable (v3 build round — all three approved
-items, on the branch awaiting Justin's playthrough).
+Last updated: 2026-07-16 by Devin CLI (v3 merged to `main` and live —
+see the dated breadcrumb at the end of this file for current status and
+next steps).
 
 ## What changed in this round (v3 build, 2026-07-13)
 
@@ -596,3 +597,23 @@ Automated Playwright run against a real Chromium, `file://` cold load, at
 - Fast-forwarded the checked-out `codex/reliability-fable-handoff` branch and local `main` to current `origin/main` (`147ca92`), preserving the pre-existing `_planning/FABLE-PROMPT-2026-07-05.md` edit.
 - The checkout now contains the merged v2/E5 and QA work; the old remote feature-branch upstream still points behind this merged state.
 - No project code was edited, committed, or pushed during reconciliation.
+
+### 2026-07-16 — v3 merged to main and pushed — Devin CLI (Fable)
+- Merged `claude/sub-agent-setup-favz3d` (all three approved v3 items:
+  share/OG polish, completion recap, E6 "Put it downstream") into `main`
+  and pushed, at Justin's explicit direction during a repo-wide sync
+  sweep. QA re-run locally pre-merge: **282/282 PASS** at both 1400×900
+  and 390×844, zero real console errors.
+- Note on the standing gate: the 07-13 round held this branch for
+  Justin's playthrough of E6 and the recap. Justin ordered the merge, so
+  the gate is cleared by his call — but the playthrough itself may not
+  have happened yet. **Next steps, in order:**
+  1. Justin plays E6 and the all-done recap on the live Pages site
+     (https://lpcode808.github.io/CAD-Intuition-Gym/) and flags any
+     copy/scene fixes as a follow-up round.
+  2. One-time check that `og-preview.png` unfurls correctly at its
+     absolute URL (a card-validator or a paste into a chat client).
+  3. No E7+ or new scope without Justin's sign-off (standing rule).
+     v4 scoping, if any, should wait for his playthrough feedback.
+- The app is now six exercises, live from `main`. `_planning/V3-SCOPE.md`
+  carries the matching status note.

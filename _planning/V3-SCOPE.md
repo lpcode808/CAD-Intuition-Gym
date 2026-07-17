@@ -2,6 +2,16 @@
 
 Written 2026-07-12 (sub-agent-setup round).
 
+## Status update — 2026-07-16: merged to main and live
+
+The branch merged to `main` and deployed on 2026-07-16, at Justin's
+explicit direction during a repo-wide sync sweep (QA 282/282 re-run
+locally pre-merge). The playthrough gate below was cleared by his merge
+call rather than by a recorded playthrough — his pass over E6 and the
+recap on the live site is the top remaining item. See `HANDOFF.md`'s
+2026-07-16 breadcrumb for the full next-steps list. v3 is closed;
+nothing further is approved.
+
 ## Status update — 2026-07-12, same day: approved and built
 
 Justin approved all three items ("Triple yes. Let's build this"). All three
