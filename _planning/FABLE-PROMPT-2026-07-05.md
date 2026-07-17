@@ -3,6 +3,14 @@
 **How to use:** paste everything below the rule into a new Claude Code thread
 running Fable (or Opus, if past the Fable window), cwd `~/Coding/CAD-Intuition-Gym`.
 
+**Scarcity note (2026-07-06 HST):** Justin reports first-wave Fable access may
+be pulled in roughly 36 hours for an indefinite period. If running this during
+that window, only use Fable for the gate check, predict-friction judgment, and
+final taste/evaluation. Do not start the full v2 build unless Justin explicitly
+chooses CAD as the remaining-window priority and the run can finish before
+access closes. Mechanical implementation still goes to `codex`; Opus is the
+fallback taste seat after the window.
+
 ---
 
 You're picking up CAD Intuition Gym after the 2026-07-03 polish round. Read

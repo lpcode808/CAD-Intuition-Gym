@@ -458,3 +458,8 @@ Automated Playwright run against a real Chromium, `file://` cold load, at
 - [x] Reset progress clears `cad-gym.v1`.
 - [x] Desktop width has no console errors or incoherent overlap.
 - [x] Mobile width has no horizontal overflow or clipped controls.
+
+### 2026-07-13-2159 — desktop cloud-lineage reconciliation — Codex
+- Fast-forwarded the checked-out `codex/reliability-fable-handoff` branch and local `main` to current `origin/main` (`147ca92`), preserving the pre-existing `_planning/FABLE-PROMPT-2026-07-05.md` edit.
+- The checkout now contains the merged v2/E5 and QA work; the old remote feature-branch upstream still points behind this merged state.
+- No project code was edited, committed, or pushed during reconciliation.
