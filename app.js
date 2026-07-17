@@ -79,6 +79,9 @@ function renderHome() {
   rerenderCurrent = renderHome;
   const prog = loadProgress();
   const anyDone = EXERCISES.some((ex) => prog[ex.id] && prog[ex.id].done);
+  const availableExercises = EXERCISES.filter((ex) => ex.available);
+  const allDone = availableExercises.length > 0
+    && availableExercises.every((ex) => prog[ex.id] && prog[ex.id].done);
 
   const rows = EXERCISES.map((ex) => {
     const done = prog[ex.id] && prog[ex.id].done;
@@ -105,8 +108,17 @@ function renderHome() {
         'A gym for the CAD decisions that don’t have a button. You can sketch and extrude — but nothing you’ve modeled has ever broken on you. Here, it will. On purpose, a few minutes per exercise.'),
       h('p', { class: 'sim-note' },
         'This is a flight simulator: there’s no CAD engine behind it, and every consequence is hand-built so the lesson lands clean. The real cockpit — Onshape — is one tab away.'),
-      h('h2', { class: 'section-label' }, 'Five decisions'),
+      h('h2', { class: 'section-label' }, 'Six decisions'),
       h('div', { class: 'ex-list' }, rows),
+      allDone && h('section', { class: 'recap' },
+        h('h2', { class: 'section-label' }, 'What you leave with'),
+        h('p', { class: 'recap-lede' }, 'Every rule you just learned, next to the flip that keeps it honest. The rule was never the rule — the intent is.'),
+        h('div', { class: 'recap-list' }, availableExercises.map((ex) =>
+          h('div', { class: 'recap-row' },
+            h('span', { class: 'ex-num' }, String(ex.num).padStart(2, '0')),
+            h('div', { class: 'recap-text' },
+              h('p', { class: 'recap-line' }, ex.takeaway.line),
+              h('p', { class: 'recap-flip' }, ex.takeaway.flip)))))),
       h('footer', { class: 'home-foot' },
         h('span', {}, 'Progress lives in this browser and nowhere else.'),
         h('button', { class: 'linklike', onclick: resetProgress }, 'Reset progress'))));

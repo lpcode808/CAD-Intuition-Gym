@@ -1,7 +1,140 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-11 by Fable (v2 item 2 — E5, on an open PR awaiting
-Justin's playthrough).
+Last updated: 2026-07-13 by Fable (v3 build round — all three approved
+items, on the branch awaiting Justin's playthrough).
+
+## What changed in this round (v3 build, 2026-07-13)
+
+Justin answered the three `_planning/V3-SCOPE.md` decision points with
+"Triple yes." All three items are built on `claude/sub-agent-setup-favz3d`,
+smallest-first, one commit each, **deliberately not merged**: E6 and the
+recap are new content/scene material, and the standing rule gates those on
+Justin's own playthrough.
+
+- **Share/OG polish** (`index.html`, `og-preview.png`): meta description +
+  Open Graph/Twitter card with absolute URLs to the live Pages site. The
+  preview image is a real 1200×630 screenshot of E1's compare moment
+  ("hole is 34 mm off center" vs. "dead center, at every width"), captured
+  from the app itself, per the scope's "real screenshot, not a logo".
+- **Completion recap** (`app.js`, `exercises.js`, `style.css`, QA): once
+  every available exercise is done, the home screen gains a quiet "What
+  you leave with" card — each exercise's `takeaway.line` beside a new
+  one-sentence `takeaway.flip` ("Unless…"), the counter-moral distilled.
+  Reads live from `EXERCISES`, so it inherited E6 automatically when E6
+  landed one commit later; no progress-schema change; flips are digit-free
+  so the getter contract is untouched; gone on reset. Implementation was
+  delegated to the committed `slice-builder` subagent from exact authored
+  copy (the agent's environment died on a session limit mid-verification;
+  its finished diff was recovered from its worktree, graded line-by-line,
+  and verified here — the two-seat rule held even with a dead builder).
+- **E6 — "Put it downstream"** (`exercises.js`, `app.js` home label "Six
+  decisions", QA): feature order and dependency, the full E1–E5 template
+  with both scenes reusing E5's `featureTree()`/`leaderLine()` vocabulary.
+  Main scene: a faceplate's connector opening keeps growing; two cover
+  screws either hang off the opening's edge (downstream — they ride every
+  spec change) or sit above it in the tree (upstream — the opening
+  swallows them, red, with drift lines, while "the tree still reads
+  clean"). The compare view shows the same four rows in both panes with
+  only the ORDER different — the structural argument made visible.
+  Counter-context: a nameplate whose label gets chained to a mounting
+  hole "for organization"; moving the hole drags the label off center —
+  a false dependency deputizes every edit to vandalize a bystander.
+  Predict answers now balance 3 A / 3 B across the six exercises.
+- **One authored deviation from V3-SCOPE §1's draft**, recorded there too:
+  the drafted fillet-vs-holes scene was reshaped to the connector opening
+  — at the app's fixed 1.6 px/mm scale a growing corner round removes only
+  a few visible px of material (tangent geometry cuts ~0.414 r along the
+  diagonal), which would have violated the "visually undeniable" rule.
+  Same judgment, stronger scene.
+
+Division of labor: all copy, both E6 scenes, and the interaction shape
+were authored in the orchestrating seat; the recap implementation ran
+through `slice-builder`; the E6 QA extension was implemented inline
+because subagent capacity was exhausted this session (deviation from the
+usual split, noted). The copy-audit sweep (getter contract, letter bias,
+register, counter integrity) also ran inline against the committed
+`copy-auditor` checklist.
+
+QA now stands at **282/282** (up from 212 on `main`): the generic loop
+walks all six exercises plus recap presence/absence/verbatim-copy and
+six-exercise reset at both widths, and E6 gets its own scene pass per
+viewport — tree presence, exactly one active row, leader line, the
+four-row ORDER swap asserted from the row text itself, pane-A-holds vs.
+pane-B-breached (two `.hole.is-bad` + two `.offline` in B only), chip
+verdicts, counter "off center" drift under the chained scheme only. The
+first full run FAILED 4 checks — my own new order assertions used
+`allInnerTexts()`, which returns empty for SVG nodes — fixed to
+`textContent` and re-run clean; the app itself never had a defect. The E6
+flow was also driven by hand at 1400×900 and 390×844 across two
+authoring iterations; screenshots caught six real layout collisions
+(clipped breach dimension, size-dim/label collisions, scope-label
+overflow, ghost-label run-on, tree-row text overflow, intent/dim overlap)
+that were fixed before the harness ever ran. Zero real console errors; no
+horizontal overflow at 390 px.
+
+**Status: pushed to `claude/sub-agent-setup-favz3d`, NOT merged.** Justin
+should play E6 and the all-done recap, then merge; the live Pages site
+updates from `main` on merge. After merge, `og-preview.png` becomes
+reachable at its absolute URL — worth one card-validator check on the
+next login.
+
+## What changed in this round (v2 closeout + sub-agent setup, 2026-07-12)
+
+**E5 is merged.** PR #5 landed on `main` on 2026-07-11 (merged by Justin
+after his playthrough — the human-review gate on the feature-tree scene
+vocabulary is cleared). That closes out `_planning/V2-SCOPE.md` entirely:
+deploy, predict decision, bridge cards, and E5 are all shipped. No app code
+(`index.html`, `app.js`, `exercises.js`, `svg.js`, `style.css`, `qa/`) was
+touched this round.
+
+Baseline verified first in this fresh container: `node qa/qa-check.mjs` on
+the merged `main` passed **212/212, exit 0** — zero real console/page
+errors (the 18 Google-Fonts entries are the documented environmental
+bucket), no favicon failures, and the home-screen screenshot read back
+clean with all five exercises and the "start here →" cue intact.
+
+Then this round's actual deliverable — durable sub-agent infrastructure so
+future rounds don't re-improvise the orchestrator/executor split that the
+bridge-card and E5 rounds proved out ad hoc:
+
+- **`.claude/agents/slice-builder.md`** — the bounded mechanical execution
+  seat (content-object wiring, rail rendering, scene primitives, styling,
+  QA extensions). Encodes the hard rules it kept needing to be told: exact
+  scope only, getter contract, no invented copy, no `railPredict()` or
+  progress-schema changes, run QA before reporting, report shaped for
+  line-by-line grading.
+- **`.claude/agents/qa-verifier.md`** — the independent grading seat: rerun
+  the harness itself, drive the full flow at 1400×900 and 390×844, read
+  screenshots back, report PASS/FAIL with evidence and an explicit
+  "unverified in this environment" list. Never edits the app.
+- **`.claude/agents/copy-auditor.md`** — read-only content sweep of
+  `exercises.js`: getter-contract borderline cases, plain-language-first
+  register, counter-context integrity, option-letter bias (the E2-flip
+  lesson), intent-first briefs.
+- **`CLAUDE.md`** (new, repo root) — points Claude Code at `AGENTS.md` as
+  canonical, documents when to use each subagent, and restates the standing
+  do-not-reopen decisions. Prior FABLE prompts had to say "there is no
+  CLAUDE.md, don't wait for one"; now there is one.
+- **`_planning/V3-SCOPE.md`** — v3 candidates scoped but NOT built, exactly
+  like the 2026-07-03 v2 scoping move: E6-order (the tree is a sequence;
+  newly cheap because E5's `featureTree()`/`leaderLine()` vocabulary
+  exists), a completion recap screen, and share meta/OG polish. Ends with
+  the three yes/no decisions Justin needs to make. **Nothing in it is
+  approved.**
+- **`_planning/FABLE-PROMPT-2026-07-12.md`** — the next-round orchestration
+  prompt (supersedes the 2026-07-10 one, whose two PRs both merged). Its
+  core gate: if Justin has answered V3-SCOPE's decision points, build the
+  approved items smallest-first, one PR each, using the committed
+  subagents; if not, the round is maintenance-only and must not guess an
+  approval.
+- **Doc truth restored:** `README.md` (was still "E1-E4, E5 on an open
+  PR") and `_planning/V2-SCOPE.md` (was still "PR open, gated") now state
+  the merged reality.
+
+**Next:** Justin answers the three decision points at the bottom of
+`_planning/V3-SCOPE.md` (E6-order? recap screen? share polish?). Until
+then, nothing new gets built — the standing hard stop on E6/analytics/
+anything-beyond-approved-scope remains in force.
 
 ## What changed in this round (E5, 2026-07-11, second round of the day)
 

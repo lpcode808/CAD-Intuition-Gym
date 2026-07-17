@@ -33,7 +33,7 @@ const PLAYWRIGHT_PIN = '1.58.2'; // matches an already-cached Chromium revision 
 
 const STORE_KEY = 'cad-gym.v1';
 const UNIT_KEY = 'cad-gym.unit';
-const EXERCISE_IDS = ['e1', 'e2', 'e3', 'e4', 'e5'];
+const EXERCISE_IDS = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
 
 /* One distinctive phrase from each exercise's bridge task, so the takeaway
    step can be checked for the right card (not just any card). */
@@ -43,6 +43,7 @@ const BRIDGE_MARKERS = {
   e3: 'turns black',
   e4: '#base',
   e5: 'Remove',
+  e6: 'above the notch',
 };
 
 /* The saved-progress schema `finish()` writes — the bridge card must add
@@ -302,6 +303,104 @@ async function runE5SceneChecks(browser, vp, collectors) {
   return checks;
 }
 
+/* E6's consequence is the tree's ORDER: the same four rows appear in both
+   paths, but which of {opening, screws} sits upstream decides who survives
+   the spec change. These checks assert the order swap itself (row text
+   sequence per pane) plus the geometric fallout (screws swallowed only in
+   path B), so they run as their own pass like E5's. */
+async function runE6SceneChecks(browser, vp, collectors) {
+  const checks = [];
+  const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+  const page = await ctx.newPage();
+  attachErrorListeners(page, `${vp.label} e6-scene`, collectors);
+  const primaryBtn = page.locator('.rail button.btn.primary');
+
+  await page.goto(`${APP_URL}#/e6`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.locator('.player').waitFor({ state: 'visible' });
+
+  /* step 0-2 — predict, then build path A ("cut the opening first") */
+  await primaryBtn.click(); // "Make a prediction →"
+  await page.locator('.rail .option').first().click(); // the predict tap
+  await primaryBtn.click(); // "Lock it in →"
+  await page.locator('.rail .option').first().click(); // build path A
+  await primaryBtn.click(); // "Send in the change request →"
+  await page.locator('.rail input.slider').waitFor({ state: 'visible' });
+
+  /* single view, path A — one in-scene tree, one active row, a leader, four
+     rows with the opening filed ABOVE the screws */
+  const ftreeGroups = await page.locator('.viewport svg .ftree').count();
+  rec(checks, `[${vp.label}] e6: single view draws exactly one in-scene feature tree`, ftreeGroups === 1, `ftree groups=${ftreeGroups}`);
+
+  const activeRows = await page.locator('.viewport svg .ftree-row.is-active').count();
+  rec(checks, `[${vp.label}] e6: exactly one feature-tree row is active in single view`, activeRows === 1, `active rows=${activeRows}`);
+
+  const leaderCount = await page.locator('.viewport svg .leader').count();
+  rec(checks, `[${vp.label}] e6: a leader line ties the edited opening to the geometry`, leaderCount > 0, `leaders=${leaderCount}`);
+
+  const rowTextsA = await page.locator('.viewport svg .ftree-row').evaluateAll((els) => els.map((el) => el.textContent));
+  rec(checks, `[${vp.label}] e6: path A files four features`, rowTextsA.length === 4, `rows=${JSON.stringify(rowTextsA)}`);
+  const aCutIdx = rowTextsA.findIndex((s) => /Cut 1/.test(s));
+  const aHolesIdx = rowTextsA.findIndex((s) => /Holes/.test(s));
+  rec(checks, `[${vp.label}] e6: path A files the opening ABOVE the screws (screws downstream)`,
+    aCutIdx !== -1 && aHolesIdx !== -1 && aCutIdx < aHolesIdx, `cut@${aCutIdx} holes@${aHolesIdx}`);
+
+  /* drive the spec change through, then compare — the SAME four rows in each
+     pane, opposite order; only pane B's screws get swallowed */
+  await setSlider(page, 0.8);
+  const compareBtn = page.locator('.rail button.btn.ghost');
+  await compareBtn.click();
+  await page.locator('.viewport .compare').waitFor({ state: 'visible' });
+
+  const paneA = page.locator('.compare .pane:nth-child(1)');
+  const paneB = page.locator('.compare .pane:nth-child(2)');
+
+  const paneARowTexts = await paneA.locator('svg .ftree-row').evaluateAll((els) => els.map((el) => el.textContent));
+  const paneBRowTexts = await paneB.locator('svg .ftree-row').evaluateAll((els) => els.map((el) => el.textContent));
+  const bCutIdx = paneBRowTexts.findIndex((s) => /Cut 1/.test(s));
+  const bHolesIdx = paneBRowTexts.findIndex((s) => /Holes/.test(s));
+  rec(checks, `[${vp.label}] e6: both compare panes file the same four features`,
+    paneARowTexts.length === 4 && paneBRowTexts.length === 4,
+    `paneA=${paneARowTexts.length} paneB=${paneBRowTexts.length}`);
+  rec(checks, `[${vp.label}] e6: pane B files the screws ABOVE the opening — the order is the only difference`,
+    bCutIdx !== -1 && bHolesIdx !== -1 && bHolesIdx < bCutIdx, `holes@${bHolesIdx} cut@${bCutIdx}`);
+
+  const paneABad = await paneA.locator('svg .hole.is-bad').count();
+  const paneBBad = await paneB.locator('svg .hole.is-bad').count();
+  const paneBDrift = await paneB.locator('svg .offline').count();
+  rec(checks, `[${vp.label}] e6: pane A's screws ride the opening — none breached`, paneABad === 0, `bad holes=${paneABad}`);
+  rec(checks, `[${vp.label}] e6: pane B's screws are swallowed by the opening, drift marked`, paneBBad === 2 && paneBDrift === 2, `bad holes=${paneBBad} drift lines=${paneBDrift}`);
+
+  const chipA = await paneA.locator('.outcome-chip').innerText();
+  const chipB = await paneB.locator('.outcome-chip').innerText();
+  rec(checks, `[${vp.label}] e6: pane A's chip reports the gap held`, chipA.includes('gap held'), `chipA="${chipA}"`);
+  rec(checks, `[${vp.label}] e6: pane B's chip reports the break into the screws`, chipB.includes('into the screws'), `chipB="${chipB}"`);
+
+  await compareBtn.click(); // back to one view before continuing
+  await page.locator('.viewport .compare').waitFor({ state: 'detached' });
+  await primaryBtn.click(); // "Name the lesson →"
+
+  /* step 4 — counter-context. Default scheme is a (label chained to the
+     hole): moving the hole drags the label off center. Scheme b anchors the
+     label to the plate, so the hole moves alone. */
+  await setSlider(page, 0.8);
+  const counterTextA = await page.locator('.viewport svg').evaluate((el) => el.textContent);
+  const counterDriftA = await page.locator('.viewport svg .offline').count();
+  rec(checks, `[${vp.label}] e6 counter: the chained label is dragged "off center"`, counterTextA.includes('off center'), `snippet="${counterTextA.slice(0, 120)}"`);
+  rec(checks, `[${vp.label}] e6 counter: the drag is marked with a drift line`, counterDriftA > 0, `drift lines=${counterDriftA}`);
+
+  await page.locator('.rail .segmented .seg').nth(1).click(); // switch to scheme B
+
+  const counterTextB = await page.locator('.viewport svg').evaluate((el) => el.textContent);
+  const counterDriftB = await page.locator('.viewport svg .offline').count();
+  rec(checks, `[${vp.label}] e6 counter: scheme B's label never leaves center`, !counterTextB.includes('off center') && counterDriftB === 0, `snippet="${counterTextB.slice(0, 120)}" drift=${counterDriftB}`);
+
+  const counterRows = await page.locator('.viewport svg .ftree-row').count();
+  rec(checks, `[${vp.label}] e6 counter: the tree keeps the same four rows — no false reorganizing`, counterRows === 4, `rows=${counterRows}`);
+
+  await ctx.close();
+  return checks;
+}
+
 async function collectUnitStrings(page) {
   return page.evaluate(() => {
     const out = [];
@@ -475,13 +574,13 @@ async function runExercise(page, exId, { capture, shotDir, vpLabel }) {
 async function verifyResetProgress(page) {
   const steps = [];
 
-  const allDoneBefore = await page.evaluate((key) => {
+  const allDoneBefore = await page.evaluate(({ key, ids }) => {
     try {
       const p = JSON.parse(localStorage.getItem(key) || '{}');
-      return ['e1', 'e2', 'e3', 'e4', 'e5'].every((id) => p[id] && p[id].done);
+      return ids.every((id) => p[id] && p[id].done);
     } catch { return false; }
-  }, STORE_KEY);
-  rec(steps, 'all five exercises marked done before reset', allDoneBefore === true);
+  }, { key: STORE_KEY, ids: EXERCISE_IDS });
+  rec(steps, 'all six exercises marked done before reset', allDoneBefore === true);
 
   page.once('dialog', (d) => d.accept());
   await page.locator('.home-foot button.linklike', { hasText: 'Reset progress' }).click();
@@ -491,8 +590,11 @@ async function verifyResetProgress(page) {
   rec(steps, `reset progress clears localStorage key "${STORE_KEY}"`, storeAfter === null, `value=${storeAfter}`);
 
   const statuses = await page.locator('a.ex-row .ex-status').allInnerTexts();
-  const allStartable = statuses.length === 5 && statuses.every((s) => !/done/i.test(s));
-  rec(steps, 'reset progress returns all five to startable', allStartable, `statuses=${JSON.stringify(statuses)}`);
+  const allStartable = statuses.length === EXERCISE_IDS.length && statuses.every((s) => !/done/i.test(s));
+  rec(steps, 'reset progress returns all six to startable', allStartable, `statuses=${JSON.stringify(statuses)}`);
+
+  const recapAfterReset = await page.locator('.recap').count();
+  rec(steps, 'reset progress removes the completion recap', recapAfterReset === 0, `count=${recapAfterReset}`);
 
   return steps;
 }
@@ -558,6 +660,9 @@ async function main() {
       const overflowPassHome = vp.width !== 390 || ovHome.scrollWidth <= ovHome.innerWidth;
       rec(allChecks, `[${vp.label}] no horizontal overflow — home`, overflowPassHome, `scrollWidth=${ovHome.scrollWidth} innerWidth=${ovHome.innerWidth}`);
 
+      const recapFresh = await page.locator('.recap').count();
+      rec(allChecks, `[${vp.label}] completion recap absent on fresh home screen`, recapFresh === 0, `count=${recapFresh}`);
+
       const homeShot = path.join(SHOT_DIR, `home-${vp.label}.png`);
       await page.screenshot({ path: homeShot });
       shotPaths.push(homeShot);
@@ -575,6 +680,22 @@ async function main() {
           );
         }
       }
+
+      console.log('[qa]   verifying completion recap…');
+      const recapCount = await page.locator('.recap').count();
+      rec(allChecks, `[${vp.label}] completion recap present once all exercises are done`, recapCount === 1, `count=${recapCount}`);
+
+      // eslint-disable-next-line no-undef
+      const recapExpected = await page.evaluate(() => EXERCISES.filter((ex) => ex.available)
+        .map((ex) => ({ id: ex.id, line: ex.takeaway.line, flip: ex.takeaway.flip })));
+      const recapRows = await page.locator('.recap .recap-row').count();
+      rec(allChecks, `[${vp.label}] recap row count matches available exercises`, recapRows === recapExpected.length, `rows=${recapRows} expected=${recapExpected.length}`);
+
+      const recapText = recapCount === 1 ? await page.locator('.recap').innerText() : '';
+      const recapMissing = recapExpected
+        .filter((ex) => !recapText.includes(ex.line) || !recapText.includes(ex.flip))
+        .map((ex) => ex.id);
+      rec(allChecks, `[${vp.label}] recap carries every takeaway line and flip verbatim`, recapCount === 1 && recapMissing.length === 0, `missing=${JSON.stringify(recapMissing)}`);
 
       // Layout re-check inside a busy exercise view (compare pane), the most
       // likely place for a mobile overflow bug to show up.
@@ -607,6 +728,7 @@ async function main() {
 
       console.log('[qa]   running E5 feature-tree scene checks…');
       allChecks.push(...await runE5SceneChecks(browser, vp, collectors));
+      allChecks.push(...await runE6SceneChecks(browser, vp, collectors));
     }
   } finally {
     await browser.close();

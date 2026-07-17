@@ -2,6 +2,13 @@
 
 Written 2026-07-03 (Fable orchestration round, see `FABLE-2026-07-03.md`).
 
+## Status update — 2026-07-12: v2 complete
+
+Everything in this document is shipped and merged to `main`. E5's PR (#5)
+was merged by Justin on 2026-07-11 after his playthrough, clearing the
+feature-tree scene-vocabulary gate named below. This doc is now historical;
+v3 candidates live in `V3-SCOPE.md` and remain gated on Justin's sign-off.
+
 ## Status update — 2026-07-10
 
 Justin cleared the E1–E4 review gate on 2026-07-09: **“yes, ship it.”** The
@@ -28,9 +35,9 @@ and shaped the v2 candidates to be buildable immediately after review.
 1. ~~**Deploy to GitHub Pages**~~ — complete; live smoke-checked 2026-07-10.
 2. ~~**Predict-friction decision**~~ — complete; keep the light tap.
 3. ~~**Bridge-to-Onshape cards**~~ — complete 2026-07-11; see below.
-4. ~~**E5**~~ — built 2026-07-11 (PR opened, not merged); **gated on
-   Justin's human playthrough**, since it introduces the new feature-tree
-   scene vocabulary. See §3 below and `HANDOFF.md` for the round writeup.
+4. ~~**E5**~~ — built 2026-07-11; PR #5 merged 2026-07-11 after Justin's
+   playthrough (the feature-tree scene-vocabulary gate is cleared). See §3
+   below and `HANDOFF.md` for the round writeup.
 
 ---
 

@@ -560,6 +560,165 @@ function e5CounterScene(stage, { t, path }) {
   leaderLine(stage, anchors[0].x, anchors[0].y, L - 12, top + 20);
 }
 
+/* ---------------------------------------------------------------- E6 scenes
+   A faceplate with a connector opening that keeps growing, and two cover
+   screws that must hug it. The decision is sequence: the screws can only
+   reference the opening if the opening comes first. Main scene: the opening
+   grows — downstream screws ride it, upstream screws get swallowed by it.
+   Counter scene: a nameplate whose hole and label share nothing — chaining
+   them "for organization" deputizes every hole edit to drag the label. */
+
+function e6MainScene(stage, { t, path }) {
+  const cy = 163;
+  const left = 240, right = 440;                 // 125 mm faceplate
+  const Hpx = 84 * MM;
+  const top = cy - Hpx / 2, bot = cy + Hpx / 2;
+  const holeR = 3 * MM;
+  const cutHalf = lerp(12, 25, t) * MM;          // opening: 24 mm → 50 mm tall
+  const cutDeep = 20 * MM;                       // how far it bites into the plate
+  const cutL = right - cutDeep;
+  const gapMm = 8;                               // the spec: wall between opening and screw edge
+  const wallMm = 20 - cutHalf / MM;              // what's left of that wall in path b
+
+  const rows = path === 'a'
+    ? [{ label: 'Sketch 1 · faceplate' }, { label: 'Extrude 1' },
+       { label: 'Cut 1 · opening', state: 'active' }, { label: 'Holes · screws' }]
+    : path === 'b'
+      ? [{ label: 'Sketch 1 · faceplate' }, { label: 'Extrude 1' },
+         { label: 'Holes · screws' }, { label: 'Cut 1 · opening', state: 'active' }]
+      : [{ label: 'Sketch 1 · faceplate' }, { label: 'Extrude 1' }];
+  const anchors = featureTree(stage, 14, 30, rows);
+  if (path === null) sceneLabel(stage, 14, 92, '+ an opening and two screws — which order?', 'muted', 'start');
+
+  // The plate with the connector opening notched out of its right edge.
+  svgEl('path', {
+    d: `M ${left} ${top} L ${right} ${top} L ${right} ${cy - cutHalf} L ${cutL} ${cy - cutHalf} ` +
+       `L ${cutL} ${cy + cutHalf} L ${right} ${cy + cutHalf} L ${right} ${bot} L ${left} ${bot} Z`,
+    class: 'part',
+  }, stage);
+
+  const hx = right - 10 * MM;
+  const ideal = cutHalf + (gapMm + 3) * MM;      // where a screw riding the opening sits
+  const fixed = (12 + gapMm + 3) * MM;           // where day-one screws were drilled
+  const hy = path === 'b' ? fixed : ideal;
+
+  if (path === null) {
+    const gHalf = 25 * MM;
+    svgEl('line', { x1: cutL, y1: cy - gHalf, x2: right, y2: cy - gHalf, class: 'ghost' }, stage);
+    svgEl('line', { x1: cutL, y1: cy + gHalf, x2: right, y2: cy + gHalf, class: 'ghost' }, stage);
+    sceneLabel(stage, right, top - 26, 'where the opening is headed', 'ghost-label', 'end');
+  }
+
+  // Intent: the screws hug the opening, wherever it ends up.
+  intentMark(stage, hx, cy - ideal);
+  intentMark(stage, hx, cy + ideal, 'intent: ride the opening', 40);
+
+  const breached = path === 'b' && wallMm <= 0;
+  for (const sgn of [-1, 1]) {
+    const y = cy + sgn * hy;
+    if (path === 'a') svgEl('circle', { cx: hx, cy: y, r: holeR + 5, class: 'edit-scope' }, stage);
+    svgEl('circle', {
+      cx: hx, cy: y, r: holeR,
+      class: 'hole' + (path ? (breached ? ' is-bad' : ' is-good') : ''),
+    }, stage);
+    if (breached) {
+      svgEl('line', { x1: hx, y1: cy + sgn * ideal, x2: hx, y2: y, class: 'offline' }, stage);
+    }
+  }
+
+  if (path === 'a') {
+    // The held gap, hung off the opening's own edge — shown on the top screw.
+    dimV(stage, {
+      y1: cy - cutHalf, y2: cy - ideal + holeR, x: right + 22,
+      ext1: right, ext2: hx + holeR, label: fmtLen(gapMm), cls: 'anchor',
+    });
+    svgEl('text', {
+      x: 170, y: top - 20, class: 'scope-label', 'text-anchor': 'start',
+      text: 'open for edit: the opening — the screws ride along',
+    }, stage);
+    leaderLine(stage, anchors[2].x, anchors[2].y, cutL - 4, cy - cutHalf - 6);
+  } else if (path === 'b') {
+    svgEl('rect', {
+      x: cutL - 6, y: cy - cutHalf - 6, width: cutDeep + 6, height: cutHalf * 2 + 12, rx: 6, class: 'edit-scope',
+    }, stage);
+    svgEl('text', {
+      x: 170, y: top - 20, class: 'scope-label', 'text-anchor': 'start',
+      text: 'open for edit: the opening — the screws can’t see it',
+    }, stage);
+    leaderLine(stage, anchors[3].x, anchors[3].y, cutL - 4, cy - cutHalf - 6);
+    if (wallMm > 0) {
+      dimV(stage, {
+        y1: cy - cutHalf, y2: cy - fixed + holeR, x: right + 22,
+        ext1: right, ext2: hx + holeR,
+        label: fmtLen(Math.round(wallMm)), cls: wallMm < 5 ? 'bad' : 'live',
+      });
+    }
+  }
+
+  dimV(stage, {
+    y1: cy - cutHalf, y2: cy + cutHalf, x: cutL + 8, ext1: cutL, ext2: cutL,
+    label: fmtLen(Math.round(cutHalf * 2 / MM)), cls: 'live',
+  });
+}
+
+function e6CounterScene(stage, { t, path }) {
+  const cy = 170;
+  const left = 220, right = 460;                 // 150 mm nameplate
+  const Hpx = 50 * MM;
+  const top = cy - Hpx / 2, bot = cy + Hpx / 2;
+  const cx = (left + right) / 2;
+  const holeX = left + lerp(18, 48, t) * MM;     // the hole, moving inboard
+  const chain = 57 * MM;                         // day-one offset the chain memorized
+  const labelX = path === 'a' ? holeX + chain : cx;
+  const offMm = Math.round(Math.abs(labelX - cx) / MM);
+  const bad = offMm >= 4;
+
+  const rows = [
+    { label: 'Sketch 1 · plate' }, { label: 'Extrude 1' },
+    { label: 'Hole 1 · mount', state: 'active' },
+    { label: path === 'a' ? 'Engrave · off hole' : 'Engrave · off plate' },
+  ];
+  const anchors = featureTree(stage, 14, 30, rows);
+  sceneLabel(stage, cx, 86, 'two features, two jobs — nothing shared', 'muted');
+
+  svgEl('rect', { x: left, y: top, width: right - left, height: Hpx, class: 'part' }, stage);
+
+  centerlineV(stage, cx, top - 30, bot + 16);
+  intentMark(stage, cx, cy, 'intent: label dead center', 82);
+
+  svgEl('circle', { cx: holeX, cy: cy, r: 4 * MM, class: 'hole is-good' }, stage);
+  leaderLine(stage, anchors[2].x, anchors[2].y, holeX - 4 * MM - 6, cy - 10);
+
+  // The engraved label.
+  const lw = 62, lh = 20;
+  svgEl('rect', {
+    x: labelX - lw / 2, y: cy - lh / 2, width: lw, height: lh, rx: 3, class: 'switch-part',
+  }, stage);
+  svgEl('text', {
+    x: labelX, y: cy + 4, class: 'scenelabel' + (bad ? ' bad' : ''),
+    'text-anchor': 'middle', text: 'ACME · 04',
+  }, stage);
+  if (bad) {
+    svgEl('line', { x1: cx, y1: cy, x2: labelX - lw / 2, y2: cy, class: 'offline' }, stage);
+  }
+
+  if (path === 'a') {
+    dimH(stage, {
+      x1: holeX, x2: labelX, y: top - 18, ext1: cy - 4 * MM, ext2: cy - lh / 2,
+      label: `${fmtLen(57)} — chained`, cls: 'anchor',
+    });
+    if (bad) {
+      dimH(stage, {
+        x1: cx, x2: labelX, y: bot + 26, ext1: bot, ext2: cy + lh / 2,
+        label: `${fmtLen(offMm)} off center`, cls: 'bad',
+      });
+    }
+  } else {
+    dimH(stage, { x1: left, x2: cx, y: top - 18, ext1: top, label: '=', cls: 'anchor' });
+    dimH(stage, { x1: cx, x2: right, y: top - 18, ext2: top, label: '=', cls: 'anchor' });
+  }
+}
+
 /* ---------------------------------------------------------------- exercises */
 
 const EXERCISES = [
@@ -658,6 +817,7 @@ const EXERCISES = [
     takeaway: {
       line: 'Dimension to the thing that expresses your intent — here, the center — not to whatever edge is closest.',
       term: 'Plain words: “tie it to the midline.” Onshape’s word for it: a symmetric constraint. (A midpoint constraint gets you there too.)',
+      flip: 'Unless the intent points at an edge — then edge-anchoring is exactly right.',
     },
 
     bridge: {
@@ -815,6 +975,7 @@ const EXERCISES = [
     takeaway: {
       line: 'One source of truth. If two things must stay related, don’t maintain them separately — make one drive the other.',
       term: 'Plain words: “draw one, reflect it.” Onshape’s word for it: a mirror — here a sketch mirror; there’s a feature-level Mirror too.',
+      flip: 'Unless the two must move independently — sometimes separateness is the intent.',
     },
 
     bridge: {
@@ -968,6 +1129,7 @@ const EXERCISES = [
     takeaway: {
       line: 'If it can move, eventually it will. Looking right isn’t being right — lock the sketch until nothing is left to chance.',
       term: 'Plain words: “no slack left.” Onshape’s phrase: a fully defined sketch — entities draw blue while they’re free, black once they’re locked.',
+      flip: 'Unless you’re still exploring — an early sketch earns its slack.',
     },
 
     bridge: {
@@ -1123,6 +1285,7 @@ const EXERCISES = [
     takeaway: {
       line: 'A relationship is intent made durable. When two dimensions belong together, link them — don’t make one memorize the other.',
       get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable, or an equation typed right into the dimension (#box_width + ${fmtLen(4)}).`; },
+      flip: 'Unless a standard already decided the number — then typing it is correct.',
     },
 
     bridge: {
@@ -1283,6 +1446,7 @@ const EXERCISES = [
     takeaway: {
       line: 'The base sketch is the part’s identity — keep it clean. Anything you expect to revisit deserves its own line in the tree: a feature is a future edit, filed in advance.',
       term: 'Plain words: “give the holes their own drawer.” Onshape’s shape for it: a second sketch plus an Extrude set to Remove — or a Hole feature — stacked after the base extrude in the feature list.',
+      flip: 'Unless the decision was never separate — then one clean sketch wins.',
     },
 
     bridge: {
@@ -1343,6 +1507,166 @@ const EXERCISES = [
         return base;
       },
       moral: 'Filing things on their own line — the habit you just built — turns the tree to noise when the decision was never separate. The notch changes with the outline, so it belongs to the outline. The rule was never “more features.” It’s: one line per decision you’ll revisit on its own.',
+    },
+  },
+  {
+    id: 'e6',
+    num: 6,
+    available: true,
+    title: 'Put it downstream',
+    tagline: 'a feature only sees what came before it',
+    principle: 'The tree is a sequence. Put a decision below the thing it must follow.',
+
+    brief: {
+      heading: 'The opening that keeps growing',
+      body: 'This faceplate has a connector opening at its right end, and two screws that clamp the cover tight against a gasket. The screws have exactly one job: stay a thin, constant gap beside the opening — drift away and the gasket leaks. The opening, meanwhile, answers to a connector spec that has already grown twice this year.',
+      intent: 'The screws hug the opening — a set gap, wherever the opening ends up.',
+      change: 'The opening’s size. Connector spec v3 is already in the mail, and it’s bigger.',
+    },
+
+    predict: {
+      prompt: 'The same four features, two possible orders in the tree. The opening is about to grow again. Which order lets the screws keep their gap — without anyone re-placing them?',
+      note: 'Just a guess — you’ll test both in a minute.',
+      answer: 'a',
+    },
+
+    choose: {
+      prompt: 'Now build it. Pick either order — including the one you suspect fails. You’ll flip between them and watch the spec change land.',
+    },
+
+    paths: {
+      a: {
+        label: 'Cut the opening first, hang the screws on it',
+        sub: 'The opening lands above the screws in the tree, so the screws can be dimensioned off its edge — a real gap, held by a real reference.',
+        short: 'downstream',
+        kind: 'intent',
+      },
+      b: {
+        label: 'Drill the screws first, cut the opening after',
+        sub: 'The screws come first, measured from the plate’s own edges. The opening arrives one line later — below them in the tree, invisible to them.',
+        short: 'upstream',
+        kind: 'accident',
+      },
+    },
+
+    change: {
+      request: '“Connector spec v3 is approved — the opening grows again. Open it out. The cover screws keep their gap beside it; the gasket won’t forgive slack.”',
+      sliderLabel: 'Opening size',
+      format: (t) => fmtLen(Math.round(24 + 26 * t)),
+      hint: 'Open it out first — feel it before we name it.',
+    },
+
+    scene: e6MainScene,
+
+    outcome(path, t) {
+      const wall = Math.round(20 - (12 + 13 * t));
+      if (t < 0.02) {
+        return {
+          tone: 'idle',
+          headline: 'the opening hasn’t moved yet',
+          note: 'Open it out and watch two things: the opening, and the screws beside it.',
+        };
+      }
+      if (path === 'b') {
+        if (wall > 0) {
+          return {
+            tone: 'warn',
+            headline: `gap down to ${fmtLen(wall)}`,
+            note: 'The opening is coming for the screws — and the screws can’t see it coming. It sits below them in the tree, and a feature only sees what came before it.',
+          };
+        }
+        return {
+          tone: 'bad',
+          headline: wall === 0 ? 'the gap is gone' : `opening broke ${fmtLen(Math.abs(wall))} into the screws`,
+          note: 'The screws were measured from edges that stopped mattering, and the opening they needed to watch didn’t exist yet on their line of the tree. Now they open into air — and the tree still reads clean. The part is wrong; no row turns red.',
+        };
+      }
+      return {
+        tone: 'good',
+        headline: `gap held at ${fmtLen(8)}, at every size`,
+        note: 'The screws hang off the opening’s own edge — downstream of the change. When the opening moved, the rebuild carried them along. Nobody re-placed anything.',
+      };
+    },
+
+    features(path) {
+      const base = [
+        { label: 'Origin', sub: 'the one reference that never moves' },
+        { label: 'Sketch 1 — faceplate', sub: 'the blank, already sized' },
+        { label: 'Extrude 1', sub: `${fmtLen(4)} thick` },
+      ];
+      if (path === 'a') {
+        base.push({ label: 'Cut 1 — connector opening', sub: 'the thing that keeps growing', active: true });
+        base.push({ label: 'Holes — cover screws', sub: `hung ${fmtLen(8)} off the opening’s edge` });
+      } else if (path === 'b') {
+        base.push({ label: 'Holes — cover screws', sub: 'measured from the plate’s edges — final, they think' });
+        base.push({ label: 'Cut 1 — connector opening', sub: 'arrives below the screws — they can’t see it', active: true });
+      } else {
+        base.push({ label: 'an opening + two screws', sub: 'four features, two possible orders. the order is your call', active: true });
+      }
+      return base;
+    },
+
+    takeaway: {
+      line: 'The tree is a sequence — a feature can only see what’s above it. Put a thing downstream of what it must follow, and every rebuild carries it along for free.',
+      term: 'Plain words: “cut the opening first, then hang the screws on it.” In Onshape the feature list is that sequence, top to bottom — drag the rollback bar up the list and watch each feature’s world shrink to what came before it.',
+      flip: 'Unless nothing real depends on it — a chain nobody needed just drags bystanders.',
+    },
+
+    bridge: {
+      task: 'Extrude a thin plate, cut a notch in one edge, then start a new sketch and dimension a circle off the notch’s edge. Edit the notch wider — the circle keeps its distance without you touching it. Then try to drag the hole feature above the notch in the feature list: Onshape refuses, because up there the edge it needs doesn’t exist yet.',
+      href: 'https://cad.onshape.com',
+    },
+
+    counter: {
+      heading: 'Now flip it',
+      body: 'A nameplate: one mounting hole near the left end, one engraved label that must sit dead center. Two features, two jobs, nothing shared. The downstream habit is ready to “organize” this — chain the label to the hole so the tree reads connected. Then a request lands: move the hole inboard. Same two schemes. Which serves you now?',
+      defaultPath: 'a',
+      scene: e6CounterScene,
+      sliderLabel: 'Move the hole inboard',
+      format: (t) => `${fmtLen(Math.round(30 * t))} inboard`,
+      hint: 'Move the hole — this part has a different job.',
+      pathLabels: {
+        a: 'Chain the label to the hole',
+        b: 'Anchor each to the plate itself',
+      },
+      outcome(path, t) {
+        const off = Math.round(30 * t);
+        if (t < 0.02) {
+          return {
+            tone: 'idle',
+            headline: 'nothing moved yet',
+            note: 'Move the hole and watch the label.',
+          };
+        }
+        if (path === 'a') {
+          if (off < 4) {
+            return { tone: 'warn', headline: `label dragged ${fmtLen(off)} off center`, note: 'The hole is moving. The label is chained to it — so it’s moving too. Nobody asked it to.' };
+          }
+          return {
+            tone: 'bad',
+            headline: `label dragged ${fmtLen(off)} off center`,
+            note: 'The chain was a claim: “when the hole moves, I must move.” The claim was false — the label answers to the plate, not the hole. A dependency nobody needed just deputized this edit to vandalize a bystander.',
+          };
+        }
+        return {
+          tone: 'good',
+          headline: 'the hole moves alone — label dead center',
+          note: 'Two features, two jobs, two anchors. The tree is still a sequence — but nothing in it pretends to depend on what it doesn’t. Independence was the intent.',
+        };
+      },
+      features(path) {
+        const base = [
+          { label: 'Origin', sub: 'the one reference that never moves' },
+          { label: 'Sketch 1 — nameplate', sub: 'the blank the label answers to' },
+          { label: 'Extrude 1', sub: `${fmtLen(3)} thick` },
+          { label: 'Hole 1 — mount', sub: 'the thing being moved', active: true },
+        ];
+        base.push(path === 'a'
+          ? { label: 'Engrave 1 — label', sub: 'chained: measured off Hole 1' }
+          : { label: 'Engrave 1 — label', sub: 'anchored to the plate outline' });
+        return base;
+      },
+      moral: 'Downstream — the habit you just built — is a claim about dependency, and here the claim is false. The label answers to the plate, not the hole. The rule was never “chain everything.” It’s: real dependents go downstream; strangers stay strangers.',
     },
   },
 ];

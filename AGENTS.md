@@ -6,6 +6,12 @@ Read these before editing:
 2. `_planning/FABLE-BUILD-BRIEF.md`
 3. `HANDOFF.md`
 
+If you can run subagents (Claude Code), `.claude/agents/` ships three
+definitions — `slice-builder`, `qa-verifier`, `copy-auditor` — and
+`CLAUDE.md` explains the division of labor. The orchestrating seat owns
+product judgment, copy, and the final call; delegation never transfers the
+responsibility to re-read the diff and re-run QA yourself.
+
 This is a static, local-first web app. Keep it vanilla HTML/CSS/JS unless Justin explicitly asks for a rebuild. No backend, no accounts, no real CAD solver, and no Onshape bridge task in the MVP.
 
 The load-bearing product idea is: **model your intent, not your accident.** Organize work by modeling judgment, not by CAD feature topic.
