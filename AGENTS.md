@@ -52,3 +52,12 @@ later session reads it as settled rather than re-asking.
 Ask sparingly — one or two real asks per session is a lot. Routine judgment calls, file moves,
 cleanups, and merge conflicts are inside the assignment, not asks. If you could proceed under an
 assumption, proceed under it and say which one you took.
+
+## Cursor Cloud specific instructions
+
+Static, no-build vanilla HTML/CSS/JS app — there is no `package.json`, no `node_modules`, and no lint or build step. Only two things to run:
+
+- Run the app: `python3 -m http.server 8000` from the repo root, then open `http://localhost:8000` (see `README.md`). Opening `index.html` via `file://` also works.
+- QA harness: `node qa/qa-check.mjs` (see `qa/README.md`). It needs Playwright + Chromium. In this environment the update script installs Playwright into the npm global prefix `~/.npm-global` and the Chromium browser into `~/.cache/ms-playwright`, so the harness resolves Playwright automatically via `npm root -g` — you do NOT need `QA_ALLOW_INSTALL=1` here. If `node qa/qa-check.mjs` ever reports Playwright not found, re-run the update script rather than reaching for the `QA_ALLOW_INSTALL=1` scratch-install fallback.
+
+Non-obvious env note: `node` is `/exec-daemon/node`; `npm` is nvm's, with its global prefix set to `~/.npm-global`. Google Fonts load fine here, so the harness's "environmental fonts error" exception normally reports 0.
