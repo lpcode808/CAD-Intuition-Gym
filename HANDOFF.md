@@ -1,9 +1,60 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-10-20 by Claude Code (fresh-eyes review round — see
+Last updated: 2026-10-20 by Claude Code (everyday layer + gym round — see
 directly below; v3 status breadcrumb is still at the end of this file).
 
-## What changed in this round (fresh-eyes review, 2026-10-20)
+## What changed in this round (everyday layer, inches, badges — 2026-10-20)
+
+Justin asked for three things in one message: default to inches; "a layer
+to toggle to trace everyday objects… fine if it's not actually Onshape
+looking — we're looking for understanding action and response"; and
+badges/achievements with light gym vibes. Scope note: this is new scope
+beyond `_planning/V3-SCOPE.md`, directed by Justin himself.
+
+- **Inches by default** (`svg.js`): a stored `cad-gym.unit` still wins.
+  Geometry is still authored in round millimeters, so inch values read as
+  decimals (4.72 in, 0.08 in). Re-authoring the scenes around round inch
+  values is possible but touches every scene and its copy — not done.
+  The QA harness pins mm for its mm-authored assertions and separately
+  checks that a cold load comes up in inches.
+- **Everyday layer** (interpretation taken: each CAD part shown as the
+  everyday object it stands for, reacting to the same slider, with the CAD
+  drawing kept on top as the trace). A CAD / Everyday toggle sits above
+  every scene (`cad-gym.layer`, default CAD) with a one-line caption naming
+  the object. Contract in `svg.js` ("everyday layer"): exercises opt in
+  with `everyday: { thing, fill, fillAlt, trace, under, over }` on the main
+  object and on `counter`; `paintScene()` in `app.js` draws under → CAD
+  scene → over. `over()` gets `{ t, path, tone }`, and the framework
+  removes any "good" everyday line while the outcome chip warns or fails,
+  so the two never contradict. Objects: E1 seesaw (tips toward its long
+  side while the dashed drawing stays level) / key rack on a wall screw;
+  E2 cabinet-door handle / wall shelf screwed into a stud; E3 birdhouse
+  front under fixed roof boards / bookend mockup (plywood vs cardboard);
+  E4 lunch box / arcade button; E5 paper template with pencil marks vs
+  sticky notes / shelf bracket clearing a water pipe; E6 desk cable notch
+  with a cord clip / luggage tag with a key ring. E1 and the framework were
+  built here; E2–E6 by two `slice-builder` agents from exact specs and
+  copy, reviewed and merged (E2's stud got a "creeping toward its edge"
+  middle state so the everyday line doesn't overrule the CAD warn).
+- **Gym badges** (`app.js`, `style.css`): ten badges in `cad-gym.badges`
+  (First rep, Called it, Felt the miss, Spotter, Cross-trainer, Kilos &
+  pounds, Sharp eye, Second set, Into the cockpit, Full circuit), a
+  "Your locker" section on home, a toast when one lands, "· N done" on
+  the exercise list, Reset clears badges too. `cad-gym.v1`'s per-exercise
+  schema is unchanged.
+- QA: 312/312 — new checks for the inches default, badges + locker +
+  reset, and the everyday layer at every step/scheme/compare for all six.
+
+**Open for Justin:**
+1. Is this the everyday layer you meant? The alternative reading was a
+   tracing exercise (learner traces a real object's outline). Objects and
+   reaction lines are all in `exercises.js` (`eNMainEveryday` /
+   `eNCounterEveryday`) and easy to swap.
+2. Inches as decimals vs re-authoring scenes to round inch values.
+3. Default layer is CAD; flip `cachedLayer` in `svg.js` to make Everyday
+   the first thing beginners see.
+
+## What changed in the previous round (fresh-eyes review, 2026-10-20)
 
 No new scope. A cold review of the live app (all six exercises driven at
 1400×900 and 390×844, plus 1024/1280 spot checks) and a `copy-auditor`

@@ -382,7 +382,16 @@ function renderPlayer(ex) {
       : 'CAD modeling consequence scene');
     if (everyday && everyday.under) everyday.under(svgEl('g', { class: 'ed-under' }, stage), opts);
     sceneFn(svgEl('g', { class: 'cad' }, stage), opts);
-    if (everyday && everyday.over) everyday.over(svgEl('g', { class: 'ed-over' }, stage), opts);
+    if (everyday && everyday.over) {
+      const over = svgEl('g', { class: 'ed-over' }, stage);
+      everyday.over(over, opts);
+      // The everyday line never contradicts the outcome chip: no "all good"
+      // while the chip still warns (an object can forgive a little drift
+      // that the intent doesn't).
+      if (opts.tone === 'warn' || opts.tone === 'bad') {
+        over.querySelectorAll('.ed-say.good').forEach((n) => n.remove());
+      }
+    }
   }
 
   function setChip(chip, o) {
@@ -394,19 +403,23 @@ function renderPlayer(ex) {
 
   function drawScenes() {
     if (S.step === 4) {
-      paintScene(refs.single, ex.counter.scene, ex.counter.everyday, { t: S.counterT, path: S.counterPath });
-      setChip(refs.single.chip, ex.counter.outcome(S.counterPath, S.counterT));
+      const o = ex.counter.outcome(S.counterPath, S.counterT);
+      paintScene(refs.single, ex.counter.scene, ex.counter.everyday, { t: S.counterT, path: S.counterPath, tone: o.tone });
+      setChip(refs.single.chip, o);
     } else if (S.step === 3 && S.compare) {
       for (const p of ['a', 'b']) {
-        paintScene(refs.panes[p], ex.scene, ex.everyday, { t: S.t, path: p });
-        setChip(refs.panes[p].chip, ex.outcome(p, S.t));
+        const o = ex.outcome(p, S.t);
+        paintScene(refs.panes[p], ex.scene, ex.everyday, { t: S.t, path: p, tone: o.tone });
+        setChip(refs.panes[p].chip, o);
       }
     } else {
+      const o = S.step === 3 ? ex.outcome(S.view, S.t) : null;
       paintScene(refs.single, ex.scene, ex.everyday, {
         t: S.step === 3 ? S.t : 0,
         path: S.step >= 2 ? S.view : null,
+        tone: o ? o.tone : null,
       });
-      setChip(refs.single.chip, S.step === 3 ? ex.outcome(S.view, S.t) : null);
+      setChip(refs.single.chip, o);
     }
   }
 
