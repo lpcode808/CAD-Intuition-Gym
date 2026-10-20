@@ -865,6 +865,9 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 }
 
 @media (max-width: 600px) {
+  /* On phones the unit pill scrolls away with the header instead of
+     floating over the scene and the layer bar. */
+  .unit-toggle { position: absolute; }
   /* Back link gets its own line, beside the unit pill; title + restart drop
      below it where the pill can't reach. justify-self keeps the link's tap
      target the size of its text, not the whole row. */

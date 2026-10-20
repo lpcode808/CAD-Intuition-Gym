@@ -352,16 +352,21 @@ const e2CounterEveryday = {
     const R = lerp(40, 70, t);
     const studX = cx - 40 * MM, connX = cx + R * MM;
     const hxL = path === 'a' ? cx - R * MM : studX;
-    const onStud = Math.abs(studX - hxL) / MM <= 0.5;
+    const drift = Math.abs(studX - hxL);              // px
+    const onStud = drift <= 20 - 5;                   // the whole screw head still on the 40px stud
+    const exact = drift / MM <= 0.5;
 
     // A shelf bracket hanging under the right screw (clear of the width dimension).
     svgEl('path', { d: `M ${connX} ${bot} H ${connX - 16} L ${connX} ${bot + 20} Z`, class: 'ed-metal' }, stage);
 
-    edScrew(stage, hxL, cy, onStud ? 'good' : 'bad', 5);
+    edScrew(stage, hxL, cy, exact ? 'good' : onStud ? '' : 'bad', 5);
     edScrew(stage, connX, cy, 'good', 5);
+    // A real stud forgives a little drift — the CAD chip still warns, and so do we.
     edSay(stage, cx, 44,
-      onStud ? 'Left screw still bites the stud' : 'Left screw slid off the stud — into plain drywall',
-      onStud ? 'good' : 'bad');
+      exact ? 'Left screw still bites the stud'
+        : onStud ? 'Still on the stud — but creeping toward its edge'
+          : 'Left screw slid off the stud — into plain drywall',
+      exact ? 'good' : onStud ? 'muted' : 'bad');
   },
 };
 
