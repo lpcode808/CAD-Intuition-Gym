@@ -297,6 +297,74 @@ function e2CounterScene(stage, { t, path }) {
   }
 }
 
+/* E2, everyday. Main: a cabinet door whose two holes take the two posts of
+   a handle — the new, longer handle drops in only if both holes moved.
+   Counter: a wall shelf whose left screw has to bite the stud hidden in the
+   wall — the mirror drags it off into plain drywall. */
+
+const e2MainEveryday = {
+  thing: 'A cabinet door — its two holes take the two posts of a handle.',
+  fill: '#e8d6b6',
+  under(stage) {
+    edBackdrop(stage, 'ed-wall');
+  },
+  over(stage, { t, path }) {
+    const cx = 260, cy = 160;
+    const S = lerp(80, 140, t);
+    const targetL = cx - (S / 2) * MM, targetR = cx + (S / 2) * MM;
+    const hxR = path === 'b' ? cx + 40 * MM : targetR;
+    const barY = cy - 16;          // low enough to clear the "short" dimension at cy − 24
+    let fits = true;
+
+    // The longer handle: one post over each target, a foot where it meets the door.
+    for (const [x, hx] of [[targetL, targetL], [targetR, hxR]]) {
+      if (Math.abs(hx - x) / MM > 0.5) {
+        fits = false;
+        svgEl('circle', { cx: x, cy, r: 7, class: 'ed-red' }, stage);   // no hole under this post
+      }
+      svgEl('rect', { x: x - 3.5, y: barY, width: 7, height: cy - barY, class: 'ed-metal' }, stage);
+      svgEl('circle', { cx: x, cy, r: 4.5, class: 'ed-metal-dark' }, stage);
+    }
+    svgEl('rect', {
+      x: targetL - 10, y: barY - 4, width: targetR - targetL + 20, height: 8, rx: 4, class: 'ed-metal',
+    }, stage);
+
+    if (!path) return;
+    if (fits) {
+      edSay(stage, cx, 44, t > 0.02 ? 'The longer handle drops right in' : 'The handle fits', 'good');
+    } else {
+      edSay(stage, cx, 44, 'One post hits solid wood — the handle won’t go on', 'bad');
+    }
+  },
+};
+
+const e2CounterEveryday = {
+  thing: 'A wall shelf — its left screw has to bite the wooden stud hidden in the wall.',
+  fill: '#e8d6b6',
+  under(stage) {
+    const studX = 260 - 40 * MM;   // the sensor pad's spot: fixed, forever
+    edBackdrop(stage, 'ed-drywall');
+    svgEl('rect', { x: studX - 20, y: 20, width: 40, height: 260, class: 'ed-stud' }, stage);
+    edSay(stage, studX, 272, 'stud', 'muted');   // at its foot: the top belongs to the response line
+  },
+  over(stage, { t, path }) {
+    const cx = 260, cy = 160, bot = cy + 28 * MM;
+    const R = lerp(40, 70, t);
+    const studX = cx - 40 * MM, connX = cx + R * MM;
+    const hxL = path === 'a' ? cx - R * MM : studX;
+    const onStud = Math.abs(studX - hxL) / MM <= 0.5;
+
+    // A shelf bracket hanging under the right screw (clear of the width dimension).
+    svgEl('path', { d: `M ${connX} ${bot} H ${connX - 16} L ${connX} ${bot + 20} Z`, class: 'ed-metal' }, stage);
+
+    edScrew(stage, hxL, cy, onStud ? 'good' : 'bad', 5);
+    edScrew(stage, connX, cy, 'good', 5);
+    edSay(stage, cx, 44,
+      onStud ? 'Left screw still bites the stud' : 'Left screw slid off the stud — into plain drywall',
+      onStud ? 'good' : 'bad');
+  },
+};
+
 /* ---------------------------------------------------------------- E3 scenes
    A tab profile that looks finished either way. Main scene: a pull lands on
    the apex; the fully defined sketch has no slack to give, the loose one
@@ -376,6 +444,80 @@ function e3CounterScene(stage, { t, path }) {
     sceneLabel(stage, 260, 284, 'rough concept — proportions still on trial', 'muted');
   }
 }
+
+/* E3, everyday. Main: a birdhouse front whose roof boards were cut to the
+   drawn slopes — the locked front holds under the tug, the loose one
+   squirms out from under its roof. Counter: a bookend that's still just an
+   idea — plywood screwed together fights every new proportion, cardboard
+   and tape reshape freely. */
+
+const e3MainEveryday = {
+  thing: 'A birdhouse front — the roof boards are already cut to fit this exact shape.',
+  fill: '#e2c393',
+  under(stage) {
+    const C0 = [348, 153], D0 = [260, 105], E0 = [172, 153];
+    edBackdrop(stage, 'ed-sky');
+    svgEl('rect', { x: 0, y: 262, width: SCENE_W, height: SCENE_H - 262, class: 'ed-ground' }, stage);
+
+    // Two roof boards cut to the ORIGINAL slopes (they never move), set 3–11px
+    // outside the drawn edges and mitered at the ridge. Drawn under, not over:
+    // the CAD "adrift" label and pull arrow sit right on the right-hand board,
+    // and a squirming front now visibly pokes out over its roof.
+    const k = Math.hypot(88, 48);
+    const nx = 48 / k, ny = -88 / k;                 // outward normal, right slope
+    const ridgeY = (d) => D0[1] - (d * k) / 88;      // an offset line meets x = 260
+    for (const s of [-1, 1]) {
+      const P = s < 0 ? E0 : C0;
+      const pts = [
+        [P[0] + s * nx * 3, P[1] + ny * 3], [D0[0], ridgeY(3)],
+        [D0[0], ridgeY(11)], [P[0] + s * nx * 11, P[1] + ny * 11],
+      ];
+      svgEl('path', { d: 'M ' + pts.map((p) => p.join(' ')).join(' L ') + ' Z', class: 'ed-wood-dark' }, stage);
+    }
+  },
+  over(stage, { t, path }) {
+    const off = path === 'b' ? Math.round(27 * t) : 0;
+
+    // Entrance hole and perch, kept above the intent label (y≈200).
+    svgEl('circle', { cx: 260, cy: 154, r: 13, class: 'ed-ink' }, stage);
+    svgEl('rect', { x: 250, y: 175, width: 20, height: 5, rx: 2, class: 'ed-wood-dark' }, stage);
+
+    // y≈26, not 44: at full pull the CAD "pull" label reaches up to y≈40.
+    if (path === 'a' && t > 0.02) {
+      edSay(stage, 260, 26, 'Tugged hard — the front holds and the roof still fits', 'good');
+    } else if (path === 'b' && off >= 3) {
+      edSay(stage, 260, 26, 'The front squirmed — the roof boards don’t fit anymore', 'bad');
+    }
+  },
+};
+
+const e3CounterEveryday = {
+  thing: 'A bookend that’s still just an idea — you’re testing proportions.',
+  fill: ({ path }) => (path === 'b' ? '#d6b07a' : '#e2c393'),   // cardboard vs plywood
+  under(stage) {
+    edBackdrop(stage, 'ed-wall');
+    svgEl('rect', { x: 0, y: 235, width: SCENE_W, height: 14, class: 'ed-floor' }, stage);
+  },
+  over(stage, { t, path }) {
+    const footY = lerp(203, 191, path === 'b' ? t : 0);   // the foot's top, as the CAD scene morphs it
+
+    // Three books standing on the foot, just right of the upright (its right edge is x = 244).
+    for (const [x, w, h, cls] of [[246, 14, 52, 'ed-blue'], [261, 12, 40, 'ed-red'], [274, 16, 58, 'ed-green']]) {
+      svgEl('rect', { x, y: footY - h, width: w, height: h, rx: 1.5, class: cls }, stage);
+    }
+    if (path === 'a') {
+      for (const [x, y] of [[212, 227], [236, 123], [308, 211]]) edScrew(stage, x, y, '', 3.5);
+    }
+
+    if (t <= 0.02) {
+      edSay(stage, 260, 44, path === 'a' ? 'Plywood, already cut and screwed together' : 'Cardboard and tape — easy to reshape', 'muted');
+    } else if (path === 'a') {
+      edSay(stage, 260, 44, 'Every new idea means cutting it all again', 'bad');
+    } else {
+      edSay(stage, 260, 44, 'Reshape it as often as you like — that’s the point', 'good');
+    }
+  },
+};
 
 /* ---------------------------------------------------------------- E4 scenes
    A lid that owes the box 2 mm of overhang. Main scene: the box grows; the
@@ -997,6 +1139,7 @@ const EXERCISES = [
     },
 
     scene: e2MainScene,
+    everyday: e2MainEveryday,
 
     outcome(path, t) {
       const off = Math.round(30 * t);
@@ -1061,6 +1204,7 @@ const EXERCISES = [
       body: 'Same plate, same two schemes — but now the holes have different jobs. The left one sits over a sensor that’s already glued in place. The right one holds a connector the client keeps moving. The request: “shift the connector outward — and don’t you dare touch my sensor.”',
       defaultPath: 'a',
       scene: e2CounterScene,
+      everyday: e2CounterEveryday,
       sliderLabel: 'Connector position',
       format: (t) => `${fmtLen(lerp(40, 70, t))} right of center`,
       hint: 'Move the connector — this pair has a different job.',
@@ -1161,6 +1305,7 @@ const EXERCISES = [
     },
 
     scene: e3MainScene,
+    everyday: e3MainEveryday,
 
     outcome(path, t) {
       const off = Math.round(27 * t);
@@ -1216,6 +1361,7 @@ const EXERCISES = [
       body: 'Ten minutes into a brand-new idea, you’re roughing out a bracket profile just to find its proportions. Nothing depends on it yet — it might not survive the afternoon. Same two disciplines. Which one serves you now?',
       defaultPath: 'a',
       scene: e3CounterScene,
+      everyday: e3CounterEveryday,
       sliderLabel: 'Push the proportions',
       format: (t) => `${Math.round(t * 100)}% toward the stout variant`,
       hint: 'Push the proportions around — this sketch has a different job.',
