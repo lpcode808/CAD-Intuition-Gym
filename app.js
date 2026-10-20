@@ -174,12 +174,11 @@ function renderPlayer(ex) {
     refs.rail = h('div', { class: 'rail', tabindex: '-1' });
 
     const featuresPanel = h('details', { class: 'features-panel' },
-      h('summary', {},
+      h('summary', { onclick: () => { S.featuresOpen = !featuresPanel.open; } },
         h('span', { class: 'panel-kicker' }, 'Features'),
         h('span', { class: 'panel-sub' }, 'Part Studio')),
       refs.features);
     featuresPanel.open = S.featuresOpen ?? window.matchMedia('(min-width: 981px)').matches;
-    featuresPanel.addEventListener('toggle', () => { S.featuresOpen = featuresPanel.open; });
 
     appRoot.replaceChildren(
       h('div', { class: 'player' },

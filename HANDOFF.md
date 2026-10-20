@@ -54,8 +54,14 @@ flagged the lesson-level questions below instead of rewriting lessons.
 - Scene label collisions fixed in E2 counter, E3 main + counter, E4 main +
   counter.
 
-QA: 282/282 after every step; independent `qa-verifier` pass run on the
-result.
+QA: 282/282 after every step. The independent `qa-verifier` pass
+confirmed the layout fixes but caught regressions from the first cut of
+the label moves (E4's intent label hid part of the red "N in short"
+readout; E3/E2/E6 collisions at the bumped size; a full-row back-link tap
+target on phones that could abandon an exercise). All fixed in the
+follow-up commit; compare also stacks again under 980px (the rail sits
+below the scene there anyway), which keeps phones correct in browsers
+without container-query support.
 
 **Flagged, not changed — Justin's call:**
 1. **E5's counter now contradicts E6.** E5's flip says a notch filed as its

@@ -207,7 +207,7 @@ function e2CounterScene(stage, { t, path }) {
   centerlineV(stage, cx, top - 30, bot + 14);
 
   intentMark(stage, sensorX, cy, 'intent: stay on the sensor');
-  intentMark(stage, connX, cy, 'intent: follow the connector', -30);
+  intentMark(stage, connX, cy, 'intent: follow the connector', -51);
 
   svgEl('circle', { cx: hxL, cy, r, class: 'hole' + (badL ? ' is-bad' : ' is-good') }, stage);
   svgEl('circle', { cx: connX, cy, r, class: 'hole is-good' }, stage);
@@ -270,7 +270,7 @@ function e3MainScene(stage, { t, path }) {
 
   svgEl('path', { d: outline(A, B, C, D, E0), class: 'part' + (path === 'a' ? '' : ' is-loose') }, stage);
 
-  intentMark(stage, D0[0], D0[1], 'intent: hold this shape', 52);
+  intentMark(stage, D0[0], D0[1], 'intent: hold this shape', 95);
 
   if (path === 'a') {
     centerlineV(stage, 260, 92, 126);
@@ -346,8 +346,8 @@ function e4MainScene(stage, { t, path }) {
   sceneLabel(stage, lidL - 8, 134, 'lid', 'muted', 'end');
 
   const tickL = cx - (B / 2 + 2) * MM, tickR = cx + (B / 2 + 2) * MM;
-  svgEl('line', { x1: tickL, y1: 118, x2: tickL, y2: 148, class: 'intent-line' }, stage);
-  svgEl('line', { x1: tickR, y1: 118, x2: tickR, y2: 148, class: 'intent-line' }, stage);
+  svgEl('line', { x1: tickL, y1: 64, x2: tickL, y2: 148, class: 'intent-line' }, stage);
+  svgEl('line', { x1: tickR, y1: 64, x2: tickR, y2: 148, class: 'intent-line' }, stage);
 
   dimH(stage, {
     x1: lidL, x2: lidR, y: 94, ext1: lidTop, ext2: lidTop,
@@ -373,7 +373,7 @@ function e4MainScene(stage, { t, path }) {
     dimH(stage, { x1: boxR, x2: lidR, y: 118, ext1: boxTop, ext2: lidTop, label: fmtLen(2), cls: 'anchor' });
   }
 
-  svgEl('text', { x: tickL + 6, y: 112, class: 'intent-label', 'text-anchor': 'start', text: `intent: ${fmtLen(2)} past the box` }, stage);
+  svgEl('text', { x: tickL + 6, y: 74, class: 'intent-label', 'text-anchor': 'start', text: `intent: ${fmtLen(2)} past the box` }, stage);
 }
 
 function e4CounterScene(stage, { t, path }) {
@@ -631,7 +631,7 @@ function e6MainScene(stage, { t, path }) {
   if (path === 'a') {
     // The held gap, hung off the opening's own edge — shown on the top screw.
     dimV(stage, {
-      y1: cy - cutHalf, y2: cy - ideal + holeR, x: right + 22,
+      y1: cy - cutHalf, y2: cy - ideal + holeR, x: right + 14,
       ext1: right, ext2: hx + holeR, label: fmtLen(gapMm), cls: 'anchor',
     });
     svgEl('text', {
@@ -650,7 +650,7 @@ function e6MainScene(stage, { t, path }) {
     leaderLine(stage, anchors[3].x, anchors[3].y, cutL - 4, cy - cutHalf - 6);
     if (wallMm > 0) {
       dimV(stage, {
-        y1: cy - cutHalf, y2: cy - fixed + holeR, x: right + 22,
+        y1: cy - cutHalf, y2: cy - fixed + holeR, x: right + 14,
         ext1: right, ext2: hx + holeR,
         label: fmtLen(Math.round(wallMm)), cls: wallMm < 5 ? 'bad' : 'live',
       });
@@ -692,7 +692,7 @@ function e6CounterScene(stage, { t, path }) {
   leaderLine(stage, anchors[2].x, anchors[2].y, holeX - 4 * MM - 6, cy - 10);
 
   // The engraved label.
-  const lw = 62, lh = 20;
+  const lw = 72, lh = 20;
   svgEl('rect', {
     x: labelX - lw / 2, y: cy - lh / 2, width: lw, height: lh, rx: 3, class: 'switch-part',
   }, stage);

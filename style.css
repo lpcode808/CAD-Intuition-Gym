@@ -695,13 +695,17 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   .rail-panel { order: 2; }
   .features-panel { order: 3; }
   .ex-body.is-compare { grid-template-columns: 1fr; }
+  .compare { grid-template-columns: 1fr; } /* rail sits below here anyway — stack for legibility */
   .home { padding: 40px 20px 56px; }
 }
 
 @media (max-width: 600px) {
   /* Back link gets its own line, beside the unit pill; title + restart drop
-     below it where the pill can't reach. */
-  .backlink { flex-basis: 100%; }
+     below it where the pill can't reach. justify-self keeps the link's tap
+     target the size of its text, not the whole row. */
+  .ex-header-row { display: grid; grid-template-columns: auto 1fr; }
+  .backlink { grid-column: 1 / -1; justify-self: start; }
+  .ex-header-row .linklike { justify-self: start; }
 }
 
 /* A scene drawn narrower than ~480px renders the viewBox at well under 1:1,
