@@ -14,6 +14,11 @@ share/OG meta and a completion recap ("What you leave with") once every
 exercise is done. The live site at
 https://lpcode808.github.io/CAD-Intuition-Gym/ serves `main`.
 
+Every scene also has an **Everyday** layer (toggle above the scene): the
+part drawn as the real thing it stands for — a seesaw, a cabinet handle, a
+lunch box — reacting to the same change, with the CAD drawing kept on top
+as the trace. Light gym badges collect in a locker on the home screen.
+
 Still open: Justin's own playthrough of E6 and the recap (the merge was his
 call; the playthrough may not have happened yet). No E7+ or new scope
 without his sign-off — see `HANDOFF.md`.
@@ -51,8 +56,10 @@ Then open `http://localhost:8000`.
 Progress is stored only in this browser under:
 
 ```txt
-cad-gym.v1
-cad-gym.unit
+cad-gym.v1      progress per exercise
+cad-gym.unit    in (default) or mm
+cad-gym.layer   cad (default) or everyday
+cad-gym.badges  earned badges
 ```
 
 No data leaves the browser.

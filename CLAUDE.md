@@ -37,6 +37,8 @@ copy work. Update `HANDOFF.md` every round: what changed, what remains.
 
 - Light predict tap (`railPredict()`) is settled; no commit-a-guess variant.
 - Vanilla static HTML/CSS/JS; no build step, backend, accounts, or solver.
-- Progress in `localStorage` only (`cad-gym.v1`, `cad-gym.unit`).
+- Progress in `localStorage` only (`cad-gym.v1` progress, `cad-gym.unit`
+  units — inches by default, `cad-gym.layer` CAD/Everyday view,
+  `cad-gym.badges` earned badges).
 - No new exercise (E6+) or scope beyond the current approved `_planning/`
   scope doc without Justin's explicit sign-off.

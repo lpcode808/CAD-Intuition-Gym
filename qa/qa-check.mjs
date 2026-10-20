@@ -33,6 +33,8 @@ const PLAYWRIGHT_PIN = '1.58.2'; // matches an already-cached Chromium revision 
 
 const STORE_KEY = 'cad-gym.v1';
 const UNIT_KEY = 'cad-gym.unit';
+const BADGE_KEY = 'cad-gym.badges';
+const LAYER_KEY = 'cad-gym.layer';
 const EXERCISE_IDS = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
 
 /* One distinctive phrase from each exercise's bridge task, so the takeaway
@@ -594,6 +596,17 @@ async function verifyResetProgress(page) {
   }, { key: STORE_KEY, ids: EXERCISE_IDS });
   rec(steps, 'all six exercises marked done before reset', allDoneBefore === true);
 
+  const badgesBefore = await page.evaluate((key) => {
+    try { return Object.keys(JSON.parse(localStorage.getItem(key) || '{}')); } catch { return []; }
+  }, BADGE_KEY);
+  rec(steps, 'finishing the circuit earned "First rep" and "Full circuit"',
+    badgesBefore.includes('first-rep') && badgesBefore.includes('full-circuit'), `badges=${JSON.stringify(badgesBefore)}`);
+  const lockerBefore = await page.locator('.locker .section-label').innerText();
+  rec(steps, 'locker header counts the earned badges',
+    new RegExp(`${badgesBefore.length} of \\d+ badges`, 'i').test(lockerBefore), `header="${lockerBefore}"`);
+  const earnedTiles = await page.locator('.locker .badge.is-earned').count();
+  rec(steps, 'locker shows one earned tile per earned badge', earnedTiles === badgesBefore.length, `tiles=${earnedTiles} badges=${badgesBefore.length}`);
+
   page.once('dialog', (d) => d.accept());
   await page.locator('.home-foot button.linklike', { hasText: 'Reset progress' }).click();
   await pollUntil(async () => (await page.evaluate((key) => localStorage.getItem(key), STORE_KEY)) === null);
@@ -608,7 +621,92 @@ async function verifyResetProgress(page) {
   const recapAfterReset = await page.locator('.recap').count();
   rec(steps, 'reset progress removes the completion recap', recapAfterReset === 0, `count=${recapAfterReset}`);
 
+  const badgesAfter = await page.evaluate((key) => localStorage.getItem(key), BADGE_KEY);
+  const earnedAfter = await page.locator('.locker .badge.is-earned').count();
+  rec(steps, `reset progress clears the badges ("${BADGE_KEY}") and the locker`, badgesAfter === null && earnedAfter === 0, `value=${badgesAfter} earned tiles=${earnedAfter}`);
+
   return steps;
+}
+
+/* ------------------------------------------------------- everyday layer
+   Every exercise ships an everyday skin for its main scene and its counter.
+   Turn it on once, walk every exercise through every step and both schemes
+   (plus compare), and check the skin is actually drawn each time — then
+   turn it off and check the CAD scene comes back clean. */
+async function runEverydayLayerChecks(browser, vp, collectors) {
+  const checks = [];
+  const ctx = await newMmContext(browser, vp);
+  const page = await ctx.newPage();
+  attachErrorListeners(page, `${vp.label} everyday-layer`, collectors);
+  const primaryBtn = page.locator('.rail button.btn.primary');
+  const skinned = (sel) => page.evaluate((s) => {
+    const svgs = [...document.querySelectorAll(s)];
+    return svgs.length > 0 && svgs.every((svg) => svg.classList.contains('is-everyday')
+      && svg.querySelector('.ed-under, .ed-over') && svg.querySelector('.ed-under, .ed-over').childNodes.length > 0);
+  }, sel);
+
+  await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  // eslint-disable-next-line no-undef
+  const defs = await page.evaluate(() => EXERCISES.filter((ex) => ex.available).map((ex) => ({
+    id: ex.id,
+    main: !!(ex.everyday && ex.everyday.thing),
+    counter: !!(ex.counter.everyday && ex.counter.everyday.thing),
+  })));
+  const missing = defs.filter((d) => !d.main || !d.counter).map((d) => d.id);
+  rec(checks, `[${vp.label}] every exercise ships an everyday layer for its scene and its counter`, missing.length === 0, `missing=${JSON.stringify(missing)}`);
+
+  for (const exId of EXERCISE_IDS) {
+    await page.goto(`${APP_URL}#/${exId}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.locator('.player').waitFor({ state: 'visible' });
+    const bar = await page.locator('.viewport .layer-bar').count();
+    if (!bar) { rec(checks, `[${vp.label}] ${exId}: layer toggle present`, false); continue; }
+
+    if (exId === EXERCISE_IDS[0]) {
+      await page.locator('.viewport .layer-bar .seg', { hasText: 'Everyday' }).click();
+      const stored = await page.evaluate((key) => localStorage.getItem(key), LAYER_KEY);
+      rec(checks, `[${vp.label}] Everyday toggle persists in "${LAYER_KEY}"`, stored === 'everyday', `value=${stored}`);
+      const badge = await page.evaluate((key) => !!JSON.parse(localStorage.getItem(key) || '{}')['cross-trainer'], BADGE_KEY);
+      rec(checks, `[${vp.label}] flipping to Everyday earns "Cross-trainer"`, badge === true);
+    }
+
+    const results = [];
+    const thing = (await page.locator('.viewport .layer-thing').innerText().catch(() => '')).trim();
+    results.push(['intent caption', thing.length > 0]);
+    results.push(['intent', await skinned('.viewport svg.scene')]);
+
+    await primaryBtn.click();
+    await page.locator('.rail .option').first().click();
+    await primaryBtn.click();
+    await page.locator('.rail .option').first().click();
+    await primaryBtn.click();
+    for (const i of [0, 1]) {
+      await page.locator('.rail .segmented .seg').nth(i).click();
+      await setSlider(page, 1);
+      results.push([`change ${'ab'[i]}`, await skinned('.viewport svg.scene')]);
+    }
+    await page.locator('.rail button.btn.ghost').click();
+    results.push(['compare', (await page.locator('.compare svg.scene').count()) === 2 && await skinned('.compare svg.scene')]);
+    await page.locator('.rail button.btn.ghost').click();
+    await primaryBtn.click();
+    for (const i of [0, 1]) {
+      await page.locator('.rail .segmented .seg').nth(i).click();
+      await setSlider(page, 1);
+      results.push([`counter ${'ab'[i]}`, await skinned('.viewport svg.scene')]);
+    }
+    const failed = results.filter(([, ok]) => !ok).map(([n]) => n);
+    rec(checks, `[${vp.label}] ${exId}: everyday layer draws at every step, both schemes, and in compare`, failed.length === 0, failed.length ? `missing at ${JSON.stringify(failed)}` : `${results.length} states`);
+  }
+
+  await page.goto(`${APP_URL}#/${EXERCISE_IDS[0]}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.locator('.viewport .layer-bar .seg', { hasText: 'CAD' }).click();
+  const back = await page.evaluate((key) => ({
+    stored: localStorage.getItem(key),
+    skinned: document.querySelectorAll('svg.scene.is-everyday, svg.scene .ed-under, svg.scene .ed-over').length,
+  }), LAYER_KEY);
+  rec(checks, `[${vp.label}] flipping back to CAD restores the plain scene`, back.stored === 'cad' && back.skinned === 0, JSON.stringify(back));
+
+  await ctx.close();
+  return checks;
 }
 
 /* --------------------------------------------------------------- unit audit */
@@ -755,6 +853,9 @@ async function main() {
       console.log('[qa]   running E5 feature-tree scene checks…');
       allChecks.push(...await runE5SceneChecks(browser, vp, collectors));
       allChecks.push(...await runE6SceneChecks(browser, vp, collectors));
+
+      console.log('[qa]   running everyday-layer checks…');
+      allChecks.push(...await runEverydayLayerChecks(browser, vp, collectors));
     }
   } finally {
     await browser.close();
