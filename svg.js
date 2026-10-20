@@ -37,8 +37,9 @@ const UNIT_KEY = 'cad-gym.unit';
 // re-reading it on every draw. Storage access is guarded because this read
 // runs at script load — a locked-down classroom browser that blocks storage
 // shouldn't take the whole app down, just forget the preference.
-let cachedUnit = 'mm';
-try { if (localStorage.getItem(UNIT_KEY) === 'in') cachedUnit = 'in'; } catch { /* default mm */ }
+// Inches by default (the audience is US classrooms); a stored choice wins.
+let cachedUnit = 'in';
+try { if (localStorage.getItem(UNIT_KEY) === 'mm') cachedUnit = 'mm'; } catch { /* default in */ }
 
 function getUnit() {
   return cachedUnit;
@@ -186,4 +187,44 @@ function featureTree(parent, x, y, rows) {
 function leaderLine(parent, x1, y1, x2, y2) {
   const mx = (x1 + x2) / 2;
   return svgEl('path', { d: `M ${x1} ${y1} C ${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`, class: 'leader' }, parent);
+}
+
+/* ---------------------------------------------------------------- everyday layer
+   An optional skin over the same scenes: the part drawn as the everyday
+   thing it stands for, reacting to the same (t, path) — a plank that tips, a
+   screw that misses its stud. The CAD drawing stays on top as the trace.
+   Still no solver: every reaction is hand-choreographed like the scenes.
+   Each exercise opts in with `everyday: { thing, fill, trace?, under, over }`
+   (and the same on its counter); under() draws beneath the CAD scene, over()
+   on top of it. Colors come from the .ed-* classes in style.css. */
+
+const LAYER_KEY = 'cad-gym.layer';
+
+let cachedLayer = 'cad';
+try { if (localStorage.getItem(LAYER_KEY) === 'everyday') cachedLayer = 'everyday'; } catch { /* default cad */ }
+
+function getLayer() {
+  return cachedLayer;
+}
+function setLayer(layer) {
+  cachedLayer = layer === 'everyday' ? 'everyday' : 'cad';
+  try { localStorage.setItem(LAYER_KEY, cachedLayer); } catch { /* session-only */ }
+}
+
+/* Full-bleed background (wall, sky, desk…) — covers the CAD grid. */
+function edBackdrop(parent, cls = 'ed-wall') {
+  return svgEl('rect', { x: 0, y: 0, width: SCENE_W, height: SCENE_H, class: cls }, parent);
+}
+
+/* A screw head seen from the front: disc + slot. tone: '' | 'good' | 'bad'. */
+function edScrew(parent, x, y, tone = '', r = 6) {
+  const g = svgEl('g', { class: `ed-screw ${tone}`.trim() }, parent);
+  svgEl('circle', { cx: x, cy: y, r, class: 'ed-screw-head' }, g);
+  svgEl('line', { x1: x - r * 0.6, y1: y - r * 0.35, x2: x + r * 0.6, y2: y + r * 0.35, class: 'ed-screw-slot' }, g);
+  return g;
+}
+
+/* What the real object does, in plain words. tone: '' | 'good' | 'bad' | 'muted'. */
+function edSay(parent, x, y, text, tone = '', anchor = 'middle') {
+  return svgEl('text', { x, y, class: `ed-say ${tone}`.trim(), 'text-anchor': anchor, text }, parent);
 }

@@ -130,6 +130,73 @@ function e1CounterScene(stage, { t, path }) {
   }
 }
 
+/* E1, everyday. Main: a seesaw whose pivot pin is the hole — the plank
+   rotates about the pin toward its longer side, while the dashed blue trace
+   (your drawing) stays level. Counter: a key rack that hangs on a screw
+   already in the wall — the hole has to land on that screw. */
+
+const e1MainEveryday = {
+  thing: 'A seesaw — the hole is its pivot pin.',
+  fill: '#e2c393',
+  trace: true,
+  under(stage, { t, path }) {
+    const cx = 260, cy = 160;
+    const Wpx = lerp(120, 200, t) * MM, Hpx = 60 * MM;
+    const left = cx - Wpx / 2, top = cy - Hpx / 2;
+    const hx = path === 'a' ? left + 60 * MM : cx;
+    const tilt = Math.min((Math.abs(hx - cx) / MM) * 0.45, 16);   // degrees, toward the long side
+
+    edBackdrop(stage, 'ed-sky');
+    svgEl('rect', { x: 0, y: 262, width: SCENE_W, height: SCENE_H - 262, class: 'ed-ground' }, stage);
+    svgEl('path', { d: `M ${hx} ${cy + 6} L ${hx - 34} 264 L ${hx + 34} 264 Z`, class: 'ed-red' }, stage);
+
+    const plank = svgEl('g', { transform: `rotate(${tilt} ${hx} ${cy})` }, stage);
+    svgEl('rect', { x: left, y: top, width: Wpx, height: Hpx, rx: 5, class: 'ed-wood' }, plank);
+    for (const f of [0.34, 0.66]) {
+      svgEl('line', { x1: left + 10, y1: top + Hpx * f, x2: left + Wpx - 10, y2: top + Hpx * f, class: 'ed-grain' }, plank);
+    }
+    for (const x of [left + 20, left + Wpx - 20]) {
+      svgEl('rect', { x: x - 3, y: top - 16, width: 6, height: 16, class: 'ed-metal-dark' }, plank);
+      svgEl('rect', { x: x - 11, y: top - 20, width: 22, height: 6, rx: 3, class: 'ed-metal-dark' }, plank);
+    }
+  },
+  over(stage, { t, path }) {
+    const cx = 260, cy = 160;
+    const left = cx - (lerp(120, 200, t) * MM) / 2;
+    const hx = path === 'a' ? left + 60 * MM : cx;
+    svgEl('circle', { cx: hx, cy, r: 3.5, class: 'ed-metal-dark' }, stage);
+    if (!path) return;
+    if (Math.abs(hx - cx) / MM > 1) {
+      edSay(stage, cx, 44, 'Tips toward the long side — the pin left the middle', 'bad');
+    } else {
+      edSay(stage, cx, 44, t > 0.02 ? 'Still balanced, at every length' : 'Balanced', 'good');
+    }
+  },
+};
+
+const e1CounterEveryday = {
+  thing: 'A key rack that hangs on a screw already in the wall — the hole has to land on it.',
+  fill: '#e2c393',
+  under(stage) {
+    edBackdrop(stage, 'ed-wall');
+  },
+  over(stage, { t, path }) {
+    const wallX = 96, cy = 160;
+    const Wpx = lerp(120, 200, t) * MM, bot = cy + 30 * MM;
+    const screwX = wallX + 60 * MM;
+    const hx = path === 'b' ? wallX + Wpx / 2 : screwX;
+    const on = Math.abs(hx - screwX) / MM <= 0.5;
+
+    // Key hooks along the bottom edge (short, clear of the width dimension).
+    for (let x = wallX + 22; x < wallX + Wpx - 12; x += 30) {
+      svgEl('path', { d: `M ${x} ${bot} v 7 a 4 4 0 0 0 8 0`, class: 'ed-line' }, stage);
+    }
+
+    edScrew(stage, screwX, cy, on ? 'good' : 'bad', 5);
+    edSay(stage, 300, 44, on ? 'Hangs right on its screw' : 'The screw’s back here — the rack won’t hang', on ? 'good' : 'bad');
+  },
+};
+
 /* ---------------------------------------------------------------- E2 scenes
    A bracket with two mounting holes that must stay symmetric while their
    spacing changes. Main scene: independent holes mean two dimensions to
@@ -772,6 +839,7 @@ const EXERCISES = [
     },
 
     scene: e1MainScene,
+    everyday: e1MainEveryday,
 
     outcome(path, t) {
       const off = Math.round(40 * t);
@@ -833,6 +901,7 @@ const EXERCISES = [
       get body() { return `Same plate, same two schemes — different job. This one hangs on a wall, and its hole must land on an anchor bolt already set in that wall, ${fmtLen(60)} over. The client still wants the plate wider.`; },
       defaultPath: 'b',
       scene: e1CounterScene,
+      everyday: e1CounterEveryday,
       sliderLabel: 'Plate width',
       format: (t) => fmtLen(lerp(120, 200, t)),
       hint: 'Run the width change one more time — this part has a different job.',

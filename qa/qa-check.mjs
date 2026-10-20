@@ -174,6 +174,18 @@ async function checkOverflow(page) {
   }));
 }
 
+/* The app defaults to inches, but this harness's scene and copy assertions
+   were authored against millimeter text ("gap held at 8 mm"). Pin mm for
+   those passes (only when nothing is stored yet, so in-run toggles stick);
+   the inches default itself is checked separately on a truly cold load. */
+async function newMmContext(browser, vp) {
+  const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+  await ctx.addInitScript((key) => {
+    try { if (!localStorage.getItem(key)) localStorage.setItem(key, 'mm'); } catch { /* ignore */ }
+  }, UNIT_KEY);
+  return ctx;
+}
+
 async function runStorageAndIdHardeningChecks(browser, vp, collectors) {
   const checks = [];
   for (const stored of ['"hello"', '42', '[]', 'null']) {
@@ -187,7 +199,7 @@ async function runStorageAndIdHardeningChecks(browser, vp, collectors) {
     await ctx.close();
   }
 
-  const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+  const ctx = await newMmContext(browser, vp);
   const page = await ctx.newPage();
   attachErrorListeners(page, `${vp.label} unique-svg-ids`, collectors);
   await page.goto(`${APP_URL}#/e1`, { waitUntil: 'domcontentloaded', timeout: 15000 });
@@ -216,7 +228,7 @@ async function runStorageAndIdHardeningChecks(browser, vp, collectors) {
    than folding into the generic per-exercise loop. */
 async function runE5SceneChecks(browser, vp, collectors) {
   const checks = [];
-  const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+  const ctx = await newMmContext(browser, vp);
   const page = await ctx.newPage();
   attachErrorListeners(page, `${vp.label} e5-scene`, collectors);
   const primaryBtn = page.locator('.rail button.btn.primary');
@@ -310,7 +322,7 @@ async function runE5SceneChecks(browser, vp, collectors) {
    path B), so they run as their own pass like E5's. */
 async function runE6SceneChecks(browser, vp, collectors) {
   const checks = [];
-  const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+  const ctx = await newMmContext(browser, vp);
   const page = await ctx.newPage();
   attachErrorListeners(page, `${vp.label} e6-scene`, collectors);
   const primaryBtn = page.locator('.rail button.btn.primary');
@@ -640,7 +652,21 @@ async function main() {
     for (const vp of VIEWPORTS) {
       console.log(`\n[qa] === viewport ${vp.label} ===`);
 
-      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+      // A truly cold load (nothing stored) must come up in inches.
+      {
+        const coldCtx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+        const coldPage = await coldCtx.newPage();
+        attachErrorListeners(coldPage, `${vp.label} cold-units`, collectors);
+        await coldPage.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        const cold = await coldPage.evaluate(() => {
+          const btn = document.querySelector('.unit-toggle');
+          return { text: btn && btn.textContent, pressed: btn && btn.getAttribute('aria-pressed') };
+        });
+        rec(allChecks, `[${vp.label}] cold load defaults to inches`, cold.text === 'in' && cold.pressed === 'true', JSON.stringify(cold));
+        await coldCtx.close();
+      }
+
+      const ctx = await newMmContext(browser, vp);
       const page = await ctx.newPage();
       attachErrorListeners(page, `${vp.label} main`, collectors);
 
