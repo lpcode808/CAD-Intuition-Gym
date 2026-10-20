@@ -193,7 +193,7 @@ const e1CounterEveryday = {
     }
 
     edScrew(stage, screwX, cy, on ? 'good' : 'bad', 5);
-    edSay(stage, 300, 44, on ? 'Hangs right on its screw' : 'The screw’s back here — the rack won’t hang', on ? 'good' : 'bad');
+    edSay(stage, 300, 44, on ? 'Hangs right on its screw' : 'The hole missed its screw — the rack won’t hang', on ? 'good' : 'bad');
   },
 };
 
@@ -344,24 +344,25 @@ const e2CounterEveryday = {
   under(stage) {
     const studX = 260 - 40 * MM;   // the sensor pad's spot: fixed, forever
     edBackdrop(stage, 'ed-drywall');
-    svgEl('rect', { x: studX - 20, y: 20, width: 40, height: 260, class: 'ed-stud' }, stage);
+    // Drawn narrower than a real stud on purpose: the glued sensor forgives
+    // almost nothing, so the screw should leave the stud when the chip fails.
+    svgEl('rect', { x: studX - 12, y: 20, width: 24, height: 260, class: 'ed-stud' }, stage);
     edSay(stage, studX, 272, 'stud', 'muted');   // at its foot: the top belongs to the response line
   },
-  over(stage, { t, path }) {
+  over(stage, { t, path, tone }) {
     const cx = 260, cy = 160, bot = cy + 28 * MM;
     const R = lerp(40, 70, t);
     const studX = cx - 40 * MM, connX = cx + R * MM;
     const hxL = path === 'a' ? cx - R * MM : studX;
-    const drift = Math.abs(studX - hxL);              // px
-    const onStud = drift <= 20 - 5;                   // the whole screw head still on the 40px stud
-    const exact = drift / MM <= 0.5;
+    const exact = tone !== 'warn' && tone !== 'bad';
+    const onStud = tone !== 'bad';
 
     // A shelf bracket hanging under the right screw (clear of the width dimension).
     svgEl('path', { d: `M ${connX} ${bot} H ${connX - 16} L ${connX} ${bot + 20} Z`, class: 'ed-metal' }, stage);
 
     edScrew(stage, hxL, cy, exact ? 'good' : onStud ? '' : 'bad', 5);
     edScrew(stage, connX, cy, 'good', 5);
-    // A real stud forgives a little drift — the CAD chip still warns, and so do we.
+    // Wording follows the chip: bites (good) → creeping (warn) → off the stud (bad).
     edSay(stage, cx, 44,
       exact ? 'Left screw still bites the stud'
         : onStud ? 'Still on the stud — but creeping toward its edge'
@@ -1100,12 +1101,12 @@ function e6CounterScene(stage, { t, path }) {
 const e6MainEveryday = {
   thing: 'A desk with a cable notch in its edge — more cords keep showing up.',
   fill: '#e2c393',
-  under(stage, { t, path }) {
+  under(stage, { t, path, tone }) {
     const cy = 163, right = 440, holeR = 3 * MM;
     const cutHalf = lerp(12, 25, t) * MM;
     const cutL = right - 20 * MM, hx = right - 10 * MM;
     const hy = path === 'b' ? 23 * MM : cutHalf + 11 * MM;
-    const breached = path === 'b' && 20 - cutHalf / MM <= 0;
+    const breached = path === 'b' && (tone === 'bad' || 20 - cutHalf / MM <= 0);
 
     edBackdrop(stage, 'ed-floor');
 
@@ -1137,19 +1138,19 @@ const e6MainEveryday = {
       }
     }
   },
-  over(stage, { t, path }) {
+  over(stage, { t, path, tone }) {
     const cy = 163, right = 440, holeR = 3 * MM;
     const cutHalf = lerp(12, 25, t) * MM;
     const hx = right - 10 * MM;
     const hy = path === 'b' ? 23 * MM : cutHalf + 11 * MM;
-    const breached = path === 'b' && 20 - cutHalf / MM <= 0;
+    const breached = path === 'b' && (tone === 'bad' || 20 - cutHalf / MM <= 0);
 
     if (!breached) {
       // The clip's ends, on the desk, screwed down at the CAD screw spots.
       for (const sgn of [-1, 1]) {
         const yIn = cy + sgn * cutHalf, yS = cy + sgn * hy;
         svgEl('rect', { x: hx - 4, y: Math.min(yIn, yS), width: 8, height: Math.abs(yS - yIn), class: 'ed-metal' }, stage);
-        edScrew(stage, hx, yS, path ? 'good' : '', holeR);
+        edScrew(stage, hx, yS, tone === 'good' ? 'good' : '', holeR);   // green only once the chip agrees
       }
     }
 
@@ -1245,7 +1246,7 @@ const EXERCISES = [
     everyday: e1MainEveryday,
 
     outcome(path, t) {
-      const off = Math.round(40 * t);
+      const off = Math.round(40 * t);   // thresholds in whole mm; readouts print the exact value, as the scene does
       if (t < 0.02) {
         return {
           tone: 'idle',
@@ -1257,13 +1258,13 @@ const EXERCISES = [
         if (off < 6) {
           return {
             tone: 'warn',
-            headline: `hole is ${fmtLen(off)} off center`,
+            headline: `hole is ${fmtLen(40 * t)} off center`,
             note: 'Only a hair off so far. Keep going.',
           };
         }
         return {
           tone: 'bad',
-          headline: `hole is ${fmtLen(off)} off center`,
+          headline: `hole is ${fmtLen(40 * t)} off center`,
           note: `The ${fmtLen(60)} dimension is doing exactly what you said — not what you meant. It keeps the hole loyal to an edge that stopped mattering.`,
         };
       }
@@ -1323,11 +1324,11 @@ const EXERCISES = [
         }
         if (path === 'b') {
           if (off < 6) {
-            return { tone: 'warn', headline: `hole is ${fmtLen(off)} off the bolt`, note: 'Drifting already.' };
+            return { tone: 'warn', headline: `hole is ${fmtLen(40 * t)} off the bolt`, note: 'Drifting already.' };
           }
           return {
             tone: 'bad',
-            headline: `hole is ${fmtLen(off)} off the bolt`,
+            headline: `hole is ${fmtLen(40 * t)} off the bolt`,
             note: '“Stay centered” was never this part’s job. The midline moved; the bolt didn’t.',
           };
         }
@@ -1415,13 +1416,13 @@ const EXERCISES = [
         if (off < 5) {
           return {
             tone: 'warn',
-            headline: `right hole is ${fmtLen(off)} behind`,
+            headline: `right hole is ${fmtLen(30 * t)} behind`,
             note: 'Barely visible yet — but notice only one hole is listening to you.',
           };
         }
         return {
           tone: 'bad',
-          headline: `right hole is ${fmtLen(off)} out of place`,
+          headline: `right hole is ${fmtLen(30 * t)} out of place`,
           note: `You dutifully updated the left dimension. The right one is a separate copy, still sitting at ${fmtLen(40)} — nobody told it. Two copies means two edits, every time, forever.`,
         };
       }
@@ -1485,11 +1486,11 @@ const EXERCISES = [
         }
         if (path === 'a') {
           if (off < 5) {
-            return { tone: 'warn', headline: `sensor hole dragged ${fmtLen(off)}`, note: 'The left hole is moving. Nobody asked it to.' };
+            return { tone: 'warn', headline: `sensor hole dragged ${fmtLen(30 * t)}`, note: 'The left hole is moving. Nobody asked it to.' };
           }
           return {
             tone: 'bad',
-            headline: `sensor hole dragged ${fmtLen(off)} off its pad`,
+            headline: `sensor hole dragged ${fmtLen(30 * t)} off its pad`,
             note: 'The mirror is doing its one job: keeping the two identical. But these holes were never twins — they only matched by coincidence on day one.',
           };
         }
@@ -1799,11 +1800,11 @@ const EXERCISES = [
         }
         if (path === 'b') {
           if (g < 4) {
-            return { tone: 'warn', headline: `hole is ${fmtLen(g)} oversize`, note: 'The hole is growing with the panel. The switch is not.' };
+            return { tone: 'warn', headline: `hole is ${fmtLen(20 * t)} oversize`, note: 'The hole is growing with the panel. The switch is not.' };
           }
           return {
             tone: 'bad',
-            headline: `hole is ⌀${fmtLen(20 + g)} — the switch is ⌀${fmtLen(20)}`,
+            headline: `hole is ⌀${fmtLen(20 + 20 * t)} — the switch is ⌀${fmtLen(20)}`,
             note: 'The link is doing what links do: passing the change along. But the switch doesn’t scale with your panel. This dimension answers to a standard, not to a neighbor.',
           };
         }

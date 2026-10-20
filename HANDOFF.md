@@ -44,6 +44,17 @@ beyond `_planning/V3-SCOPE.md`, directed by Justin himself.
   schema is unchanged.
 - QA: 312/312 — new checks for the inches default, badges + locker +
   reset, and the everyday layer at every step/scheme/compare for all six.
+- Independent `qa-verifier` pass: PASS (16,968 swept states, no everyday
+  "good" line under a warning chip). Its medium findings were fixed after:
+  chips rounded to whole mm before converting, so in inches they disagreed
+  with the scene by 0.01 in (now print the exact value, thresholds still in
+  whole mm); E6's clip screws stayed green under a warning chip (now follow
+  the chip); E2's stud reassured while the chip failed (stud drawn narrower,
+  wording follows the chip); illustrations muddied CAD labels (heavier
+  label halos in Everyday mode). Also: focus stays on the layer toggle,
+  at most three toasts at once, locker 5×2 and placed after the recap.
+  Not re-verified by a second verifier pass — re-checked here by QA and
+  screenshots.
 
 **Open for Justin:**
 1. Is this the everyday layer you meant? The alternative reading was a

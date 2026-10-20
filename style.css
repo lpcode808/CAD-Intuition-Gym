@@ -197,14 +197,16 @@ a.ex-row:hover { background: var(--panel-2); }
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); /* 5 × 2 on desktop, 2 × 5 on phones */
   gap: 8px;
 }
 .badge {
   display: flex;
-  gap: 11px;
-  align-items: flex-start;
-  padding: 11px 12px;
+  flex-direction: column;
+  gap: 7px;
+  align-items: center;
+  text-align: center;
+  padding: 12px 10px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -805,6 +807,8 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .scene.is-everyday .switch-part { fill: var(--ed-fill-alt, #d7e0ea); }
 .scene.is-everyday .dim { opacity: 0.8; }
 .scene.is-trace .part { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 6 4; }
+/* Over an illustration, the CAD labels need a heavier halo to stay crisp. */
+.scene.is-everyday :is(.dimtext, .scenelabel, .ghost-label, .intent-label, .scope-label) { stroke-width: 5; stroke-linejoin: round; }
 
 .ed-wall { fill: #f6efe3; }
 .ed-sky { fill: #e4f0fa; }
@@ -865,8 +869,8 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 }
 
 @media (max-width: 480px) {
-  .locker-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
-  .badge { padding: 9px 10px; gap: 8px; }
+  .locker-grid { gap: 6px; }
+  .badge { padding: 10px 8px; }
   .medal { width: 28px; height: 28px; font-size: 10.5px; }
   .toast { padding: 9px 12px; }
   .toast-how { display: none; } /* name only — three at once shouldn't cover the screen */

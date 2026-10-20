@@ -92,6 +92,7 @@ function showToast(badge) {
       h('span', { class: 'toast-kicker' }, 'Badge earned'),
       h('span', { class: 'toast-name' }, badge.name),
       h('span', { class: 'toast-how' }, badge.how)));
+  while (toastHost.children.length >= 3) toastHost.firstChild.remove();
   toastHost.append(el);
   setTimeout(() => el.classList.add('is-leaving'), 3400);
   setTimeout(() => el.remove(), 3800);
@@ -169,7 +170,6 @@ function renderHome() {
         anyDone && h('span', { class: 'section-count' },
           ` · ${availableExercises.filter((ex) => prog[ex.id] && prog[ex.id].done).length} done`)),
       h('div', { class: 'ex-list' }, rows),
-      locker(),
       allDone && h('section', { class: 'recap' },
         h('h2', { class: 'section-label' }, 'What you leave with'),
         h('p', { class: 'recap-lede' }, 'Every rule you just learned, next to the flip that keeps it honest. The rule was never the rule — the intent is.'),
@@ -179,6 +179,7 @@ function renderHome() {
             h('div', { class: 'recap-text' },
               h('p', { class: 'recap-line' }, ex.takeaway.line),
               h('p', { class: 'recap-flip' }, ex.takeaway.flip)))))),
+      locker(),
       h('footer', { class: 'home-foot' },
         h('span', {}, 'Progress lives in this browser and nowhere else.'),
         h('button', { class: 'linklike', onclick: resetProgress }, 'Reset progress'))));
@@ -358,6 +359,8 @@ function renderPlayer(ex) {
               setLayer(v);
               if (v === 'everyday') award('cross-trainer');
               renderViewport();
+              const again = refs.viewport.querySelector('.layer-bar .seg.is-on');
+              if (again) again.focus();
             },
           }, label))),
       getLayer() === 'everyday'
