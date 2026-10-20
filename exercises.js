@@ -624,6 +624,77 @@ function e4CounterScene(stage, { t, path }) {
   dimH(stage, { x1: cx - Ppx / 2, x2: cx + Ppx / 2, y: pBot + 26, ext1: pBot, ext2: pBot, label: fmtLen(P), cls: 'live' });
 }
 
+/* E4, everyday. Main: a lunch box on the counter whose lid has to hang just
+   past the rim to snap shut — the typed lid gets left behind as the box
+   grows and the lunch is out in the open. Counter: an arcade button that
+   only comes in one size — the linked hole outgrows it and it drops through. */
+
+const e4MainEveryday = {
+  thing: 'A lunch box — the lid has to hang just past the rim to snap shut.',
+  fill: '#bfe3dc',
+  fillAlt: '#f3a65a',
+  under(stage) {
+    edBackdrop(stage, 'ed-wall');
+    svgEl('rect', { x: 0, y: 230, width: SCENE_W, height: SCENE_H - 230, class: 'ed-floor' }, stage);
+  },
+  over(stage, { t, path }) {
+    const cx = 260;
+    const B = lerp(100, 160, t);
+    const innerBot = 230 - 8 * MM;
+
+    // Lunch on the cavity floor, either side of the CAD "box" label.
+    const ax = cx - 38, ay = innerBot - 11;
+    svgEl('circle', { cx: ax, cy: ay, r: 11, class: 'ed-red' }, stage);
+    svgEl('path', { d: `M ${ax} ${ay - 9} q 0.5 -4 3 -7`, class: 'ed-line' }, stage);
+    svgEl('ellipse', {
+      cx: ax + 7, cy: ay - 13, rx: 4.5, ry: 2.2, transform: `rotate(-25 ${ax + 7} ${ay - 13})`, class: 'ed-green',
+    }, stage);
+    const sl = cx + 16, sr = cx + 60, st = innerBot - 34;
+    svgEl('path', { d: `M ${sl} ${innerBot} L ${sl} ${st - 3} L ${sr + 3} ${innerBot} Z`, class: 'ed-green' }, stage);
+    svgEl('path', { d: `M ${sl} ${innerBot} L ${sl} ${st} L ${sr} ${innerBot} Z`, class: 'ed-tan' }, stage);
+
+    if (!path) return;
+    const boxR = cx + (B * MM) / 2;
+    const lidR = cx + ((path === 'b' ? B + 4 : 104) * MM) / 2;
+    if (path === 'a' && boxR - lidR > 1) {
+      edSay(stage, cx, 40, 'Lid’s too small now — lunch is out in the open', 'bad');
+    } else {
+      edSay(stage, cx, 40, t > 0.02 ? 'The lid snaps on at every size' : 'The lid snaps on', 'good');
+    }
+  },
+};
+
+const e4CounterEveryday = {
+  thing: 'An arcade button — it only comes in one size.',
+  fill: '#d5dbe4',
+  fillAlt: '#e2574c',
+  under(stage) {
+    edBackdrop(stage, 'ed-wall');
+  },
+  over(stage, { t, path }) {
+    const cx = 260, cy = 168;
+    const dHole = path === 'b' ? lerp(80, 160, t) / 4 : 20;
+    const rH = (dHole / 2) * MM, rS = 10 * MM;
+
+    // The button's dome and a glint, inside the CAD switch body.
+    svgEl('circle', { cx, cy, r: rS - 5, class: 'ed-red' }, stage);
+    svgEl('ellipse', {
+      cx: cx - 4, cy: cy - 4.5, rx: 3.2, ry: 1.8, transform: `rotate(-35 ${cx - 4} ${cy - 4.5})`, class: 'ed-paper',
+    }, stage);
+
+    if (dHole - 20 > 0.5) {
+      // Nothing left for its rim to sit on: a small arrow in the gap below it.
+      const y1 = cy + rS + 3, y2 = Math.min(y1 + 10, cy + rH + 5);
+      if (y2 - y1 >= 5) {
+        svgEl('path', { d: `M ${cx} ${y1} V ${y2} M ${cx - 3.5} ${y2 - 4} L ${cx} ${y2} L ${cx + 3.5} ${y2 - 4}`, class: 'ed-line' }, stage);
+      }
+      edSay(stage, cx, 60, 'The hole outgrew the button — it drops right through', 'bad');
+    } else {
+      edSay(stage, cx, 60, t > 0.02 ? 'The button clicks in at every panel size' : 'The button clicks in', 'good');
+    }
+  },
+};
+
 /* ---------------------------------------------------------------- E5 scenes
    A plate whose outline is settled but whose hole pattern keeps changing.
    The decision is structural: where in the tree does the hole pattern live?
@@ -775,6 +846,91 @@ function e5CounterScene(stage, { t, path }) {
   }, stage);
   leaderLine(stage, anchors[0].x, anchors[0].y, L - 12, top + 20);
 }
+
+/* E5, everyday. Main: a paper template on a desk. In one sketch the holes
+   are pencil marks on the sheet itself, so erasing the old ones scuffs its
+   edge; as their own feature each hole sits on its own sticky note, and the
+   old notes peel off without touching the sheet. Counter: a shelf bracket
+   whose notch has to clear a water pipe — the weld bead becomes the pipe. */
+
+const e5MainEveryday = {
+  thing: 'A paper template with marks for the holes.',
+  fill: '#fffdf7',
+  under(stage) {
+    edBackdrop(stage, 'ed-floor');
+  },
+  over(stage, { t, path }) {
+    const cx = 340, cy = 163;
+    const right = cx + (130 * MM) / 2;
+    const r = 4 * MM;
+    const gouge = path === 'a' ? 12 * t : 0;
+    const gpx = gouge * MM;
+    const keep = [
+      [lerp(cx - 30 * MM, cx - 45 * MM, t), lerp(cy - 16 * MM, cy, t)],
+      [lerp(cx + 30 * MM, cx + 45 * MM, t), lerp(cy + 16 * MM, cy, t)],
+    ];
+    const old = [[cx + 30 * MM, cy - 16 * MM], [cx - 30 * MM, cy + 16 * MM]];
+    const S = 24;                                  // sticky-note side
+
+    if (path === 'b') {
+      // Each hole on its own sticky note; the CAD halo and hole redrawn on top.
+      keep.forEach(([x, y], i) => {
+        svgEl('rect', {
+          x: x - S / 2, y: y - S / 2, width: S, height: S, class: 'ed-sticky',
+          transform: `rotate(${i ? 5 : -6} ${x} ${y})`,
+        }, stage);
+        svgEl('circle', { cx: x, cy: y, r: r + 5, class: 'edit-scope' }, stage);
+        svgEl('circle', { cx: x, cy: y, r, class: 'hole is-good' }, stage);
+      });
+      if (t < 0.98) {
+        // The old two peel away as their holes fade.
+        old.forEach(([x, y], i) => {
+          const g = svgEl('g', { opacity: String(1 - t) }, stage);
+          svgEl('rect', {
+            x: x - S / 2, y: y - S / 2, width: S, height: S, class: 'ed-sticky',
+            transform: `translate(${6 * t} ${-8 * t}) rotate(${(i ? -4 : 7) + 16 * t} ${x} ${y})`,
+          }, g);
+          svgEl('circle', { cx: x, cy: y, r: r * (1 - t) + 5, class: 'edit-scope' }, g);
+          svgEl('circle', { cx: x, cy: y, r: r * (1 - t), class: 'hole' }, g);
+        });
+      }
+      if (t > 0.02) edSay(stage, 280, 284, 'Peeled off the old notes — the sheet never noticed', 'good');
+      return;
+    }
+
+    // One sketch: the holes are pencil marks on the sheet; the old two get erased.
+    for (const [x, y] of keep) svgEl('circle', { cx: x, cy: y, r: r + 3, class: 'ed-pencil' }, stage);
+    if (t < 0.98) {
+      const g = svgEl('g', { opacity: String(1 - t) }, stage);
+      for (const [x, y] of old) svgEl('circle', { cx: x, cy: y, r: r + 3, class: 'ed-pencil' }, g);
+    }
+    if (path === 'a' && gouge >= 1) {
+      const sx = right - gpx / 2 - 2;
+      svgEl('ellipse', {
+        cx: sx, cy, rx: gpx / 2 + 7, ry: 30, transform: `rotate(-6 ${sx} ${cy})`, class: 'ed-smudge',
+      }, stage);
+      edSay(stage, 280, 284, 'Erasing the old marks scuffed the edge of the sheet', 'bad');
+    }
+  },
+};
+
+const e5CounterEveryday = {
+  thing: 'A shelf bracket with a notch that has to clear a water pipe.',
+  fill: '#c9d0d8',
+  under(stage) {
+    edBackdrop(stage, 'ed-wall');
+  },
+  over(stage, { t, path }) {
+    const top = lerp(152, 164.8, t);
+    const beadX = lerp(362, 402, t);
+    const clear = path === 'a' || Math.round(25 * t) < 4;
+
+    // The pipe, seen end-on, right where the CAD bead sits.
+    svgEl('circle', { cx: beadX, cy: top + 8, r: 7, class: 'ed-metal-dark' }, stage);
+    svgEl('circle', { cx: beadX, cy: top + 8, r: 3.5, class: 'ed-metal' }, stage);
+    edSay(stage, 330, 52, clear ? 'The notch clears the pipe' : 'The bracket hits the pipe', clear ? 'good' : 'bad');
+  },
+};
 
 /* ---------------------------------------------------------------- E6 scenes
    A faceplate with a connector opening that keeps growing, and two cover
@@ -934,6 +1090,106 @@ function e6CounterScene(stage, { t, path }) {
     dimH(stage, { x1: cx, x2: right, y: top - 18, ext2: top, label: '=', cls: 'anchor' });
   }
 }
+
+/* E6, everyday. Main: a desk seen from above, a cable notch in its back
+   edge and a cord clip screwed down either side of it; more cords keep
+   arriving, so the notch keeps growing. Screws placed off the notch ride
+   along; screws placed off the desk edges get chewed through. Counter: a
+   luggage tag — moving the ring hole must not drag the name off center. */
+
+const e6MainEveryday = {
+  thing: 'A desk with a cable notch in its edge — more cords keep showing up.',
+  fill: '#e2c393',
+  under(stage, { t, path }) {
+    const cy = 163, right = 440, holeR = 3 * MM;
+    const cutHalf = lerp(12, 25, t) * MM;
+    const cutL = right - 20 * MM, hx = right - 10 * MM;
+    const hy = path === 'b' ? 23 * MM : cutHalf + 11 * MM;
+    const breached = path === 'b' && 20 - cutHalf / MM <= 0;
+
+    edBackdrop(stage, 'ed-floor');
+
+    // Cords, drawn beneath the desk: they show in the notch and past its edge,
+    // under the CAD dimensions. Two at first, five by the end.
+    const n = Math.round(2 + 3 * t);
+    const step = (2 * cutHalf - 12) / n;
+    const kinds = ['ed-ink', 'ed-blue', 'ed-red', 'ed-yellow', 'ed-green'];
+    for (let i = 0; i < n; i++) {
+      const y = cy + (i - (n - 1) / 2) * step;
+      const y2 = y + (y - cy) * 0.3;                 // fanning out once past the edge
+      svgEl('path', {
+        d: `M ${cutL - 4} ${y - 2} H ${right + 8} C ${right + 30} ${y - 2} ${right + 40} ${y2 - 2} ${SCENE_W} ${y2 - 2} ` +
+           `V ${y2 + 2} C ${right + 40} ${y2 + 2} ${right + 30} ${y + 2} ${right + 8} ${y + 2} H ${cutL - 4} Z`,
+        class: kinds[i],
+      }, stage);
+    }
+
+    // The clip's bridge across the notch — or, once breached, its two snapped halves.
+    if (!breached) {
+      svgEl('rect', { x: hx - 4, y: cy - cutHalf, width: 8, height: cutHalf * 2, class: 'ed-metal' }, stage);
+    } else {
+      for (const sgn of [-1, 1]) {
+        const y0 = cy + sgn * (hy - holeR), y1 = cy + sgn * 9;
+        svgEl('rect', {
+          x: hx - 4, y: Math.min(y0, y1), width: 8, height: Math.abs(y1 - y0), class: 'ed-metal',
+          transform: `rotate(${sgn * -8} ${hx} ${y0})`,
+        }, stage);
+      }
+    }
+  },
+  over(stage, { t, path }) {
+    const cy = 163, right = 440, holeR = 3 * MM;
+    const cutHalf = lerp(12, 25, t) * MM;
+    const hx = right - 10 * MM;
+    const hy = path === 'b' ? 23 * MM : cutHalf + 11 * MM;
+    const breached = path === 'b' && 20 - cutHalf / MM <= 0;
+
+    if (!breached) {
+      // The clip's ends, on the desk, screwed down at the CAD screw spots.
+      for (const sgn of [-1, 1]) {
+        const yIn = cy + sgn * cutHalf, yS = cy + sgn * hy;
+        svgEl('rect', { x: hx - 4, y: Math.min(yIn, yS), width: 8, height: Math.abs(yS - yIn), class: 'ed-metal' }, stage);
+        edScrew(stage, hx, yS, path ? 'good' : '', holeR);
+      }
+    }
+
+    if (path === 'a' && t > 0.02) {
+      edSay(stage, SCENE_W / 2, 286, 'The cord clip rides along with the notch', 'good');
+    } else if (breached) {
+      edSay(stage, SCENE_W / 2, 286, 'The bigger notch chewed through the clip’s screws', 'bad');
+    }
+  },
+};
+
+const e6CounterEveryday = {
+  thing: 'A luggage tag — a ring hole near one end, a name that should sit dead center.',
+  fill: '#f3a65a',
+  under(stage) {
+    edBackdrop(stage, 'ed-wall');
+  },
+  over(stage, { t, path }) {
+    const cy = 170, left = 220, cx = 340;
+    const holeX = left + lerp(18, 48, t) * MM;
+    const labelX = path === 'a' ? holeX + 57 * MM : cx;
+    const bad = Math.round(Math.abs(labelX - cx) / MM) >= 4;
+
+    // A split ring through the hole, and a strap looping off it up-left.
+    const rx = holeX - 10, ry = cy - 10;
+    svgEl('circle', { cx: rx, cy: ry, r: 14, class: 'ed-line' }, stage);
+    svgEl('path', { d: `M ${rx - 10.4} ${ry + 6} A 12 12 0 0 1 ${rx - 2.1} ${ry - 11.8}`, class: 'ed-line' }, stage);
+    const px = rx - 10, py = ry - 10;
+    svgEl('path', {
+      d: `M ${px + 2.1} ${py - 2.1} l -24 -24 a 3 3 0 0 0 -4.2 4.2 l 24 24`,
+      class: 'ed-line',
+    }, stage);
+
+    if (bad) {
+      edSay(stage, SCENE_W / 2, 284, 'Moving the ring dragged the name off center', 'bad');
+    } else {
+      edSay(stage, SCENE_W / 2, 284, t > 0.02 ? 'The name stays centered wherever the ring goes' : 'The name sits dead center', 'good');
+    }
+  },
+};
 
 /* ---------------------------------------------------------------- exercises */
 
@@ -1455,6 +1711,7 @@ const EXERCISES = [
     },
 
     scene: e4MainScene,
+    everyday: e4MainEveryday,
 
     outcome(path, t) {
       const over = 2 - 30 * t;                   // lid overhang per side, mm
@@ -1523,6 +1780,7 @@ const EXERCISES = [
       get body() { return `Same instinct, different hole. This control panel takes a standard ⌀${fmtLen(20)} push-button switch. The switch comes off a shelf and will never change — but the panel is about to get wider.`; },
       defaultPath: 'b',
       scene: e4CounterScene,
+      everyday: e4CounterEveryday,
       sliderLabel: 'Panel width',
       format: (t) => fmtLen(lerp(80, 160, t)),
       hint: 'Grow the panel — this hole answers to a standard, not a neighbor.',
@@ -1618,6 +1876,7 @@ const EXERCISES = [
     },
 
     scene: e5MainScene,
+    everyday: e5MainEveryday,
 
     outcome(path, t) {
       const off = Math.round(12 * t);
@@ -1685,6 +1944,7 @@ const EXERCISES = [
       body: 'A one-off spacer bracket, shipping Friday, never to be opened again. Its silhouette has a notch that clears a weld bead — and the notch isn’t a bolt-on decision, it is the silhouette. One last request lands: reshape the whole thing for the new bead. Same two structures. Which serves you now?',
       defaultPath: 'b',
       scene: e5CounterScene,
+      everyday: e5CounterEveryday,
       sliderLabel: 'Reshape the silhouette',
       format: (t) => `${Math.round(t * 100)}% toward the new shape`,
       hint: 'Reshape it — this part has a different job.',
@@ -1783,6 +2043,7 @@ const EXERCISES = [
     },
 
     scene: e6MainScene,
+    everyday: e6MainEveryday,
 
     outcome(path, t) {
       const wall = Math.round(20 - (12 + 13 * t));
@@ -1848,6 +2109,7 @@ const EXERCISES = [
       body: 'A nameplate: one mounting hole near the left end, one engraved label that must sit dead center. Two features, two jobs, nothing shared. The downstream habit is ready to “organize” this — chain the label to the hole so the tree reads connected. Then a request lands: move the hole inboard. Same two schemes. Which serves you now?',
       defaultPath: 'a',
       scene: e6CounterScene,
+      everyday: e6CounterEveryday,
       sliderLabel: 'Move the hole inboard',
       format: (t) => `${fmtLen(Math.round(30 * t))} inboard`,
       hint: 'Move the hole — this part has a different job.',
