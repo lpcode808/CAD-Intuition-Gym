@@ -1,10 +1,88 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-16 by Devin CLI (v3 merged to `main` and live —
-see the dated breadcrumb at the end of this file for current status and
-next steps).
+Last updated: 2026-10-20 by Claude Code (fresh-eyes review round — see
+directly below; v3 status breadcrumb is still at the end of this file).
 
-## What changed in this round (v3 build, 2026-07-13)
+## What changed in this round (fresh-eyes review, 2026-10-20)
+
+No new scope. A cold review of the live app (all six exercises driven at
+1400×900 and 390×844, plus 1024/1280 spot checks) and a `copy-auditor`
+sweep of `exercises.js`. Fixed what was clearly broken or inaccurate;
+flagged the lesson-level questions below instead of rewriting lessons.
+
+**Layout (`app.js`, `style.css`)**
+- The fixed units pill covered "↺ restart" at every width under ~1400px
+  (1024, 1280, phones) — the link was unclickable. Restart now follows the
+  title; on ≤600px the back link takes its own line beside the pill.
+- Compare mode was the weakest moment in the app: at 1400px each pane was
+  ~266px wide, so in-scene text (E5/E6 feature trees, gap labels) rendered
+  at ~5px. Compare now hides the Features panel (it can only describe one
+  scheme anyway), the player max-width went 1220→1360, and panes are ~450px
+  at 1400. A container query stacks the panes whenever the column is under
+  700px (e.g. 1024px laptops) rather than shrinking them.
+- The ≤480px label bump used to apply only to compare panes, on the stated
+  assumption that panes are narrower than the single view — not true on
+  phones, where both are full width. The bump is now a container query on
+  the scene's actual width, so single view on phones and 1024px laptops gets
+  it too. Feature-tree row text is no longer bumped: E6's "Sketch 1 ·
+  faceplate" overflowed its box at 11px.
+- Small: first undone exercise reads "next →" once any are done; focus
+  moves to the new step's rail on step change (Tab no longer restarts at
+  the page top); the mobile Features panel stays open across steps once
+  opened.
+
+**Content (`exercises.js`, QA markers updated to match)**
+- E6's flip-step toggle read "A · downstream / B · upstream", but the
+  counter isn't about order at all. Counters can now carry `counter.short`
+  for the toggle (E6: chained / plate-anchored; E2: mirrored /
+  independent), and `counter.pathLabels` — authored for every exercise but
+  never rendered — now shows as the toggle's hover title.
+- Onshape fidelity (PRD §8): a sketch mirror adds no feature-list row (E2
+  showed "Mirror 1"); a hole drawn in its own sketch needs its own cut, so
+  E1/E2/E4-counter trees gain "Extrude 2 — cut" (E5's vocabulary);
+  Onshape has no "Cut" feature, so E6's "Cut 1" is "Extrude 2" and
+  "Holes" is "Hole 1".
+- Bridge tasks: E1's didn't reproduce E1 (an origin-anchored circle in an
+  ordinary rectangle "holds" but isn't centered) — now uses a center-point
+  rectangle. E6's told you to drag "the hole feature" without ever making
+  one. E2 "centerline" → construction line. E4 term/bridge: the variable
+  comes first, the equation references it.
+- Copy slips: E3 counter said "six numbers" with four on screen; E6 brief
+  warned of the wrong failure; E6 option B's sub stated the answer before
+  the prediction; one off-register line in E6's counter; recap flip for E6
+  had an ambiguous "it"; "Friday".
+- Scene label collisions fixed in E2 counter, E3 main + counter, E4 main +
+  counter.
+
+QA: 282/282 after every step; independent `qa-verifier` pass run on the
+result.
+
+**Flagged, not changed — Justin's call:**
+1. **E5's counter now contradicts E6.** E5's flip says a notch filed as its
+   own feature gets left behind when the outline changes ("still drawn
+   against the old edge"); E6 then teaches that a downstream feature
+   referencing an upstream edge rides along for free. What actually breaks
+   in E5's scene is a broken reference (the "!" row), which the copy never
+   says. Suggest re-framing E5's counter around the broken reference, or
+   accepting it as a deliberate simplification.
+2. **E5's main outcome copy vs scene.** The note says deleting the old
+   holes "took a stray edge along"; the scene shows a V-shaped bite "out of
+   true". A deleted outline edge would leave an open profile (Extrude 1
+   fails), and a bite implies an under-defined outline — the thing E3 just
+   taught against.
+3. **Option subs telegraph the answer** across the set: the accident
+   option rationalizes ("perfectly centered today", "feels tidy") and the
+   intent option promises ("whatever happens"). Letter balance is clean
+   (3A/3B); the wording is the easier tell.
+4. **Unverified Onshape claims:** E6's bridge says Onshape refuses to drag a
+   feature above one it references (vs. allowing it and erroring) — worth a
+   hands-on check. E5's bridge "watch the feature list: only your hole
+   feature rebuilds" isn't something Onshape shows.
+5. Minor: "Engrave" isn't an Onshape feature (reads fine as a renamed one);
+   beginner-unfriendly words remain ("bezel", "weld bead", "inboard", "out
+   of true"); E2 calls its part both "bracket" and "plate".
+
+## What changed in the previous round (v3 build, 2026-07-13)
 
 Justin answered the three `_planning/V3-SCOPE.md` decision points with
 "Triple yes." All three items are built on `claude/sub-agent-setup-favz3d`,

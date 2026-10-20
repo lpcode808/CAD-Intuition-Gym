@@ -82,6 +82,7 @@ function renderHome() {
   const availableExercises = EXERCISES.filter((ex) => ex.available);
   const allDone = availableExercises.length > 0
     && availableExercises.every((ex) => prog[ex.id] && prog[ex.id].done);
+  const nextUp = availableExercises.find((ex) => !(prog[ex.id] && prog[ex.id].done));
 
   const rows = EXERCISES.map((ex) => {
     const done = prog[ex.id] && prog[ex.id].done;
@@ -93,7 +94,7 @@ function renderHome() {
       return h('div', { class: 'ex-row is-locked' },
         num, text, h('span', { class: 'ex-status' }, 'in authoring'));
     }
-    const startLabel = !anyDone && ex.num === 1 ? 'start here →' : 'start →';
+    const startLabel = ex !== nextUp ? 'start →' : anyDone ? 'next →' : 'start here →';
     return h('a', { class: 'ex-row', href: `#/${ex.id}` },
       num, text,
       h('span', { class: 'ex-status' + (done ? ' is-done' : ' is-go') },
@@ -144,10 +145,16 @@ function renderPlayer(ex) {
     view: null,           // the scheme currently on screen (flippable in step 3)
     t: 0, moved: false, compare: false, revealed: false,
     counterT: 0, counterPath: ex.counter.defaultPath, counterMoved: false,
+    featuresOpen: null,   // null until the learner toggles it — then it sticks
   };
   const refs = {};
 
-  function go(i) { S.step = i; S.maxStep = Math.max(S.maxStep, i); render(); }
+  function go(i) {
+    S.step = i; S.maxStep = Math.max(S.maxStep, i);
+    render();
+    // Keyboard users land on the new step's content, not back at the top.
+    refs.rail.focus({ preventScroll: true });
+  }
   function advance() { go(S.step + 1); }
 
   function restart() {
@@ -164,14 +171,15 @@ function renderPlayer(ex) {
   function render() {
     refs.features = h('div', { class: 'features-body' });
     refs.viewport = h('div', { class: 'viewport' });
-    refs.rail = h('div', { class: 'rail' });
+    refs.rail = h('div', { class: 'rail', tabindex: '-1' });
 
     const featuresPanel = h('details', { class: 'features-panel' },
       h('summary', {},
         h('span', { class: 'panel-kicker' }, 'Features'),
         h('span', { class: 'panel-sub' }, 'Part Studio')),
       refs.features);
-    featuresPanel.open = window.matchMedia('(min-width: 981px)').matches;
+    featuresPanel.open = S.featuresOpen ?? window.matchMedia('(min-width: 981px)').matches;
+    featuresPanel.addEventListener('toggle', () => { S.featuresOpen = featuresPanel.open; });
 
     appRoot.replaceChildren(
       h('div', { class: 'player' },
@@ -181,7 +189,7 @@ function renderPlayer(ex) {
             h('span', { class: 'ex-title' }, `Exercise ${ex.num} — ${ex.title}`),
             h('button', { class: 'linklike', onclick: restart }, '↺ restart')),
           stepper()),
-        h('div', { class: 'ex-body' },
+        refs.body = h('div', { class: 'ex-body' },
           featuresPanel,
           h('div', { class: 'viewport-panel' }, refs.viewport),
           h('aside', { class: 'rail-panel' }, refs.rail))));
@@ -230,6 +238,9 @@ function renderPlayer(ex) {
   function renderViewport() {
     refs.panes = null;
     refs.single = null;
+    // Compare gets the features column's width: the left panel can only
+    // describe one scheme, and two legible panes need the room.
+    refs.body.classList.toggle('is-compare', S.step === 3 && S.compare);
     if (S.step === 3 && S.compare) {
       refs.panes = {};
       const wrap = h('div', { class: 'compare' });
@@ -468,8 +479,9 @@ function renderPlayer(ex) {
           h('button', {
             class: 'seg' + (S.counterPath === p ? ' is-on' : ''),
             'aria-pressed': S.counterPath === p ? 'true' : 'false',
+            title: ex.counter.pathLabels[p],
             onclick: () => { S.counterPath = p; renderStep(); },
-          }, `${p.toUpperCase()} · ${ex.paths[p].short}`)))),
+          }, `${p.toUpperCase()} · ${(ex.counter.short || {})[p] || ex.paths[p].short}`)))),
       sliderBlock({
         label: ex.counter.sliderLabel,
         value: S.counterT,

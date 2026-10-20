@@ -38,7 +38,7 @@ const EXERCISE_IDS = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
 /* One distinctive phrase from each exercise's bridge task, so the takeaway
    step can be checked for the right card (not just any card). */
 const BRIDGE_MARKERS = {
-  e1: 'Symmetric constraint',
+  e1: 'center-point rectangle',
   e2: 'Mirror tool',
   e3: 'turns black',
   e4: '#base',
@@ -339,8 +339,8 @@ async function runE6SceneChecks(browser, vp, collectors) {
 
   const rowTextsA = await page.locator('.viewport svg .ftree-row').evaluateAll((els) => els.map((el) => el.textContent));
   rec(checks, `[${vp.label}] e6: path A files four features`, rowTextsA.length === 4, `rows=${JSON.stringify(rowTextsA)}`);
-  const aCutIdx = rowTextsA.findIndex((s) => /Cut 1/.test(s));
-  const aHolesIdx = rowTextsA.findIndex((s) => /Holes/.test(s));
+  const aCutIdx = rowTextsA.findIndex((s) => /Extrude 2/.test(s));
+  const aHolesIdx = rowTextsA.findIndex((s) => /Hole 1/.test(s));
   rec(checks, `[${vp.label}] e6: path A files the opening ABOVE the screws (screws downstream)`,
     aCutIdx !== -1 && aHolesIdx !== -1 && aCutIdx < aHolesIdx, `cut@${aCutIdx} holes@${aHolesIdx}`);
 
@@ -356,8 +356,8 @@ async function runE6SceneChecks(browser, vp, collectors) {
 
   const paneARowTexts = await paneA.locator('svg .ftree-row').evaluateAll((els) => els.map((el) => el.textContent));
   const paneBRowTexts = await paneB.locator('svg .ftree-row').evaluateAll((els) => els.map((el) => el.textContent));
-  const bCutIdx = paneBRowTexts.findIndex((s) => /Cut 1/.test(s));
-  const bHolesIdx = paneBRowTexts.findIndex((s) => /Holes/.test(s));
+  const bCutIdx = paneBRowTexts.findIndex((s) => /Extrude 2/.test(s));
+  const bHolesIdx = paneBRowTexts.findIndex((s) => /Hole 1/.test(s));
   rec(checks, `[${vp.label}] e6: both compare panes file the same four features`,
     paneARowTexts.length === 4 && paneBRowTexts.length === 4,
     `paneA=${paneARowTexts.length} paneB=${paneBRowTexts.length}`);

@@ -158,7 +158,7 @@ function sceneLabel(parent, x, y, text, cls = '', anchor = 'middle') {
 }
 
 /* ---------------------------------------------------------------- feature tree
-   E5's consequence lives partly in the feature tree, so the tree is drawn
+   E5's and E6's consequences live partly in the feature tree, so the tree is drawn
    inside the scene itself (each compare pane needs its own copy — the left
    Features panel can only show one). Rows: { label, state } where state is
    '' | 'active' (open in the editor right now) | 'error' (broken reference).

@@ -188,7 +188,7 @@ a.ex-row:hover { background: var(--panel-2); }
 
 /* ---------------------------------------------------------------- player */
 
-.player { max-width: 1220px; margin: 0 auto; padding: 18px 20px 48px; }
+.player { max-width: 1360px; margin: 0 auto; padding: 18px 20px 48px; }
 
 .ex-header-row {
   display: flex;
@@ -204,7 +204,9 @@ a.ex-row:hover { background: var(--panel-2); }
   white-space: nowrap;
 }
 .backlink:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
-.ex-title { font-weight: 600; flex: 1; }
+/* Restart sits right after the title, not at the far right — that corner
+   belongs to the fixed unit pill, which would otherwise cover it. */
+.ex-title { font-weight: 600; }
 
 .stepper {
   display: flex;
@@ -254,6 +256,11 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   gap: 14px;
   align-items: start;
 }
+
+/* Compare mode: the features panel can only describe one scheme, and two
+   legible panes need its width. */
+.ex-body.is-compare { grid-template-columns: minmax(0, 1fr) 372px; }
+.ex-body.is-compare .features-panel { display: none; }
 
 /* ---- features panel (the Onshape furniture) ---- */
 
@@ -315,6 +322,11 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 }
 .viewport { display: flex; flex-direction: column; gap: 8px; }
 
+/* Scene sizing keys off the space a scene actually gets (container queries),
+   not the window: the same 520×300 scene can land at ~340px in a phone, a
+   1024px laptop, or one of two compare panes. */
+.viewport, .pane { container-type: inline-size; }
+
 .scene {
   display: block;
   width: 100%;
@@ -325,6 +337,10 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 }
 
 .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Side by side only while each pane stays at least phone-scene wide. */
+@container (max-width: 699px) {
+  .compare { grid-template-columns: 1fr; }
+}
 .pane { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pane-cap {
   font-size: 11.5px;
@@ -365,6 +381,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   padding: 18px;
 }
 .rail { display: flex; flex-direction: column; gap: 14px; }
+.rail:focus { outline: none; } /* focus lands here on each step so Tab starts in the step, not at the top */
 
 .rail-head { font-family: var(--serif); font-size: 22px; line-height: 1.2; margin: 0; }
 .prose { font-family: var(--serif); font-size: 15.5px; line-height: 1.6; margin: 0; }
@@ -677,26 +694,32 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   .viewport-panel { order: 1; }
   .rail-panel { order: 2; }
   .features-panel { order: 3; }
-  .compare { grid-template-columns: 1fr; }
+  .ex-body.is-compare { grid-template-columns: 1fr; }
   .home { padding: 40px 20px 56px; }
 }
 
-@media (max-width: 480px) {
-  /* Compare panes render the same 520×300 scene viewBox at a much smaller
-     display width than the single-view scene does, so the pre-set SVG label
-     sizes end up tighter than elsewhere. Bump just those, just here. */
-  .compare .scenelabel,
-  .compare .ghost-label,
-  .compare .intent-label {
+@media (max-width: 600px) {
+  /* Back link gets its own line, beside the unit pill; title + restart drop
+     below it where the pill can't reach. */
+  .backlink { flex-basis: 100%; }
+}
+
+/* A scene drawn narrower than ~480px renders the viewBox at well under 1:1,
+   so the 10px labels shrink toward unreadable. Bump the labels — sizes are
+   viewBox units, so a bumped scene looks the same at every width it hits. */
+@container (max-width: 479px) {
+  .scenelabel,
+  .ghost-label,
+  .intent-label {
     font-size: 12px;
   }
-  .compare .dimtext {
+  .dimtext {
     font-size: 13px;
   }
-  /* Tree rows are fixed-width boxes (146px in the viewBox), so this bump is
-     capped where the longest row label still fits inside its box. */
-  .compare .ftree-text,
-  .compare .scope-label {
+  /* Long one-line edit-scope captions run close to the scene edge; feature
+     tree rows are fixed 146-unit boxes ("Sketch 1 · faceplate" fills one at
+     10px), so tree text stays put. */
+  .scope-label {
     font-size: 11px;
   }
 }

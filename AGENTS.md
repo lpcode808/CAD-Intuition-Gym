@@ -18,13 +18,13 @@ The load-bearing product idea is: **model your intent, not your accident.** Orga
 
 Hard rules:
 
-- E1-E4 must each include the full loop: intent, predict, choose, change request, consequence, takeaway, and counter-context.
+- Every exercise (E1-E6 today) must include the full loop: intent, predict, choose, change request, consequence, takeaway, and counter-context.
 - No exercise ships without a counter-context.
 - Consequences are pre-authored scenes, not computed by a solver.
 - Copy stays plain-language-first, CAD-term-second.
 - Progress stays in browser `localStorage` only.
 
-Before declaring done, run the app in a browser at desktop and mobile widths, complete all available exercises, check there are no console errors, and update `HANDOFF.md` with what changed and what remains. `node qa/qa-check.mjs` automates most of that bar (full E1–E4 loop at both widths, zero-console-error check, and the unit-copy staleness audit — see the authoring contract at the top of `exercises.js`); run it after any change, but it doesn't replace looking at the app yourself for visual/copy work.
+Before declaring done, run the app in a browser at desktop and mobile widths, complete all available exercises, check there are no console errors, and update `HANDOFF.md` with what changed and what remains. `node qa/qa-check.mjs` automates most of that bar (full E1–E6 loop at both widths, zero-console-error check, and the unit-copy staleness audit — see the authoring contract at the top of `exercises.js`); run it after any change, but it doesn't replace looking at the app yourself for visual/copy work.
 
 ## Questions for Justin — `ASK.md`
 
