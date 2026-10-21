@@ -8,20 +8,20 @@ The product spine is:
 
 ## Status
 
-v3 built, on a branch awaiting Justin's playthrough. Six exercises (E1-E6)
-are authored, playable end-to-end, and covered by the QA harness at desktop
-and mobile widths. The live site at
-https://lpcode808.github.io/CAD-Intuition-Gym/ serves `main` (five
-exercises) until the v3 branch merges.
+v3 is merged and live. Six exercises (E1-E6) are authored, playable
+end-to-end, and covered by the QA harness at desktop and mobile widths, plus
+share/OG meta and a completion recap ("What you leave with") once every
+exercise is done. The live site at
+https://lpcode808.github.io/CAD-Intuition-Gym/ serves `main`.
 
-v2 (`_planning/V2-SCOPE.md`) is fully shipped and merged. v3
-(`_planning/V3-SCOPE.md`, all three items approved by Justin 2026-07-12) is
-built on branch `claude/sub-agent-setup-favz3d`: share/OG meta with a real
-consequence-moment preview image, a completion recap ("What you leave
-with") once every exercise is done, and E6 — "Put it downstream", feature
-order and dependency, reusing E5's in-scene feature-tree vocabulary. E6 and
-the recap are new content/scene material, so the branch stays unmerged
-until Justin plays it.
+Every scene also has an **Everyday** layer (toggle above the scene): the
+part drawn as the real thing it stands for — a seesaw, a cabinet handle, a
+lunch box — reacting to the same change, with the CAD drawing kept on top
+as the trace. Light gym badges collect in a locker on the home screen.
+
+Still open: Justin's own playthrough of E6 and the recap (the merge was his
+call; the playthrough may not have happened yet). No E7+ or new scope
+without his sign-off — see `HANDOFF.md`.
 
 GitHub:
 
@@ -44,7 +44,7 @@ Then open `http://localhost:8000`.
 - `PRD.md` — product spec and resolved scope decisions.
 - `_planning/FABLE-BUILD-BRIEF.md` — original build dispatch brief.
 - `_planning/V2-SCOPE.md` — v2 scope, fully shipped 2026-07-11.
-- `_planning/V3-SCOPE.md` — v3 scope, approved and built 2026-07-12 (merge gated on Justin's playthrough).
+- `_planning/V3-SCOPE.md` — v3 scope, approved 2026-07-12, merged to `main` 2026-07-16.
 - `_planning/FABLE-PROMPT-2026-07-12.md` — ready-to-paste prompt for the next Fable/Opus thread (current). Earlier dated prompts in `_planning/` are superseded prior rounds.
 - `HANDOFF.md` — current continuation state.
 - `CLAUDE.md` + `.claude/agents/` — Claude Code project notes and committed subagent definitions (slice-builder, qa-verifier, copy-auditor) for the orchestrator/executor split.
@@ -56,8 +56,10 @@ Then open `http://localhost:8000`.
 Progress is stored only in this browser under:
 
 ```txt
-cad-gym.v1
-cad-gym.unit
+cad-gym.v1      progress per exercise
+cad-gym.unit    in (default) or mm
+cad-gym.layer   cad (default) or everyday
+cad-gym.badges  earned badges
 ```
 
 No data leaves the browser.

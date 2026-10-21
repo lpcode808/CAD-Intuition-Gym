@@ -1,10 +1,156 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-07-16 by Devin CLI (v3 merged to `main` and live —
-see the dated breadcrumb at the end of this file for current status and
-next steps).
+Last updated: 2026-10-20 by Claude Code (everyday layer + gym round — see
+directly below; v3 status breadcrumb is still at the end of this file).
 
-## What changed in this round (v3 build, 2026-07-13)
+## What changed in this round (everyday layer, inches, badges — 2026-10-20)
+
+Justin asked for three things in one message: default to inches; "a layer
+to toggle to trace everyday objects… fine if it's not actually Onshape
+looking — we're looking for understanding action and response"; and
+badges/achievements with light gym vibes. Scope note: this is new scope
+beyond `_planning/V3-SCOPE.md`, directed by Justin himself.
+
+- **Inches by default** (`svg.js`): a stored `cad-gym.unit` still wins.
+  Geometry is still authored in round millimeters, so inch values read as
+  decimals (4.72 in, 0.08 in). Re-authoring the scenes around round inch
+  values is possible but touches every scene and its copy — not done.
+  The QA harness pins mm for its mm-authored assertions and separately
+  checks that a cold load comes up in inches.
+- **Everyday layer** (interpretation taken: each CAD part shown as the
+  everyday object it stands for, reacting to the same slider, with the CAD
+  drawing kept on top as the trace). A CAD / Everyday toggle sits above
+  every scene (`cad-gym.layer`, default CAD) with a one-line caption naming
+  the object. Contract in `svg.js` ("everyday layer"): exercises opt in
+  with `everyday: { thing, fill, fillAlt, trace, under, over }` on the main
+  object and on `counter`; `paintScene()` in `app.js` draws under → CAD
+  scene → over. `over()` gets `{ t, path, tone }`, and the framework
+  removes any "good" everyday line while the outcome chip warns or fails,
+  so the two never contradict. Objects: E1 seesaw (tips toward its long
+  side while the dashed drawing stays level) / key rack on a wall screw;
+  E2 cabinet-door handle / wall shelf screwed into a stud; E3 birdhouse
+  front under fixed roof boards / bookend mockup (plywood vs cardboard);
+  E4 lunch box / arcade button; E5 paper template with pencil marks vs
+  sticky notes / shelf bracket clearing a water pipe; E6 desk cable notch
+  with a cord clip / luggage tag with a key ring. E1 and the framework were
+  built here; E2–E6 by two `slice-builder` agents from exact specs and
+  copy, reviewed and merged (E2's stud got a "creeping toward its edge"
+  middle state so the everyday line doesn't overrule the CAD warn).
+- **Gym badges** (`app.js`, `style.css`): ten badges in `cad-gym.badges`
+  (First rep, Called it, Felt the miss, Spotter, Cross-trainer, Kilos &
+  pounds, Sharp eye, Second set, Into the cockpit, Full circuit), a
+  "Your locker" section on home, a toast when one lands, "· N done" on
+  the exercise list, Reset clears badges too. `cad-gym.v1`'s per-exercise
+  schema is unchanged.
+- QA: 312/312 — new checks for the inches default, badges + locker +
+  reset, and the everyday layer at every step/scheme/compare for all six.
+- Independent `qa-verifier` pass: PASS (16,968 swept states, no everyday
+  "good" line under a warning chip). Its medium findings were fixed after:
+  chips rounded to whole mm before converting, so in inches they disagreed
+  with the scene by 0.01 in (now print the exact value, thresholds still in
+  whole mm); E6's clip screws stayed green under a warning chip (now follow
+  the chip); E2's stud reassured while the chip failed (stud drawn narrower,
+  wording follows the chip); illustrations muddied CAD labels (heavier
+  label halos in Everyday mode). Also: focus stays on the layer toggle,
+  at most three toasts at once, locker 5×2 and placed after the recap.
+  Not re-verified by a second verifier pass — re-checked here by QA and
+  screenshots.
+
+**Open for Justin:**
+1. Is this the everyday layer you meant? The alternative reading was a
+   tracing exercise (learner traces a real object's outline). Objects and
+   reaction lines are all in `exercises.js` (`eNMainEveryday` /
+   `eNCounterEveryday`) and easy to swap.
+2. Inches as decimals vs re-authoring scenes to round inch values.
+3. Default layer is CAD; flip `cachedLayer` in `svg.js` to make Everyday
+   the first thing beginners see.
+
+## What changed in the previous round (fresh-eyes review, 2026-10-20)
+
+No new scope. A cold review of the live app (all six exercises driven at
+1400×900 and 390×844, plus 1024/1280 spot checks) and a `copy-auditor`
+sweep of `exercises.js`. Fixed what was clearly broken or inaccurate;
+flagged the lesson-level questions below instead of rewriting lessons.
+
+**Layout (`app.js`, `style.css`)**
+- The fixed units pill covered "↺ restart" at every width under ~1400px
+  (1024, 1280, phones) — the link was unclickable. Restart now follows the
+  title; on ≤600px the back link takes its own line beside the pill.
+- Compare mode was the weakest moment in the app: at 1400px each pane was
+  ~266px wide, so in-scene text (E5/E6 feature trees, gap labels) rendered
+  at ~5px. Compare now hides the Features panel (it can only describe one
+  scheme anyway), the player max-width went 1220→1360, and panes are ~450px
+  at 1400. A container query stacks the panes whenever the column is under
+  700px (e.g. 1024px laptops) rather than shrinking them.
+- The ≤480px label bump used to apply only to compare panes, on the stated
+  assumption that panes are narrower than the single view — not true on
+  phones, where both are full width. The bump is now a container query on
+  the scene's actual width, so single view on phones and 1024px laptops gets
+  it too. Feature-tree row text is no longer bumped: E6's "Sketch 1 ·
+  faceplate" overflowed its box at 11px.
+- Small: first undone exercise reads "next →" once any are done; focus
+  moves to the new step's rail on step change (Tab no longer restarts at
+  the page top); the mobile Features panel stays open across steps once
+  opened.
+
+**Content (`exercises.js`, QA markers updated to match)**
+- E6's flip-step toggle read "A · downstream / B · upstream", but the
+  counter isn't about order at all. Counters can now carry `counter.short`
+  for the toggle (E6: chained / plate-anchored; E2: mirrored /
+  independent), and `counter.pathLabels` — authored for every exercise but
+  never rendered — now shows as the toggle's hover title.
+- Onshape fidelity (PRD §8): a sketch mirror adds no feature-list row (E2
+  showed "Mirror 1"); a hole drawn in its own sketch needs its own cut, so
+  E1/E2/E4-counter trees gain "Extrude 2 — cut" (E5's vocabulary);
+  Onshape has no "Cut" feature, so E6's "Cut 1" is "Extrude 2" and
+  "Holes" is "Hole 1".
+- Bridge tasks: E1's didn't reproduce E1 (an origin-anchored circle in an
+  ordinary rectangle "holds" but isn't centered) — now uses a center-point
+  rectangle. E6's told you to drag "the hole feature" without ever making
+  one. E2 "centerline" → construction line. E4 term/bridge: the variable
+  comes first, the equation references it.
+- Copy slips: E3 counter said "six numbers" with four on screen; E6 brief
+  warned of the wrong failure; E6 option B's sub stated the answer before
+  the prediction; one off-register line in E6's counter; recap flip for E6
+  had an ambiguous "it"; "Friday".
+- Scene label collisions fixed in E2 counter, E3 main + counter, E4 main +
+  counter.
+
+QA: 282/282 after every step. The independent `qa-verifier` pass
+confirmed the layout fixes but caught regressions from the first cut of
+the label moves (E4's intent label hid part of the red "N in short"
+readout; E3/E2/E6 collisions at the bumped size; a full-row back-link tap
+target on phones that could abandon an exercise). All fixed in the
+follow-up commit; compare also stacks again under 980px (the rail sits
+below the scene there anyway), which keeps phones correct in browsers
+without container-query support.
+
+**Flagged, not changed — Justin's call:**
+1. **E5's counter now contradicts E6.** E5's flip says a notch filed as its
+   own feature gets left behind when the outline changes ("still drawn
+   against the old edge"); E6 then teaches that a downstream feature
+   referencing an upstream edge rides along for free. What actually breaks
+   in E5's scene is a broken reference (the "!" row), which the copy never
+   says. Suggest re-framing E5's counter around the broken reference, or
+   accepting it as a deliberate simplification.
+2. **E5's main outcome copy vs scene.** The note says deleting the old
+   holes "took a stray edge along"; the scene shows a V-shaped bite "out of
+   true". A deleted outline edge would leave an open profile (Extrude 1
+   fails), and a bite implies an under-defined outline — the thing E3 just
+   taught against.
+3. **Option subs telegraph the answer** across the set: the accident
+   option rationalizes ("perfectly centered today", "feels tidy") and the
+   intent option promises ("whatever happens"). Letter balance is clean
+   (3A/3B); the wording is the easier tell.
+4. **Unverified Onshape claims:** E6's bridge says Onshape refuses to drag a
+   feature above one it references (vs. allowing it and erroring) — worth a
+   hands-on check. E5's bridge "watch the feature list: only your hole
+   feature rebuilds" isn't something Onshape shows.
+5. Minor: "Engrave" isn't an Onshape feature (reads fine as a renamed one);
+   beginner-unfriendly words remain ("bezel", "weld bead", "inboard", "out
+   of true"); E2 calls its part both "bracket" and "plate".
+
+## What changed in the previous round (v3 build, 2026-07-13)
 
 Justin answered the three `_planning/V3-SCOPE.md` decision points with
 "Triple yes." All three items are built on `claude/sub-agent-setup-favz3d`,

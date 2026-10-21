@@ -186,9 +186,115 @@ a.ex-row:hover { background: var(--panel-2); }
   margin: 3px 0 0;
 }
 
+/* ---- locker: the gym's badges, light on purpose ---- */
+
+.section-count { letter-spacing: 0.08em; color: var(--faint); }
+
+.locker { margin-top: 44px; }
+.locker .section-label { margin-top: 0; }
+.locker-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); /* 5 × 2 on desktop, 2 × 5 on phones */
+  gap: 8px;
+}
+.badge {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  align-items: center;
+  text-align: center;
+  padding: 12px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.badge:not(.is-earned) { background: transparent; border-style: dashed; }
+.badge-text { min-width: 0; }
+.badge-name { display: block; font-weight: 600; font-size: 13px; }
+.badge-how { display: block; font-size: 11.5px; line-height: 1.4; color: var(--muted); margin-top: 1px; }
+.badge:not(.is-earned) .badge-name { color: var(--muted); }
+
+.medal {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--faint);
+  border: 1.5px dashed var(--border-strong);
+  background: var(--panel-2);
+}
+.medal.is-earned {
+  color: #6b4a0e;
+  border: 1.5px solid #d9a93c;
+  background: radial-gradient(circle at 35% 30%, #fff3c7, #f3cf6a 70%);
+  box-shadow: 0 0 0 3px #fbf0d2;
+}
+
+.toast-host {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 14px;
+  background: var(--panel);
+  border: 1px solid #e6cf8f;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(29, 40, 51, 0.16);
+  animation: toast-in 0.28s ease-out;
+  transition: opacity 0.35s, transform 0.35s;
+}
+.toast.is-leaving { opacity: 0; transform: translateY(6px); }
+.toast-text { min-width: 0; }
+.toast-kicker {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a07a1c;
+}
+.toast-name { display: block; font-weight: 600; font-size: 14px; }
+.toast-how { display: block; font-size: 12px; color: var(--muted); line-height: 1.4; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ---------------------------------------------------------------- player */
 
-.player { max-width: 1220px; margin: 0 auto; padding: 18px 20px 48px; }
+.player { max-width: 1360px; margin: 0 auto; padding: 18px 20px 48px; }
 
 .ex-header-row {
   display: flex;
@@ -204,7 +310,9 @@ a.ex-row:hover { background: var(--panel-2); }
   white-space: nowrap;
 }
 .backlink:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
-.ex-title { font-weight: 600; flex: 1; }
+/* Restart sits right after the title, not at the far right — that corner
+   belongs to the fixed unit pill, which would otherwise cover it. */
+.ex-title { font-weight: 600; }
 
 .stepper {
   display: flex;
@@ -254,6 +362,11 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   gap: 14px;
   align-items: start;
 }
+
+/* Compare mode: the features panel can only describe one scheme, and two
+   legible panes need its width. */
+.ex-body.is-compare { grid-template-columns: minmax(0, 1fr) 372px; }
+.ex-body.is-compare .features-panel { display: none; }
 
 /* ---- features panel (the Onshape furniture) ---- */
 
@@ -315,6 +428,11 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 }
 .viewport { display: flex; flex-direction: column; gap: 8px; }
 
+/* Scene sizing keys off the space a scene actually gets (container queries),
+   not the window: the same 520×300 scene can land at ~340px in a phone, a
+   1024px laptop, or one of two compare panes. */
+.viewport, .pane { container-type: inline-size; }
+
 .scene {
   display: block;
   width: 100%;
@@ -325,6 +443,10 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 }
 
 .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Side by side only while each pane stays at least phone-scene wide. */
+@container (max-width: 699px) {
+  .compare { grid-template-columns: 1fr; }
+}
 .pane { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pane-cap {
   font-size: 11.5px;
@@ -365,6 +487,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   padding: 18px;
 }
 .rail { display: flex; flex-direction: column; gap: 14px; }
+.rail:focus { outline: none; } /* focus lands here on each step so Tab starts in the step, not at the top */
 
 .rail-head { font-family: var(--serif); font-size: 22px; line-height: 1.2; margin: 0; }
 .prose { font-family: var(--serif); font-size: 15.5px; line-height: 1.6; margin: 0; }
@@ -669,6 +792,69 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .dim.bad .arrowhead { fill: var(--bad); }
 .dim.bad .dimtext { fill: var(--bad); font-weight: 500; }
 
+/* ---- everyday layer: the part as the real thing it stands for ----
+   Warm, illustrative, deliberately not CAD chrome. The CAD drawing stays on
+   top as the trace; .is-trace turns the part outline into a dashed blue
+   "your drawing" line so a moving real object can visibly leave it. */
+
+.layer-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 30px; }
+.layer-bar .seg { padding: 5px 10px; font-size: 11.5px; }
+.layer-thing { font-family: var(--serif); font-size: 13.5px; line-height: 1.4; color: var(--ink); flex: 1; min-width: 12em; }
+.layer-hint { font-size: 12px; color: var(--faint); }
+
+.scene.is-everyday .part { fill: var(--ed-fill, #ecdcc0); }
+.scene.is-everyday .part.alt { fill: var(--ed-fill-alt, var(--ed-fill, #ecdcc0)); }
+.scene.is-everyday .switch-part { fill: var(--ed-fill-alt, #d7e0ea); }
+.scene.is-everyday .dim { opacity: 0.8; }
+.scene.is-trace .part { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 6 4; }
+/* Over an illustration, the CAD labels need a heavier halo to stay crisp. */
+.scene.is-everyday :is(.dimtext, .scenelabel, .ghost-label, .intent-label, .scope-label) { stroke-width: 5; stroke-linejoin: round; }
+
+.ed-wall { fill: #f6efe3; }
+.ed-sky { fill: #e4f0fa; }
+.ed-ground { fill: #cfe3b8; }
+.ed-floor { fill: #eadcc4; }
+.ed-drywall { fill: #f1ebe1; }
+.ed-wood { fill: #e2c393; stroke: #9c7444; stroke-width: 1.4; }
+.ed-wood-dark { fill: #c49a63; stroke: #84603a; stroke-width: 1.4; }
+.ed-grain { fill: none; stroke: #c9a46f; stroke-width: 1; }
+.ed-stud { fill: #ecd3a8; stroke: #b48a55; stroke-width: 1.2; }
+.ed-metal { fill: #c9d0d8; stroke: #66727f; stroke-width: 1.3; }
+.ed-metal-dark { fill: #8b97a4; stroke: #4d5966; stroke-width: 1.3; }
+.ed-paper { fill: #fffdf7; stroke: #b9b2a5; stroke-width: 1.1; }
+.ed-sticky { fill: #ffe27a; stroke: #d8b632; stroke-width: 1.1; }
+.ed-pencil { fill: none; stroke: #6f6a63; stroke-width: 1.4; }
+.ed-smudge { fill: rgba(214, 120, 150, 0.28); stroke: none; }
+.ed-plastic { fill: #bfe3dc; stroke: #3f8c80; stroke-width: 1.4; }
+.ed-plastic-lid { fill: #f3a65a; stroke: #b86a24; stroke-width: 1.4; }
+.ed-red { fill: #e2574c; stroke: #a7342b; stroke-width: 1.3; }
+.ed-yellow { fill: #f6c453; stroke: #c4932a; stroke-width: 1.2; }
+.ed-green { fill: #8fc29a; stroke: #4f8a5b; stroke-width: 1.2; }
+.ed-blue { fill: #8db7e3; stroke: #3f6f9f; stroke-width: 1.2; }
+.ed-tan { fill: #e9d3ae; stroke: #b08a57; stroke-width: 1.2; }
+.ed-ink { fill: #3a3631; }
+.ed-line { fill: none; stroke: #3a3631; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.ed-shadow { fill: rgba(40, 30, 20, 0.12); }
+
+.ed-screw-head { fill: #d5dbe1; stroke: #5c6874; stroke-width: 1.3; }
+.ed-screw-slot { stroke: #5c6874; stroke-width: 1.4; stroke-linecap: round; }
+.ed-screw.good .ed-screw-head { stroke: var(--good); stroke-width: 2; }
+.ed-screw.bad .ed-screw-head { stroke: var(--bad); stroke-width: 2; fill: #f6d9d6; }
+
+.ed-say {
+  font-family: var(--ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: #fffaf2;
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+.ed-say.good { fill: var(--good); }
+.ed-say.bad { fill: var(--bad); }
+.ed-say.muted { fill: #8a7b66; font-weight: 500; }
+
 /* ------------------------------------------------------------- responsive */
 
 @media (max-width: 980px) {
@@ -677,27 +863,51 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   .viewport-panel { order: 1; }
   .rail-panel { order: 2; }
   .features-panel { order: 3; }
-  .compare { grid-template-columns: 1fr; }
+  .ex-body.is-compare { grid-template-columns: 1fr; }
+  .compare { grid-template-columns: 1fr; } /* rail sits below here anyway — stack for legibility */
   .home { padding: 40px 20px 56px; }
 }
 
 @media (max-width: 480px) {
-  /* Compare panes render the same 520×300 scene viewBox at a much smaller
-     display width than the single-view scene does, so the pre-set SVG label
-     sizes end up tighter than elsewhere. Bump just those, just here. */
-  .compare .scenelabel,
-  .compare .ghost-label,
-  .compare .intent-label {
+  .locker-grid { gap: 6px; }
+  .badge { padding: 10px 8px; }
+  .medal { width: 28px; height: 28px; font-size: 10.5px; }
+  .toast { padding: 9px 12px; }
+  .toast-how { display: none; } /* name only — three at once shouldn't cover the screen */
+}
+
+@media (max-width: 600px) {
+  /* On phones the unit pill scrolls away with the header instead of
+     floating over the scene and the layer bar. */
+  .unit-toggle { position: absolute; }
+  /* Back link gets its own line, beside the unit pill; title + restart drop
+     below it where the pill can't reach. justify-self keeps the link's tap
+     target the size of its text, not the whole row. */
+  .ex-header-row { display: grid; grid-template-columns: auto 1fr; }
+  .backlink { grid-column: 1 / -1; justify-self: start; }
+  .ex-header-row .linklike { justify-self: start; }
+}
+
+/* A scene drawn narrower than ~480px renders the viewBox at well under 1:1,
+   so the 10px labels shrink toward unreadable. Bump the labels — sizes are
+   viewBox units, so a bumped scene looks the same at every width it hits. */
+@container (max-width: 479px) {
+  .scenelabel,
+  .ghost-label,
+  .intent-label {
     font-size: 12px;
   }
-  .compare .dimtext {
+  .dimtext {
     font-size: 13px;
   }
-  /* Tree rows are fixed-width boxes (146px in the viewBox), so this bump is
-     capped where the longest row label still fits inside its box. */
-  .compare .ftree-text,
-  .compare .scope-label {
+  /* Long one-line edit-scope captions run close to the scene edge; feature
+     tree rows are fixed 146-unit boxes ("Sketch 1 · faceplate" fills one at
+     10px), so tree text stays put. */
+  .scope-label {
     font-size: 11px;
+  }
+  .ed-say {
+    font-size: 14px;
   }
 }
 

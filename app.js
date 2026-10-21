@@ -30,6 +30,7 @@ const unitToggleBtn = h('button', {
   'aria-pressed': getUnit() === 'in' ? 'true' : 'false',
   onclick: () => {
     toggleUnit();
+    award('kilos-pounds');
     unitToggleBtn.textContent = unitToggleLabel();
     unitToggleBtn.setAttribute('aria-label', unitToggleA11yLabel());
     unitToggleBtn.setAttribute('aria-pressed', getUnit() === 'in' ? 'true' : 'false');
@@ -40,6 +41,62 @@ document.body.appendChild(unitToggleBtn);
 
 const STEP_NAMES = ['Intent', 'Predict', 'Choose', 'The change', 'Flip it'];
 const TONE_MARK = { good: '✓', bad: '✕', warn: '△', idle: '' };
+
+/* ---------------------------------------------------------------- badges
+   Light gym flavor. Each badge is earned once and kept in this browser
+   (cad-gym.badges: badge id → ISO date), cleared with progress. It lives
+   apart from cad-gym.v1 so the per-exercise progress schema stays as-is. */
+
+const BADGE_KEY = 'cad-gym.badges';
+const BADGES = [
+  { id: 'first-rep', glyph: '1', name: 'First rep', how: 'Finish your first exercise.' },
+  { id: 'called-it', glyph: '✓', name: 'Called it', how: 'Predict the consequence before it lands.' },
+  { id: 'felt-the-miss', glyph: '✕', name: 'Felt the miss', how: 'Finish one you predicted wrong. The miss is the workout.' },
+  { id: 'spotter', glyph: 'AB', name: 'Spotter', how: 'Watch both schemes side by side.' },
+  { id: 'cross-trainer', glyph: 'IRL', name: 'Cross-trainer', how: 'Flip a scene to the everyday layer.' },
+  { id: 'kilos-pounds', glyph: '⇄', name: 'Kilos & pounds', how: 'Switch the units.' },
+  { id: 'sharp-eye', glyph: '3×', name: 'Sharp eye', how: 'Call three predictions right.' },
+  { id: 'second-set', glyph: '↺', name: 'Second set', how: 'Redo an exercise you already finished.' },
+  { id: 'into-the-cockpit', glyph: '↗', name: 'Into the cockpit', how: 'Open Onshape from a “Try the real thing” card.' },
+  { id: 'full-circuit', glyph: '★', name: 'Full circuit', how: 'Finish every exercise.' },
+];
+let sessionBadges = {};
+
+function loadBadges() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(BADGE_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : sessionBadges;
+  }
+  catch { return sessionBadges; }
+}
+
+function award(id) {
+  const earned = loadBadges();
+  const badge = BADGES.find((b) => b.id === id);
+  if (!badge || earned[id]) return;
+  earned[id] = new Date().toISOString();
+  sessionBadges = earned;
+  try { localStorage.setItem(BADGE_KEY, JSON.stringify(earned)); } catch { /* session-only */ }
+  showToast(badge);
+}
+
+/* Toasts sit outside #app (like the unit pill) so a route change — finishing
+   an exercise lands you on home — doesn't wipe one mid-read. */
+const toastHost = h('div', { class: 'toast-host', role: 'status', 'aria-live': 'polite' });
+document.body.appendChild(toastHost);
+
+function showToast(badge) {
+  const el = h('div', { class: 'toast' },
+    h('span', { class: 'medal is-earned', 'aria-hidden': 'true' }, badge.glyph),
+    h('span', { class: 'toast-text' },
+      h('span', { class: 'toast-kicker' }, 'Badge earned'),
+      h('span', { class: 'toast-name' }, badge.name),
+      h('span', { class: 'toast-how' }, badge.how)));
+  while (toastHost.children.length >= 3) toastHost.firstChild.remove();
+  toastHost.append(el);
+  setTimeout(() => el.classList.add('is-leaving'), 3400);
+  setTimeout(() => el.remove(), 3800);
+}
 
 /* ------------------------------------------------------------- utilities */
 
@@ -82,6 +139,7 @@ function renderHome() {
   const availableExercises = EXERCISES.filter((ex) => ex.available);
   const allDone = availableExercises.length > 0
     && availableExercises.every((ex) => prog[ex.id] && prog[ex.id].done);
+  const nextUp = availableExercises.find((ex) => !(prog[ex.id] && prog[ex.id].done));
 
   const rows = EXERCISES.map((ex) => {
     const done = prog[ex.id] && prog[ex.id].done;
@@ -93,7 +151,7 @@ function renderHome() {
       return h('div', { class: 'ex-row is-locked' },
         num, text, h('span', { class: 'ex-status' }, 'in authoring'));
     }
-    const startLabel = !anyDone && ex.num === 1 ? 'start here →' : 'start →';
+    const startLabel = ex !== nextUp ? 'start →' : anyDone ? 'next →' : 'start here →';
     return h('a', { class: 'ex-row', href: `#/${ex.id}` },
       num, text,
       h('span', { class: 'ex-status' + (done ? ' is-done' : ' is-go') },
@@ -108,7 +166,9 @@ function renderHome() {
         'A gym for the CAD decisions that don’t have a button. You can sketch and extrude — but nothing you’ve modeled has ever broken on you. Here, it will. On purpose, a few minutes per exercise.'),
       h('p', { class: 'sim-note' },
         'This is a flight simulator: there’s no CAD engine behind it, and every consequence is hand-built so the lesson lands clean. The real cockpit — Onshape — is one tab away.'),
-      h('h2', { class: 'section-label' }, 'Six decisions'),
+      h('h2', { class: 'section-label' }, 'Six decisions',
+        anyDone && h('span', { class: 'section-count' },
+          ` · ${availableExercises.filter((ex) => prog[ex.id] && prog[ex.id].done).length} done`)),
       h('div', { class: 'ex-list' }, rows),
       allDone && h('section', { class: 'recap' },
         h('h2', { class: 'section-label' }, 'What you leave with'),
@@ -119,15 +179,32 @@ function renderHome() {
             h('div', { class: 'recap-text' },
               h('p', { class: 'recap-line' }, ex.takeaway.line),
               h('p', { class: 'recap-flip' }, ex.takeaway.flip)))))),
+      locker(),
       h('footer', { class: 'home-foot' },
         h('span', {}, 'Progress lives in this browser and nowhere else.'),
         h('button', { class: 'linklike', onclick: resetProgress }, 'Reset progress'))));
 }
 
+function locker() {
+  const earned = loadBadges();
+  const count = BADGES.filter((b) => earned[b.id]).length;
+  return h('section', { class: 'locker' },
+    h('h2', { class: 'section-label' }, `Your locker · ${count} of ${BADGES.length} badges`),
+    h('ul', { class: 'locker-grid' }, BADGES.map((b) =>
+      h('li', { class: 'badge' + (earned[b.id] ? ' is-earned' : '') },
+        h('span', { class: 'medal' + (earned[b.id] ? ' is-earned' : ''), 'aria-hidden': 'true' }, b.glyph),
+        h('span', { class: 'badge-text' },
+          h('span', { class: 'badge-name' }, b.name),
+          h('span', { class: 'sr-only' }, earned[b.id] ? ' — earned. ' : ' — not yet. '),
+          h('span', { class: 'badge-how' }, b.how))))));
+}
+
 function resetProgress() {
-  if (confirm('Clear your progress on this device?')) {
+  if (confirm('Clear your progress and badges on this device?')) {
     sessionProgress = {};
+    sessionBadges = {};
     try { localStorage.removeItem(STORE_KEY); } catch { /* nothing stored anyway */ }
+    try { localStorage.removeItem(BADGE_KEY); } catch { /* nothing stored anyway */ }
     route();
   }
 }
@@ -144,10 +221,16 @@ function renderPlayer(ex) {
     view: null,           // the scheme currently on screen (flippable in step 3)
     t: 0, moved: false, compare: false, revealed: false,
     counterT: 0, counterPath: ex.counter.defaultPath, counterMoved: false,
+    featuresOpen: null,   // null until the learner toggles it — then it sticks
   };
   const refs = {};
 
-  function go(i) { S.step = i; S.maxStep = Math.max(S.maxStep, i); render(); }
+  function go(i) {
+    S.step = i; S.maxStep = Math.max(S.maxStep, i);
+    render();
+    // Keyboard users land on the new step's content, not back at the top.
+    refs.rail.focus({ preventScroll: true });
+  }
   function advance() { go(S.step + 1); }
 
   function restart() {
@@ -164,14 +247,14 @@ function renderPlayer(ex) {
   function render() {
     refs.features = h('div', { class: 'features-body' });
     refs.viewport = h('div', { class: 'viewport' });
-    refs.rail = h('div', { class: 'rail' });
+    refs.rail = h('div', { class: 'rail', tabindex: '-1' });
 
     const featuresPanel = h('details', { class: 'features-panel' },
-      h('summary', {},
+      h('summary', { onclick: () => { S.featuresOpen = !featuresPanel.open; } },
         h('span', { class: 'panel-kicker' }, 'Features'),
         h('span', { class: 'panel-sub' }, 'Part Studio')),
       refs.features);
-    featuresPanel.open = window.matchMedia('(min-width: 981px)').matches;
+    featuresPanel.open = S.featuresOpen ?? window.matchMedia('(min-width: 981px)').matches;
 
     appRoot.replaceChildren(
       h('div', { class: 'player' },
@@ -181,7 +264,7 @@ function renderPlayer(ex) {
             h('span', { class: 'ex-title' }, `Exercise ${ex.num} — ${ex.title}`),
             h('button', { class: 'linklike', onclick: restart }, '↺ restart')),
           stepper()),
-        h('div', { class: 'ex-body' },
+        refs.body = h('div', { class: 'ex-body' },
           featuresPanel,
           h('div', { class: 'viewport-panel' }, refs.viewport),
           h('aside', { class: 'rail-panel' }, refs.rail))));
@@ -230,6 +313,9 @@ function renderPlayer(ex) {
   function renderViewport() {
     refs.panes = null;
     refs.single = null;
+    // Compare gets the features column's width: the left panel can only
+    // describe one scheme, and two legible panes need the room.
+    refs.body.classList.toggle('is-compare', S.step === 3 && S.compare);
     if (S.step === 3 && S.compare) {
       refs.panes = {};
       const wrap = h('div', { class: 'compare' });
@@ -241,16 +327,74 @@ function renderPlayer(ex) {
             h('span', { class: 'pane-key' }, p.toUpperCase()),
             ex.paths[p].label),
           svg, chip));
-        refs.panes[p] = { stage, chip };
+        refs.panes[p] = { svg, stage, chip };
       }
-      refs.viewport.replaceChildren(wrap);
+      refs.viewport.replaceChildren(...[layerBar(), wrap].filter(Boolean));
     } else {
       const { svg, stage } = makeSceneSvg();
       const chip = h('div', { class: 'outcome-chip' });
-      refs.single = { stage, chip };
-      refs.viewport.replaceChildren(svg, chip);
+      refs.single = { svg, stage, chip };
+      refs.viewport.replaceChildren(...[layerBar(), svg, chip].filter(Boolean));
     }
     drawScenes();
+  }
+
+  /* ---- everyday layer: the same scene, seen as the real thing ---- */
+
+  function everydayDef() {
+    return S.step === 4 ? ex.counter.everyday : ex.everyday;
+  }
+
+  function layerBar() {
+    const def = everydayDef();
+    if (!def) return null;
+    return h('div', { class: 'layer-bar' },
+      h('div', { class: 'segmented', role: 'group', 'aria-label': 'Scene layer' },
+        [['cad', 'CAD'], ['everyday', 'Everyday']].map(([v, label]) =>
+          h('button', {
+            class: 'seg' + (getLayer() === v ? ' is-on' : ''),
+            'aria-pressed': getLayer() === v ? 'true' : 'false',
+            onclick: () => {
+              if (getLayer() === v) return;
+              setLayer(v);
+              if (v === 'everyday') award('cross-trainer');
+              renderViewport();
+              const again = refs.viewport.querySelector('.layer-bar .seg.is-on');
+              if (again) again.focus();
+            },
+          }, label))),
+      getLayer() === 'everyday'
+        ? h('span', { class: 'layer-thing' }, def.thing)
+        : h('span', { class: 'layer-hint' }, 'Flip to Everyday to see the real thing this part stands for.'));
+  }
+
+  /* Under → CAD scene → over. The CAD drawing stays on top as the trace. */
+  function paintScene({ svg, stage }, sceneFn, def, opts) {
+    clearNode(stage);
+    const everyday = getLayer() === 'everyday' && def ? def : null;
+    svg.classList.toggle('is-everyday', !!everyday);
+    svg.classList.toggle('is-trace', !!(everyday && everyday.trace));
+    // fill / fillAlt: a color, or a function of { t, path } (material can differ by scheme).
+    for (const [key, prop] of [['fill', '--ed-fill'], ['fillAlt', '--ed-fill-alt']]) {
+      const v = everyday && (typeof everyday[key] === 'function' ? everyday[key](opts) : everyday[key]);
+      if (v) svg.style.setProperty(prop, v);
+      else svg.style.removeProperty(prop);
+    }
+    svg.setAttribute('aria-label', everyday
+      ? `Everyday view: ${everyday.thing}`
+      : 'CAD modeling consequence scene');
+    if (everyday && everyday.under) everyday.under(svgEl('g', { class: 'ed-under' }, stage), opts);
+    sceneFn(svgEl('g', { class: 'cad' }, stage), opts);
+    if (everyday && everyday.over) {
+      const over = svgEl('g', { class: 'ed-over' }, stage);
+      everyday.over(over, opts);
+      // The everyday line never contradicts the outcome chip: no "all good"
+      // while the chip still warns (an object can forgive a little drift
+      // that the intent doesn't).
+      if (opts.tone === 'warn' || opts.tone === 'bad') {
+        over.querySelectorAll('.ed-say.good').forEach((n) => n.remove());
+      }
+    }
   }
 
   function setChip(chip, o) {
@@ -262,25 +406,23 @@ function renderPlayer(ex) {
 
   function drawScenes() {
     if (S.step === 4) {
-      const { stage, chip } = refs.single;
-      clearNode(stage);
-      ex.counter.scene(stage, { t: S.counterT, path: S.counterPath });
-      setChip(chip, ex.counter.outcome(S.counterPath, S.counterT));
+      const o = ex.counter.outcome(S.counterPath, S.counterT);
+      paintScene(refs.single, ex.counter.scene, ex.counter.everyday, { t: S.counterT, path: S.counterPath, tone: o.tone });
+      setChip(refs.single.chip, o);
     } else if (S.step === 3 && S.compare) {
       for (const p of ['a', 'b']) {
-        const { stage, chip } = refs.panes[p];
-        clearNode(stage);
-        ex.scene(stage, { t: S.t, path: p });
-        setChip(chip, ex.outcome(p, S.t));
+        const o = ex.outcome(p, S.t);
+        paintScene(refs.panes[p], ex.scene, ex.everyday, { t: S.t, path: p, tone: o.tone });
+        setChip(refs.panes[p].chip, o);
       }
     } else {
-      const { stage, chip } = refs.single;
-      clearNode(stage);
-      ex.scene(stage, {
+      const o = S.step === 3 ? ex.outcome(S.view, S.t) : null;
+      paintScene(refs.single, ex.scene, ex.everyday, {
         t: S.step === 3 ? S.t : 0,
         path: S.step >= 2 ? S.view : null,
+        tone: o ? o.tone : null,
       });
-      setChip(chip, S.step === 3 ? ex.outcome(S.view, S.t) : null);
+      setChip(refs.single.chip, o);
     }
   }
 
@@ -416,7 +558,11 @@ function renderPlayer(ex) {
       h('button', {
         class: 'btn ghost',
         'aria-pressed': S.compare ? 'true' : 'false',
-        onclick: () => { S.compare = !S.compare; renderStep(); },
+        onclick: () => {
+          S.compare = !S.compare;
+          if (S.compare) award('spotter');
+          renderStep();
+        },
       }, S.compare ? 'Back to one view' : 'Compare side by side')));
 
     refs.predChip = h('p', { class: 'pred-chip' });
@@ -451,6 +597,7 @@ function renderPlayer(ex) {
     refs.predChip.textContent = right
       ? 'Your prediction held. Flip to the other scheme anyway — watching it fail is half the workout.'
       : 'Not what you predicted — good. Feeling the miss is the workout. Flip between A and B and watch why.';
+    if (right) award('called-it');
   }
 
   /* step 4 — name it, then flip it (counter-context) */
@@ -468,8 +615,9 @@ function renderPlayer(ex) {
           h('button', {
             class: 'seg' + (S.counterPath === p ? ' is-on' : ''),
             'aria-pressed': S.counterPath === p ? 'true' : 'false',
+            title: ex.counter.pathLabels[p],
             onclick: () => { S.counterPath = p; renderStep(); },
-          }, `${p.toUpperCase()} · ${ex.paths[p].short}`)))),
+          }, `${p.toUpperCase()} · ${(ex.counter.short || {})[p] || ex.paths[p].short}`)))),
       sliderBlock({
         label: ex.counter.sliderLabel,
         value: S.counterT,
@@ -515,6 +663,7 @@ function renderPlayer(ex) {
           href: ex.bridge.href,
           target: '_blank',
           rel: 'noopener noreferrer',
+          onclick: () => award('into-the-cockpit'),
         }, 'Open Onshape ↗'),
         h('p', { class: 'fine' }, 'Optional — the gym taught the judgment; the real cockpit is one tab away.')));
     }
@@ -531,13 +680,22 @@ function renderPlayer(ex) {
 
   function finish() {
     const prog = loadProgress();
+    const again = !!(prog[ex.id] && prog[ex.id].done);
+    const right = S.predicted === ex.predict.answer;
     prog[ex.id] = {
       done: true,
       predicted: S.predicted,
-      predictedRight: S.predicted === ex.predict.answer,
+      predictedRight: right,
       finishedAt: new Date().toISOString(),
     };
     saveProgress(prog);
+
+    award('first-rep');
+    if (!right) award('felt-the-miss');
+    if (again) award('second-set');
+    if (EXERCISES.filter((e) => prog[e.id] && prog[e.id].predictedRight).length >= 3) award('sharp-eye');
+    if (EXERCISES.filter((e) => e.available).every((e) => prog[e.id] && prog[e.id].done)) award('full-circuit');
+
     location.hash = '#/';
   }
 
