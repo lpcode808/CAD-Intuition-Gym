@@ -11,7 +11,7 @@
   --border-strong: #b7c2ce;
   --ink: #1d2833;
   --muted: #5c6b7a;
-  --faint: #8a97a5;
+  --faint: #6b7886;
   --accent: #1a66d6;
   --accent-deep: #1554b4;
   --accent-soft: #e8f0fc;
@@ -91,8 +91,48 @@ button { font-family: inherit; }
   font-size: 13px;
   color: var(--muted);
   max-width: 62ch;
+  margin: 14px 0 0;
+}
+
+.rep-how {
+  font-size: 14px;
+  line-height: 1.55;
+  max-width: 62ch;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--panel);
+  border-radius: 0 6px 6px 0;
+}
+.hero-cta { display: inline-block; text-decoration: none; }
+
+.rep-done {
+  margin: -24px 0 32px;
+  padding: 16px 18px;
+  background: var(--panel);
+  border: 1px solid #bfe0cd;
+  border-left: 4px solid var(--good);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: toast-in 0.3s ease-out;
+}
+.rep-done .btn { align-self: flex-start; margin-top: 6px; text-decoration: none; }
+.rep-kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--good);
   margin: 0;
 }
+.rep-title { font-family: var(--serif); font-size: 20px; font-weight: 700; margin: 0; }
+.rep-line { font-family: var(--serif); font-size: 15px; line-height: 1.5; margin: 0; color: var(--ink); }
+.rep-badges { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rep-badges li { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+.rep-badges strong { color: var(--ink); font-weight: 600; }
+.rep-badges .medal { width: 28px; height: 28px; font-size: 10.5px; }
 
 .section-label {
   font-family: var(--mono);
@@ -179,12 +219,18 @@ a.ex-row:hover { background: var(--panel-2); }
   margin: 0;
 }
 
-.recap-flip {
-  font-size: 12.5px;
-  font-style: italic;
-  color: var(--muted);
-  margin: 3px 0 0;
+.recap-flip { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+.recap-flip summary {
+  cursor: pointer;
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--accent);
+  padding: 2px 0;
 }
+.recap-flip p { font-style: italic; margin: 3px 0 0; }
+.recap-score { font-size: 13px; color: var(--ink); margin: 0 0 12px; font-weight: 500; }
+.locker-empty { font-size: 13px; color: var(--muted); margin: 0; max-width: 62ch; }
 
 /* ---- locker: the gym's badges, light on purpose ---- */
 
@@ -363,6 +409,12 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   align-items: start;
 }
 
+/* The scene stays in view while the rail scrolls — the slider and the
+   consequence belong on screen together (phones get this below 980px). */
+@media (min-width: 981px) {
+  .viewport-panel { position: sticky; top: 12px; }
+}
+
 /* Compare mode: the features panel can only describe one scheme, and two
    legible panes need its width. */
 .ex-body.is-compare { grid-template-columns: minmax(0, 1fr) 372px; }
@@ -492,6 +544,9 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .rail-head { font-family: var(--serif); font-size: 22px; line-height: 1.2; margin: 0; }
 .prose { font-family: var(--serif); font-size: 15.5px; line-height: 1.6; margin: 0; }
 .fine { font-size: 12px; color: var(--faint); margin: 0; }
+.gate-hint { font-size: 12.5px; color: var(--muted); }
+.call-prompt { font-weight: 600; font-size: 14px; margin: 0; }
+.call-made { font-size: 12.5px; color: var(--muted); margin: 0; }
 
 .intent-card {
   border: 1px solid var(--border);
@@ -800,7 +855,8 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .layer-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 30px; }
 .layer-bar .seg { padding: 5px 10px; font-size: 11.5px; }
 .layer-thing { font-family: var(--serif); font-size: 13.5px; line-height: 1.4; color: var(--ink); flex: 1; min-width: 12em; }
-.layer-hint { font-size: 12px; color: var(--faint); }
+.layer-hint { font-size: 12.5px; color: var(--muted); }
+.layer-note { font-family: var(--ui); font-size: 11.5px; color: var(--muted); }
 
 .scene.is-everyday .part { fill: var(--ed-fill, #ecdcc0); }
 .scene.is-everyday .part.alt { fill: var(--ed-fill-alt, var(--ed-fill, #ecdcc0)); }
@@ -866,6 +922,25 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   .ex-body.is-compare { grid-template-columns: 1fr; }
   .compare { grid-template-columns: 1fr; } /* rail sits below here anyway — stack for legibility */
   .home { padding: 40px 20px 56px; }
+}
+
+@media (max-width: 980px) {
+  .ex-body[data-step="3"]:not(.is-compare) .viewport-panel,
+  .ex-body[data-step="4"] .viewport-panel {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    box-shadow: 0 6px 14px -10px rgba(29, 40, 51, 0.35);
+  }
+}
+
+@media (max-width: 600px) {
+  .rep-done { margin-top: 8px; } /* clear of the units pill */
+  .seg { min-height: 40px; padding: 8px 12px; }
+  .layer-bar .seg { min-height: 36px; }
+  .ex-header .linklike { padding: 10px 4px; margin: -10px 0; }
+  .slider { height: 32px; }
+  .toast-host { top: 10px; bottom: auto; }
 }
 
 @media (max-width: 480px) {
