@@ -149,7 +149,6 @@ function renderHome() {
   const called = doneList.filter((ex) => prog[ex.id].predictedRight).length;
   const finished = justFinished && EXERCISES.find((ex) => ex.id === justFinished.id);
   const justBadges = (justFinished && justFinished.badges) || [];
-  justFinished = null;
 
   const rows = EXERCISES.map((ex) => {
     const done = prog[ex.id] && prog[ex.id].done;
@@ -205,7 +204,9 @@ function renderHome() {
       anyDone && h('section', { class: 'recap' },
         h('h2', { class: 'section-label' }, allDone ? 'What you leave with' : 'What you’ve earned so far'),
         h('p', { class: 'recap-lede' }, 'Every rule you’ve earned, with the flip that keeps it honest. Say the exception to yourself before you open “Unless…?” — the rule was never the rule; the intent is.'),
-        h('p', { class: 'recap-score' }, `You called ${called} of ${doneList.length} predictions before the change landed — and felt the rest.`),
+        h('p', { class: 'recap-score' }, called === doneList.length
+          ? `You called ${doneList.length === 1 ? 'your prediction' : `all ${doneList.length} predictions`} before the change landed.`
+          : `You called ${called} of ${doneList.length} predictions before the change landed — and felt the rest.`),
         h('div', { class: 'recap-list' }, doneList.map((ex) =>
           h('div', { class: 'recap-row' },
             h('span', { class: 'ex-num' }, String(ex.num).padStart(2, '0')),
@@ -253,6 +254,7 @@ function resetProgress() {
 /* ---------------------------------------------------------------- player */
 
 function renderPlayer(ex) {
+  justFinished = null;   // the rep card belongs to the home visit right after a finish
 
   const S = {
     step: 0, maxStep: 0,
@@ -262,6 +264,7 @@ function renderPlayer(ex) {
     t: 0, moved: false, compare: false, revealed: false,
     counterT: 0, counterPath: ex.counter.defaultPath, counterMoved: false,
     seen: { a: false, b: false },          // each scheme watched under the change (t ≥ SEEN_T)
+    earned: [],                            // badges toasted during this rep, listed again on the rep card
     counterCall: null,                     // their call in "Flip it", before running it
     counterSeen: { a: false, b: false },
     featuresOpen: null,   // null until the learner toggles it — then it sticks
@@ -269,6 +272,11 @@ function renderPlayer(ex) {
   // The flip's winner: whichever scheme holds at the full change.
   const counterAnswer = ['a', 'b'].find((p) => ex.counter.outcome(p, 1).tone === 'good');
   const refs = {};
+
+  function earn(id) {
+    const b = award(id);
+    if (b) S.earned.push(b);
+  }
 
   function go(i) {
     S.step = i; S.maxStep = Math.max(S.maxStep, i);
@@ -409,7 +417,7 @@ function renderPlayer(ex) {
             onclick: () => {
               if (getLayer() === v) return;
               setLayer(v);
-              if (v === 'everyday') award('cross-trainer');
+              if (v === 'everyday') earn('cross-trainer');
               renderViewport();
               const again = refs.viewport.querySelector('.layer-bar .seg.is-on');
               if (again) again.focus();
@@ -417,7 +425,7 @@ function renderPlayer(ex) {
           }, label))),
       getLayer() === 'everyday'
         ? h('span', { class: 'layer-thing' }, def.thing,
-          h('span', { class: 'layer-note' }, ' Each slider position is a fresh one, built from your model.'))
+          S.step >= 3 && h('span', { class: 'layer-note' }, ' Each slider position is a fresh one, built from your model.'))
         : h('span', { class: 'layer-hint' }, 'Everyday shows the real object this part stands for.'));
   }
 
@@ -495,6 +503,7 @@ function renderPlayer(ex) {
 
   function gateHint(seen, view, first) {
     if (seen.a && seen.b) return null;
+    if (view === null) return 'Drag the change past halfway — both schemes are on screen.';
     if (!seen.a && !seen.b) return first;
     const other = seen.a ? 'b' : 'a';
     return view === other
@@ -515,7 +524,6 @@ function renderPlayer(ex) {
       refs.doneBtn.disabled = !both;
       refs.moral.hidden = !both;
       refs.callChip.hidden = !both;
-      if (both && S.counterCall === counterAnswer) award('called-the-flip');
       const msg = gateHint(S.counterSeen, S.counterPath,
         ex.counter.hint || 'Run the change one more time — this part has a different job.');
       refs.moveHint2.textContent = msg || '';
@@ -652,7 +660,7 @@ function renderPlayer(ex) {
         'aria-pressed': S.compare ? 'true' : 'false',
         onclick: () => {
           S.compare = !S.compare;
-          if (S.compare) award('spotter');
+          if (S.compare) earn('spotter');
           renderStep();
         },
       }, S.compare ? 'Back to one view' : 'Compare side by side')));
@@ -686,7 +694,7 @@ function renderPlayer(ex) {
     refs.predChip.textContent = (right
       ? 'You called it. '
       : 'Not what you predicted — good, that’s the workout. ') + (ex.predict.why || '');
-    if (right) award('called-it');
+    if (right) earn('called-it');
   }
 
   /* step 4 — name it, then flip it (counter-context) */
@@ -753,6 +761,8 @@ function renderPlayer(ex) {
 
     refs.counterNote = h('p', { class: 'outcome-note' });
     out.push(refs.counterNote);
+    refs.moveHint2 = h('p', { class: 'fine gate-hint', 'data-ref': 'movehint2', 'aria-live': 'polite' });
+    out.push(refs.moveHint2);
 
     const called = S.counterCall === counterAnswer;
     refs.callChip = h('p', { class: 'pred-chip ' + (called ? 'is-right' : 'is-wrong') },
@@ -773,7 +783,7 @@ function renderPlayer(ex) {
           href: ex.bridge.href,
           target: '_blank',
           rel: 'noopener noreferrer',
-          onclick: () => award('into-the-cockpit'),
+          onclick: () => earn('into-the-cockpit'),
         }, 'Open Onshape ↗'),
         h('p', { class: 'fine' }, 'Optional — the gym taught the judgment; the real cockpit is one tab away.')));
     }
@@ -782,8 +792,6 @@ function renderPlayer(ex) {
       `Mark Exercise ${ex.num} done ✓`);
     refs.doneBtn.disabled = true;
     out.push(refs.doneBtn);
-    refs.moveHint2 = h('p', { class: 'fine gate-hint', 'data-ref': 'movehint2', 'aria-live': 'polite' });
-    out.push(refs.moveHint2);
 
     updateCounterNote();
     return out;
@@ -810,6 +818,8 @@ function renderPlayer(ex) {
 
     const quiet = { quiet: true };
     const badges = [
+      ...S.earned,
+      S.counterCall === counterAnswer && award('called-the-flip', quiet),
       award('first-rep', quiet),
       !right && award('felt-the-miss', quiet),
       again && award('second-set', quiet),

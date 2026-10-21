@@ -1311,7 +1311,7 @@ const EXERCISES = [
 
     takeaway: {
       line: 'Dimension to the thing that expresses your intent — here, the center — not to whatever edge is closest.',
-      term: 'Plain words: “tie it to the middle.” Onshape’s word for it: a Midpoint constraint — or, when the plate is drawn centered on the origin, Coincident to the origin (the try-it card below does that).',
+      term: 'Plain words: “tie it to the middle.” Onshape’s word for it: a Midpoint constraint — or, when the plate is drawn centered on the origin, Coincident to the origin (the try-it card does exactly that).',
       flip: 'Unless the intent points at an edge — then edge-anchoring is exactly right.',
     },
 
@@ -1322,7 +1322,7 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
-      job: 'Land the hole on a bolt already set in the wall — a fixed distance from the corner, however wide the plate gets.',
+      job: 'Land the hole on a bolt already set in the wall — a fixed distance from the wall edge, however wide the plate gets.',
       get body() { return `Same plate, same two schemes — different job. This one hangs on a wall, and its hole must land on an anchor bolt already set in that wall, ${fmtLen(E1_HALF)} over. The client still wants the plate wider.`; },
       defaultPath: 'b',
       scene: e1CounterScene,

@@ -937,9 +937,10 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 @media (max-width: 600px) {
   .rep-done { margin-top: 8px; } /* clear of the units pill */
   .seg { min-height: 40px; padding: 8px 12px; }
-  .layer-bar .seg { min-height: 36px; }
+  .layer-bar .seg { min-height: 40px; }
   .ex-header .linklike { padding: 10px 4px; margin: -10px 0; }
-  .slider { height: 32px; }
+  .slider { height: 40px; }
+  .recap-flip summary { padding: 10px 0; }
   .toast-host { top: 10px; bottom: auto; }
 }
 

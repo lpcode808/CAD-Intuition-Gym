@@ -79,6 +79,22 @@ QA: 372/372 — the harness now drives both schemes before naming the
 lesson, makes the flip-it call, checks the gate hints, the mechanism
 feedback, the call verdict, and reads recap flips through the reveal.
 
+Independent `qa-verifier` pass: PASS on every claim (all six exercises,
+both units, both widths, gate edge cases, scene sweep showing no new
+collisions vs `main`). Its follow-ups, fixed after: on phones the
+flip-it "switch to B" hint had slid below the bridge card (it now sits
+right under the counter readout); compare mode showed a "switch to A"
+hint with both panes on screen; "Called the flip" toasted onto the
+rep-complete card (now listed on the card with the rep's other badges);
+the rep card vanished on a units toggle; slider and layer toggle are now
+40px on phones; small copy nits.
+
+Flagged by the verifier, not changed: the flip-it call can be answered by
+pattern — every counter's winner is the scheme that lost the main lesson,
+and the heading says "Now flip it". That is the PRD's hard rule (a
+counter-context always flips), so the call's value is in reading the New
+job; varying it would break the rule. Worth Justin's eye.
+
 **Still open / flagged (not done):**
 1. E5/E6 in-scene feature-tree text is ~7px on phones; an HTML tree above
    the scene on narrow screens would fix it (new rendering path).
