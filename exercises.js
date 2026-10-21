@@ -19,6 +19,21 @@
    after touching copy. */
 'use strict';
 
+/* Inch-authored sizes. Most scenes are authored in round millimeters, but
+   the two whose copy invites arithmetic — E2's half-spacing, E4's lid = box
+   + 2 × overhang — are authored in round inches (the default unit), with
+   values chosen so the sums also add up in whole millimeters. */
+const IN = 25.4;
+const E2_S0 = 3 * IN, E2_S1 = 5.5 * IN;          // hole spacing, today → after the change
+const E2_HALF = E2_S0 / 2;                       // each hole's distance from center today
+const E2_DRIFT = (E2_S1 - E2_S0) / 2;            // how far a forgotten hole falls behind
+const E2_C1 = E2_HALF + E2_DRIFT;                // counter: the connector's far position
+const E4_BOX0 = 4 * IN, E4_BOX1 = 6 * IN;        // box width, today → the bigger version
+const E4_LIP = 0.08 * IN;                        // lid overhang per side
+const E4_LID = E4_BOX0 + 2 * E4_LIP;             // the typed lid
+const E4_SW = 0.75 * IN;                         // counter: the standard switch's diameter
+const E4_P0 = 4 * E4_SW, E4_P1 = 8 * E4_SW;      // counter: panel width (hole = panel ÷ 4 today)
+
 /* ---------------------------------------------------------------- E1 scenes
    A plate whose width changes. The hole's anchoring scheme is the decision.
    Main scene: the plate grows about its own center (the part changed shape;
@@ -212,21 +227,21 @@ function e2MainScene(stage, { t, path }) {
   const top = cy - Hpx / 2, bot = cy + Hpx / 2;
   const r = 5 * MM;
 
-  const S = lerp(80, 140, t);                    // hole spacing, mm
+  const S = lerp(E2_S0, E2_S1, t);                    // hole spacing, mm
   const targetL = cx - (S / 2) * MM;
   const targetR = cx + (S / 2) * MM;
 
   if (path === null) {
     // Before any scheme is chosen: show where the spacing is headed.
-    svgEl('circle', { cx: cx - 70 * MM, cy, r, class: 'ghost' }, stage);
-    svgEl('circle', { cx: cx + 70 * MM, cy, r, class: 'ghost' }, stage);
-    sceneLabel(stage, cx + 70 * MM + 10, cy - r - 12, 'where the spacing is headed', 'ghost-label', 'end');
+    svgEl('circle', { cx: cx - (E2_S1 / 2) * MM, cy, r, class: 'ghost' }, stage);
+    svgEl('circle', { cx: cx + (E2_S1 / 2) * MM, cy, r, class: 'ghost' }, stage);
+    sceneLabel(stage, cx + (E2_S1 / 2) * MM + 10, cy - r - 12, 'where the spacing is headed', 'ghost-label', 'end');
   }
 
   svgEl('rect', { x: left, y: top, width: Wpx, height: Hpx, class: 'part' }, stage);
 
   const hxL = targetL;                           // the hole you remembered to edit
-  const hxR = path === 'b' ? cx + 40 * MM : targetR;   // …and the one you forgot
+  const hxR = path === 'b' ? cx + E2_HALF * MM : targetR;   // …and the one you forgot
   const offMm = (targetR - hxR) / MM;
   const badR = offMm > 0.5;
 
@@ -239,7 +254,7 @@ function e2MainScene(stage, { t, path }) {
   if (path === 'b') {
     centerlineV(stage, cx, top - 30, bot + 14);
     dimH(stage, { x1: hxL, x2: cx, y: top - 22, ext1: cy - r, label: fmtLen(S / 2), cls: 'anchor' });
-    dimH(stage, { x1: cx, x2: hxR, y: top - 22, ext2: cy - r, label: fmtLen(40), cls: badR ? 'bad' : 'anchor' });
+    dimH(stage, { x1: cx, x2: hxR, y: top - 22, ext2: cy - r, label: fmtLen(E2_HALF), cls: badR ? 'bad' : 'anchor' });
   } else if (path === 'a') {
     centerlineV(stage, cx, top - 30, bot + 14);
     dimH(stage, { x1: hxL, x2: hxR, y: top - 22, ext1: cy - r, ext2: cy - r, label: fmtLen(S), cls: 'anchor' });
@@ -263,8 +278,8 @@ function e2CounterScene(stage, { t, path }) {
   const top = cy - Hpx / 2, bot = cy + Hpx / 2;
   const r = 5 * MM;
 
-  const R = lerp(40, 70, t);                     // connector target, mm right of center
-  const sensorX = cx - 40 * MM;                  // the sensor pad: glued down, forever
+  const R = lerp(E2_HALF, E2_C1, t);                     // connector target, mm right of center
+  const sensorX = cx - E2_HALF * MM;                  // the sensor pad: glued down, forever
   const connX = cx + R * MM;
   const hxL = path === 'a' ? cx - R * MM : sensorX;
   const offMm = (sensorX - hxL) / MM;
@@ -280,7 +295,7 @@ function e2CounterScene(stage, { t, path }) {
   svgEl('circle', { cx: connX, cy, r, class: 'hole is-good' }, stage);
 
   if (path === 'b') {
-    dimH(stage, { x1: sensorX, x2: cx, y: top - 22, ext1: cy - r, label: fmtLen(40), cls: 'anchor' });
+    dimH(stage, { x1: sensorX, x2: cx, y: top - 22, ext1: cy - r, label: fmtLen(E2_HALF), cls: 'anchor' });
     dimH(stage, { x1: cx, x2: connX, y: top - 22, ext2: cy - r, label: fmtLen(R), cls: 'anchor' });
   } else {
     dimH(stage, { x1: hxL, x2: connX, y: top - 22, ext1: cy - r, ext2: cy - r, label: fmtLen(2 * R), cls: 'anchor' });
@@ -310,9 +325,9 @@ const e2MainEveryday = {
   },
   over(stage, { t, path }) {
     const cx = 260, cy = 160;
-    const S = lerp(80, 140, t);
+    const S = lerp(E2_S0, E2_S1, t);
     const targetL = cx - (S / 2) * MM, targetR = cx + (S / 2) * MM;
-    const hxR = path === 'b' ? cx + 40 * MM : targetR;
+    const hxR = path === 'b' ? cx + E2_HALF * MM : targetR;
     const barY = cy - 16;          // low enough to clear the "short" dimension at cy − 24
     let fits = true;
 
@@ -342,7 +357,7 @@ const e2CounterEveryday = {
   thing: 'A wall shelf — its left screw has to bite the wooden stud hidden in the wall.',
   fill: '#e8d6b6',
   under(stage) {
-    const studX = 260 - 40 * MM;   // the sensor pad's spot: fixed, forever
+    const studX = 260 - E2_HALF * MM;   // the sensor pad's spot: fixed, forever
     edBackdrop(stage, 'ed-drywall');
     // Drawn narrower than a real stud on purpose: the glued sensor forgives
     // almost nothing, so the screw should leave the stud when the chip fails.
@@ -351,8 +366,8 @@ const e2CounterEveryday = {
   },
   over(stage, { t, path, tone }) {
     const cx = 260, cy = 160, bot = cy + 28 * MM;
-    const R = lerp(40, 70, t);
-    const studX = cx - 40 * MM, connX = cx + R * MM;
+    const R = lerp(E2_HALF, E2_C1, t);
+    const studX = cx - E2_HALF * MM, connX = cx + R * MM;
     const hxL = path === 'a' ? cx - R * MM : studX;
     const exact = tone !== 'warn' && tone !== 'bad';
     const onStud = tone !== 'bad';
@@ -533,15 +548,15 @@ const e3CounterEveryday = {
 
 function e4MainScene(stage, { t, path }) {
   const cx = 260;
-  const B = lerp(100, 160, t);                   // box outer width, mm
+  const B = lerp(E4_BOX0, E4_BOX1, t);                   // box outer width, mm
   const Bpx = B * MM;
   const boxL = cx - Bpx / 2, boxR = cx + Bpx / 2;
   const boxTop = 142, boxBot = 230, wall = 8 * MM;
   const innerBot = boxBot - wall;
 
   if (path === null) {
-    svgEl('rect', { x: cx - 80 * MM, y: boxTop, width: 160 * MM, height: boxBot - boxTop, class: 'ghost' }, stage);
-    sceneLabel(stage, cx + 80 * MM, 120, 'where the box is headed', 'ghost-label', 'end');
+    svgEl('rect', { x: cx - (E4_BOX1 / 2) * MM, y: boxTop, width: E4_BOX1 * MM, height: boxBot - boxTop, class: 'ghost' }, stage);
+    sceneLabel(stage, cx + (E4_BOX1 / 2) * MM, 120, 'where the box is headed', 'ghost-label', 'end');
   }
 
   // Open-topped box, drawn as a U cross-section.
@@ -552,7 +567,7 @@ function e4MainScene(stage, { t, path }) {
   }, stage);
   sceneLabel(stage, cx, boxBot - 4.5, 'box', 'muted');
 
-  const Lmm = path === 'b' ? B + 4 : 104;        // the lid: linked, or frozen at day one
+  const Lmm = path === 'b' ? B + 2 * E4_LIP : E4_LID;        // the lid: linked, or frozen at day one
   const Lpx = Lmm * MM;
   const lidL = cx - Lpx / 2, lidR = cx + Lpx / 2;
   const lidTop = 126;
@@ -560,13 +575,13 @@ function e4MainScene(stage, { t, path }) {
   svgEl('rect', { x: lidL, y: lidTop, width: Lpx, height: 14, class: 'part alt' }, stage);
   sceneLabel(stage, lidL - 8, 134, 'lid', 'muted', 'end');
 
-  const tickL = cx - (B / 2 + 2) * MM, tickR = cx + (B / 2 + 2) * MM;
+  const tickL = cx - (B / 2 + E4_LIP) * MM, tickR = cx + (B / 2 + E4_LIP) * MM;
   svgEl('line', { x1: tickL, y1: 64, x2: tickL, y2: 148, class: 'intent-line' }, stage);
   svgEl('line', { x1: tickR, y1: 64, x2: tickR, y2: 148, class: 'intent-line' }, stage);
 
   dimH(stage, {
     x1: lidL, x2: lidR, y: 94, ext1: lidTop, ext2: lidTop,
-    label: path === 'b' ? `= box width + ${fmtLen(4)}` : path === 'a' ? fmtLen(104) : `? ${getUnit()}`,
+    label: path === 'b' ? `= box width + ${fmtLen(2 * E4_LIP)}` : path === 'a' ? fmtLen(E4_LID) : `? ${getUnit()}`,
     cls: path ? 'anchor' : '',
   });
   dimH(stage, { x1: boxL, x2: boxR, y: boxBot + 26, ext1: boxBot, ext2: boxBot, label: fmtLen(B), cls: 'live' });
@@ -585,21 +600,21 @@ function e4MainScene(stage, { t, path }) {
       });
     }
   } else if (path === 'b') {
-    dimH(stage, { x1: boxR, x2: lidR, y: 118, ext1: boxTop, ext2: lidTop, label: fmtLen(2), cls: 'anchor' });
+    dimH(stage, { x1: boxR, x2: lidR, y: 118, ext1: boxTop, ext2: lidTop, label: fmtLen(E4_LIP), cls: 'anchor' });
   }
 
-  svgEl('text', { x: tickL + 6, y: 74, class: 'intent-label', 'text-anchor': 'start', text: `intent: ${fmtLen(2)} past the box` }, stage);
+  svgEl('text', { x: tickL + 6, y: 74, class: 'intent-label', 'text-anchor': 'start', text: `intent: ${fmtLen(E4_LIP)} past the box` }, stage);
 }
 
 function e4CounterScene(stage, { t, path }) {
   const cx = 260, cy = 168;
-  const P = lerp(80, 160, t);                    // panel width, mm
+  const P = lerp(E4_P0, E4_P1, t);                    // panel width, mm
   const Ppx = P * MM;
   const pTop = 106, pBot = 238;
-  const dHole = path === 'b' ? P / 4 : 20;       // linked scales; typed holds
+  const dHole = path === 'b' ? P / 4 : E4_SW;       // linked scales; typed holds
   const rH = (dHole / 2) * MM;
-  const rS = 10 * MM;                            // the switch: ⌀20, off a shelf
-  const oversize = dHole - 20;
+  const rS = (E4_SW / 2) * MM;                            // the switch: ⌀20, off a shelf
+  const oversize = dHole - E4_SW;
   const bad = oversize > 0.5;
 
   svgEl('rect', { x: cx - Ppx / 2, y: pTop, width: Ppx, height: pBot - pTop, class: 'part' }, stage);
@@ -609,12 +624,12 @@ function e4CounterScene(stage, { t, path }) {
   svgEl('line', { x1: cx - 7, y1: cy, x2: cx + 7, y2: cy, class: 'switch-mark' }, stage);
   svgEl('line', { x1: cx, y1: cy - 7, x2: cx, y2: cy + 7, class: 'switch-mark' }, stage);
 
-  sceneLabel(stage, cx, 98, `a standard ⌀${fmtLen(20)} switch must drop in here`, 'muted');
+  sceneLabel(stage, cx, 98, `a standard ⌀${fmtLen(E4_SW)} switch must drop in here`, 'muted');
   svgEl('circle', { cx, cy, r: rS + 3, class: 'intent-ring' }, stage);
-  svgEl('text', { x: cx, y: pBot - 8, class: 'intent-label', 'text-anchor': 'middle', text: `intent: fit the switch — ⌀${fmtLen(20)}, forever` }, stage);
+  svgEl('text', { x: cx, y: pBot - 8, class: 'intent-label', 'text-anchor': 'middle', text: `intent: fit the switch — ⌀${fmtLen(E4_SW)}, forever` }, stage);
 
   sceneLabel(stage, cx, cy + rH + 18,
-    path === 'b' ? `⌀${fmtLen(dHole)} = panel width ÷ 4` : `⌀${fmtLen(20)} — typed in`,
+    path === 'b' ? `⌀${fmtLen(dHole)} = panel width ÷ 4` : `⌀${fmtLen(E4_SW)} — typed in`,
     bad ? 'bad' : 'accent');
 
   if (oversize >= 4) {
@@ -640,7 +655,7 @@ const e4MainEveryday = {
   },
   over(stage, { t, path }) {
     const cx = 260;
-    const B = lerp(100, 160, t);
+    const B = lerp(E4_BOX0, E4_BOX1, t);
     const innerBot = 230 - 8 * MM;
 
     // Lunch on the cavity floor, either side of the CAD "box" label.
@@ -656,7 +671,7 @@ const e4MainEveryday = {
 
     if (!path) return;
     const boxR = cx + (B * MM) / 2;
-    const lidR = cx + ((path === 'b' ? B + 4 : 104) * MM) / 2;
+    const lidR = cx + ((path === 'b' ? B + 2 * E4_LIP : E4_LID) * MM) / 2;
     if (path === 'a' && boxR - lidR > 1) {
       edSay(stage, cx, 40, 'Lid’s too small now — lunch is out in the open', 'bad');
     } else {
@@ -674,8 +689,8 @@ const e4CounterEveryday = {
   },
   over(stage, { t, path }) {
     const cx = 260, cy = 168;
-    const dHole = path === 'b' ? lerp(80, 160, t) / 4 : 20;
-    const rH = (dHole / 2) * MM, rS = 10 * MM;
+    const dHole = path === 'b' ? lerp(E4_P0, E4_P1, t) / 4 : E4_SW;
+    const rH = (dHole / 2) * MM, rS = (E4_SW / 2) * MM;
 
     // The button's dome and a glint, inside the CAD switch body.
     svgEl('circle', { cx, cy, r: rS - 5, class: 'ed-red' }, stage);
@@ -683,7 +698,7 @@ const e4CounterEveryday = {
       cx: cx - 4, cy: cy - 4.5, rx: 3.2, ry: 1.8, transform: `rotate(-35 ${cx - 4} ${cy - 4.5})`, class: 'ed-paper',
     }, stage);
 
-    if (dHole - 20 > 0.5) {
+    if (dHole - E4_SW > 0.5) {
       // Nothing left for its rim to sit on: a small arrow in the gap below it.
       const y1 = cy + rS + 3, y2 = Math.min(y1 + 10, cy + rH + 5);
       if (y2 - y1 >= 5) {
@@ -1365,7 +1380,7 @@ const EXERCISES = [
       heading: 'One bracket, two holes, one promise',
       body: 'This bracket bolts onto two standoffs. Two mounting holes — and the whole point of them is symmetry. They must sit the same distance either side of the center, or the bracket goes on crooked.',
       intent: 'Keep the two holes perfectly symmetric about the center.',
-      get change() { return `The spacing between them. It’s ${fmtLen(80)} today, and the client is already muttering about moving the standoffs — the dashed circles are where the holes are headed.`; },
+      get change() { return `The spacing between them. It’s ${fmtLen(E2_S0)} today, and the client is already muttering about moving the standoffs — the dashed circles are where the holes are headed.`; },
     },
 
     predict: {
@@ -1387,16 +1402,16 @@ const EXERCISES = [
       },
       b: {
         label: 'Place two holes, one dimension each',
-        get sub() { return `Left hole: ${fmtLen(40)} from center. Right hole: ${fmtLen(40)} from center. Two dimensions, perfectly symmetric today.`; },
+        get sub() { return `Left hole: ${fmtLen(E2_HALF)} from center. Right hole: ${fmtLen(E2_HALF)} from center. Two dimensions, perfectly symmetric today.`; },
         short: 'two copies',
         kind: 'accident',
       },
     },
 
     change: {
-      get request() { return `“The standoffs moved — take the hole spacing from ${fmtLen(80)} out to ${fmtLen(140)}. The pair still has to be dead symmetric.”`; },
+      get request() { return `“The standoffs moved — take the hole spacing from ${fmtLen(E2_S0)} out to ${fmtLen(E2_S1)}. The pair still has to be dead symmetric.”`; },
       sliderLabel: 'Hole spacing',
-      format: (t) => fmtLen(lerp(80, 140, t)),
+      format: (t) => fmtLen(lerp(E2_S0, E2_S1, t)),
       hint: 'Drag the spacing first — feel it before we name it.',
     },
 
@@ -1404,7 +1419,7 @@ const EXERCISES = [
     everyday: e2MainEveryday,
 
     outcome(path, t) {
-      const off = Math.round(30 * t);
+      const off = Math.round(E2_DRIFT * t);
       if (t < 0.02) {
         return {
           tone: 'idle',
@@ -1416,14 +1431,14 @@ const EXERCISES = [
         if (off < 5) {
           return {
             tone: 'warn',
-            headline: `right hole is ${fmtLen(30 * t)} behind`,
+            headline: `right hole is ${fmtLen(E2_DRIFT * t)} behind`,
             note: 'Barely visible yet — but notice only one hole is listening to you.',
           };
         }
         return {
           tone: 'bad',
-          headline: `right hole is ${fmtLen(30 * t)} out of place`,
-          note: `You dutifully updated the left dimension. The right one is a separate copy, still sitting at ${fmtLen(40)} — nobody told it. Two copies means two edits, every time, forever.`,
+          headline: `right hole is ${fmtLen(E2_DRIFT * t)} out of place`,
+          note: `You dutifully updated the left dimension. The right one is a separate copy, still sitting at ${fmtLen(E2_HALF)} — nobody told it. Two copies means two edits, every time, forever.`,
         };
       }
       return {
@@ -1443,7 +1458,7 @@ const EXERCISES = [
       } else if (path === 'a') {
         base.push({ label: 'Sketch 2 — mounting holes', sub: 'one hole drawn, its twin mirrored across the centerline · a sketch mirror', active: true });
       } else {
-        base.push({ label: 'Sketch 2 — mounting holes', sub: `two holes, two separate ${fmtLen(40)} dimensions`, active: true });
+        base.push({ label: 'Sketch 2 — mounting holes', sub: `two holes, two separate ${fmtLen(E2_HALF)} dimensions`, active: true });
       }
       base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
       base.push({ label: 'Extrude 2 — cut', sub: 'removes the holes, through all' });
@@ -1468,7 +1483,7 @@ const EXERCISES = [
       scene: e2CounterScene,
       everyday: e2CounterEveryday,
       sliderLabel: 'Connector position',
-      format: (t) => `${fmtLen(lerp(40, 70, t))} right of center`,
+      format: (t) => `${fmtLen(lerp(E2_HALF, E2_C1, t))} right of center`,
       hint: 'Move the connector — this pair has a different job.',
       pathLabels: {
         a: 'One hole, mirrored',
@@ -1476,7 +1491,7 @@ const EXERCISES = [
       },
       short: { a: 'mirrored', b: 'independent' },
       outcome(path, t) {
-        const off = Math.round(30 * t);
+        const off = Math.round(E2_DRIFT * t);
         if (t < 0.02) {
           return {
             tone: 'idle',
@@ -1486,11 +1501,11 @@ const EXERCISES = [
         }
         if (path === 'a') {
           if (off < 5) {
-            return { tone: 'warn', headline: `sensor hole dragged ${fmtLen(30 * t)}`, note: 'The left hole is moving. Nobody asked it to.' };
+            return { tone: 'warn', headline: `sensor hole dragged ${fmtLen(E2_DRIFT * t)}`, note: 'The left hole is moving. Nobody asked it to.' };
           }
           return {
             tone: 'bad',
-            headline: `sensor hole dragged ${fmtLen(30 * t)} off its pad`,
+            headline: `sensor hole dragged ${fmtLen(E2_DRIFT * t)} off its pad`,
             note: 'The mirror is doing its one job: keeping the two identical. But these holes were never twins — they only matched by coincidence on day one.',
           };
         }
@@ -1508,7 +1523,7 @@ const EXERCISES = [
         if (path === 'a') {
           base.push({ label: 'Sketch 2 — both holes', sub: 'connector hole drawn · sensor hole a mirrored copy — moves whenever the connector moves', active: true });
         } else {
-          base.push({ label: 'Sketch 2 — sensor hole', sub: `${fmtLen(40)} left of center · its own dimension`, active: true });
+          base.push({ label: 'Sketch 2 — sensor hole', sub: `${fmtLen(E2_HALF)} left of center · its own dimension`, active: true });
           base.push({ label: 'Sketch 3 — connector hole', sub: 'its own dimension · free to move alone', active: true });
         }
         base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
@@ -1674,13 +1689,13 @@ const EXERCISES = [
 
     brief: {
       heading: 'A lid with one job',
-      get body() { return `This box gets a snap-on lid. The lid must overhang the box by ${fmtLen(2)} on each side — enough to grab, not enough to snag. The box is ${fmtLen(100)} wide today, so the correct lid is ${fmtLen(104)}.`; },
-      get intent() { return `Keep the lid exactly ${fmtLen(2)} past the box on each side.`; },
+      get body() { return `This box gets a snap-on lid. The lid must overhang the box by ${fmtLen(E4_LIP)} on each side — enough to grab, not enough to snag. The box is ${fmtLen(E4_BOX0)} wide today, so the correct lid is ${fmtLen(E4_LID)}.`; },
+      get intent() { return `Keep the lid exactly ${fmtLen(E4_LIP)} past the box on each side.`; },
       change: 'The box. A bigger version keeps coming up in meetings — the dashed outline is where it’s headed.',
     },
 
     predict: {
-      get prompt() { return `Two ways to size the lid, and both come out to ${fmtLen(104)} today. The box is about to grow. Which lid still fits the day it does?`; },
+      get prompt() { return `Two ways to size the lid, and both come out to ${fmtLen(E4_LID)} today. The box is about to grow. Which lid still fits the day it does?`; },
       note: 'Just a guess — you’ll test both in a minute.',
       answer: 'b',
     },
@@ -1691,13 +1706,13 @@ const EXERCISES = [
 
     paths: {
       a: {
-        get label() { return `Type the lid at ${fmtLen(104)}`; },
-        get sub() { return `Box is ${fmtLen(100)}, plus ${fmtLen(2)} per side. Do the math once, type the answer.`; },
+        get label() { return `Type the lid at ${fmtLen(E4_LID)}`; },
+        get sub() { return `Box is ${fmtLen(E4_BOX0)}, plus ${fmtLen(E4_LIP)} per side. Do the math once, type the answer.`; },
         short: 'hardcoded',
         kind: 'accident',
       },
       b: {
-        get label() { return `Make the lid “box width + ${fmtLen(4)}”`; },
+        get label() { return `Make the lid “box width + ${fmtLen(2 * E4_LIP)}”`; },
         sub: 'No number of its own — the lid asks the box how wide to be.',
         short: 'linked',
         kind: 'intent',
@@ -1705,9 +1720,9 @@ const EXERCISES = [
     },
 
     change: {
-      get request() { return `“The bigger version is approved — take the box out toward ${fmtLen(160)}. And yes, the lid still owes us its ${fmtLen(2)}.”`; },
+      get request() { return `“The bigger version is approved — take the box out toward ${fmtLen(E4_BOX1)}. And yes, the lid still owes us its ${fmtLen(E4_LIP)}.”`; },
       sliderLabel: 'Box width',
-      format: (t) => fmtLen(lerp(100, 160, t)),
+      format: (t) => fmtLen(lerp(E4_BOX0, E4_BOX1, t)),
       hint: 'Grow the box first — feel it before we name it.',
     },
 
@@ -1715,7 +1730,7 @@ const EXERCISES = [
     everyday: e4MainEveryday,
 
     outcome(path, t) {
-      const over = 2 - 30 * t;                   // lid overhang per side, mm
+      const over = E4_LIP - ((E4_BOX1 - E4_BOX0) / 2) * t;                   // lid overhang per side, mm
       if (t < 0.02) {
         return {
           tone: 'idle',
@@ -1728,7 +1743,7 @@ const EXERCISES = [
           return {
             tone: 'warn',
             headline: `overhang down to ${fmtLen(over, { mmDecimals: 1 })}`,
-            note: `The lid isn’t growing. Its ${fmtLen(2)} of grace is being spent.`,
+            note: `The lid isn’t growing. Its ${fmtLen(E4_LIP)} of grace is being spent.`,
           };
         }
         if (over > -1.5) {
@@ -1741,12 +1756,12 @@ const EXERCISES = [
         return {
           tone: 'bad',
           headline: `box sticks out ${fmtLen(Math.abs(over))} past the lid`,
-          note: `${fmtLen(104)} was the right answer to a question the box stopped asking. The number didn’t drift — the world did, and a typed number never hears about it.`,
+          note: `${fmtLen(E4_LID)} was the right answer to a question the box stopped asking. The number didn’t drift — the world did, and a typed number never hears about it.`,
         };
       }
       return {
         tone: 'good',
-        headline: `always ${fmtLen(2)} past the box`,
+        headline: `always ${fmtLen(E4_LIP)} past the box`,
         note: 'The lid doesn’t know a number — it knows a relationship. The box grew, the lid heard about it, and nobody edited anything.',
       };
     },
@@ -1759,15 +1774,15 @@ const EXERCISES = [
         path === null
           ? { label: 'Sketch 2 — lid plate', sub: 'how wide? that’s your call', active: true }
           : path === 'a'
-            ? { label: 'Sketch 2 — lid plate', sub: `width typed in: ${fmtLen(104)}`, active: true }
-            : { label: 'Sketch 2 — lid plate', sub: `width = box width + ${fmtLen(4)} · a linked dimension`, active: true },
+            ? { label: 'Sketch 2 — lid plate', sub: `width typed in: ${fmtLen(E4_LID)}`, active: true }
+            : { label: 'Sketch 2 — lid plate', sub: `width = box width + ${fmtLen(2 * E4_LIP)} · a linked dimension`, active: true },
         { label: 'Extrude 2 — lid', sub: `${fmtLen(7)} thick` },
       ];
     },
 
     takeaway: {
       line: 'A relationship is intent made durable. When two dimensions belong together, link them — don’t make one memorize the other.',
-      get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable (#box_width), then an equation typed right into the lid’s dimension: #box_width + ${fmtLen(4)}.`; },
+      get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable (#box_width), then an equation typed right into the lid’s dimension: #box_width + ${fmtLen(2 * E4_LIP)}.`; },
       flip: 'Unless a standard already decided the number — then typing it is correct.',
     },
 
@@ -1778,19 +1793,19 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
-      get body() { return `Same instinct, different hole. This control panel takes a standard ⌀${fmtLen(20)} push-button switch. The switch comes off a shelf and will never change — but the panel is about to get wider.`; },
+      get body() { return `Same instinct, different hole. This control panel takes a standard ⌀${fmtLen(E4_SW)} push-button switch. The switch comes off a shelf and will never change — but the panel is about to get wider.`; },
       defaultPath: 'b',
       scene: e4CounterScene,
       everyday: e4CounterEveryday,
       sliderLabel: 'Panel width',
-      format: (t) => fmtLen(lerp(80, 160, t)),
+      format: (t) => fmtLen(lerp(E4_P0, E4_P1, t)),
       hint: 'Grow the panel — this hole answers to a standard, not a neighbor.',
       pathLabels: {
-        get a() { return `Type the hole at ⌀${fmtLen(20)}`; },
+        get a() { return `Type the hole at ⌀${fmtLen(E4_SW)}`; },
         b: 'Link the hole to the panel width',
       },
       outcome(path, t) {
-        const g = Math.round(20 * t);            // how oversize the linked hole runs, mm
+        const g = Math.round(E4_SW * t);            // how oversize the linked hole runs, mm
         if (t < 0.02) {
           return {
             tone: 'idle',
@@ -1800,17 +1815,17 @@ const EXERCISES = [
         }
         if (path === 'b') {
           if (g < 4) {
-            return { tone: 'warn', headline: `hole is ${fmtLen(20 * t)} oversize`, note: 'The hole is growing with the panel. The switch is not.' };
+            return { tone: 'warn', headline: `hole is ${fmtLen(E4_SW * t)} oversize`, note: 'The hole is growing with the panel. The switch is not.' };
           }
           return {
             tone: 'bad',
-            headline: `hole is ⌀${fmtLen(20 + 20 * t)} — the switch is ⌀${fmtLen(20)}`,
+            headline: `hole is ⌀${fmtLen(E4_SW + E4_SW * t)} — the switch is ⌀${fmtLen(E4_SW)}`,
             note: 'The link is doing what links do: passing the change along. But the switch doesn’t scale with your panel. This dimension answers to a standard, not to a neighbor.',
           };
         }
         return {
           tone: 'good',
-          headline: `⌀${fmtLen(20)} at every panel size`,
+          headline: `⌀${fmtLen(E4_SW)} at every panel size`,
           note: 'A typed number — the villain a minute ago — is exactly right here, because the real reference is a standard that never moves.',
         };
       },
@@ -1819,7 +1834,7 @@ const EXERCISES = [
           { label: 'Origin', sub: 'the one reference that never moves' },
           { label: 'Sketch 1 — panel outline', sub: 'its width is the thing that will change' },
           path === 'a'
-            ? { label: 'Sketch 2 — switch hole', sub: `⌀${fmtLen(20)} typed in — quoting the standard`, active: true }
+            ? { label: 'Sketch 2 — switch hole', sub: `⌀${fmtLen(E4_SW)} typed in — quoting the standard`, active: true }
             : { label: 'Sketch 2 — switch hole', sub: '⌀ linked to panel width ÷ 4', active: true },
           { label: 'Extrude 1', sub: `${fmtLen(3)} panel` },
           { label: 'Extrude 2 — cut', sub: 'removes the switch hole, through all' },
