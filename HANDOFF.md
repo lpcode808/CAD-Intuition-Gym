@@ -1,9 +1,111 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-10-20 by Claude Code (everyday layer + gym round — see
-directly below; v3 status breadcrumb is still at the end of this file).
+Last updated: 2026-10-21 by Claude Code (UX + learning-design review round —
+see directly below; v3 status breadcrumb is still at the end of this file).
 
-## What changed in this round (everyday layer, inches, badges — 2026-10-20)
+## What changed in this round (UX + learning-design review, 2026-10-21)
+
+PR #7 (everyday layer, inches, badges) was merged by Justin; this round
+restarted the branch from `main`. Two independent read-only reviews ran in
+parallel — a beginner walkthrough on a phone and a laptop, and an
+instructional-design pass over every content object — plus my own pass.
+They converged on the same core problems; all the fixes below are inside
+the existing loop (no new exercises, light predict tap kept).
+
+**Learning flow (`app.js`)**
+- **Both schemes must be watched before the lesson is named.** A learner
+  could predict right, build the winner, nudge the slider and leave without
+  ever seeing the failure — the comparison the PRD calls core (§5) was
+  optional. "Name the lesson" now waits until A and B have each run past
+  the reveal point (compare mode counts for both), with a hint saying
+  what's left. Same rule in "Flip it" for the moral and Done.
+- **"Flip it" asks for a call first.** The counters asked "Which serves you
+  now?" and recorded nothing. Now a light tap (same shape as Predict), then
+  both schemes run, then "You called the flip" / "The flip caught you" next
+  to the moral. A one-line **New job** card (`counter.job`) states the
+  changed intent before the paragraph.
+- **Prediction feedback explains the mechanism.** The old chip was fixed
+  text and could say "watching it fail" while the working scheme was on
+  screen. Now: "You called it." / "Not what you predicted — good" + a
+  per-exercise `predict.why` sentence (the mechanism, not the symptom).
+- **The answer isn't on screen during the prediction.** The header shows
+  the situation (`brief.heading`) until "Name it", then the principle;
+  home rows show the situation + job until done, then the principle +
+  tagline. Option subs now describe what each scheme does instead of
+  arguing for it ("perfectly centered today", "feels tidy" are gone); E3's
+  brief no longer states the answer.
+- **Choose** starts on the learner's guess (one tap to build it, or pick
+  the other) and is framed as the modeling decision.
+- **Consolidation:** the recap appears as exercises are finished, flips
+  sit behind an "Unless…?" reveal (self-test, not re-reading), with a
+  prediction score. Finishing an exercise lands on a rep-complete card with
+  the takeaway, any badges earned, and a Next button (or "See what you
+  leave with" after the circuit).
+- **Badges** reward learning moves: "Kilos & pounds" → "Called the flip";
+  "Second set" needs a later day (spaced practice).
+
+**UX (`app.js`, `style.css`)**
+- The scene stays in view while the rail scrolls (sticky on desktop; on
+  phones during "The change" and "Flip it", not in stacked compare). The
+  flip-it slider used to sit ~600px below the scene on a phone.
+- Home: a one-line "how a rep works", a Start / Continue button, the
+  flight-simulator note rewritten as the pitch, and an empty locker
+  collapsed to one line.
+- Toasts on phones sit at the top (they covered the prediction feedback).
+- 40px+ tap targets on phones (segmented toggles, restart, slider); faint
+  text darkened to pass AA (`--faint` #8a97a5 → #6b7886).
+- "Flip" now means the counter only ("switch to B", "see a scene in the
+  everyday layer").
+
+**Content (`exercises.js`)**
+- Round inches where the copy does arithmetic: E1 (4.00 in plate, hole at
+  2.00 in, out to 8.00 in), E2 (3.00 in spacing, 1.50 in a side), E4
+  (4.00 in box + 0.08 in a side = 4.16 in lid; switch 0.75 in on a 3.00 in
+  panel) — values chosen so the mm readouts add up too. Before, E4 said
+  3.94 + 2 × 0.08 = 4.09.
+- E1 terms: Onshape's Symmetric needs two entities and a line, so the term
+  note and feature subs now say Midpoint (or Coincident to a centered
+  origin, as the bridge does).
+- Failures named by structure, not by a slip (E2 B, E5 A).
+- E5's counter reframed as "one decision, two homes" (E2's lesson), which
+  no longer contradicts E6; E6's takeaway now says the reference carries
+  the screws, not the order alone.
+- E4's counter states the temptation ("the hole happened to be a quarter
+  of the panel, so the link habit says panel ÷ 4").
+- E3 everyday copy talks about the plan, not physical strength; the
+  everyday caption says each slider position is a fresh build.
+
+QA: 372/372 — the harness now drives both schemes before naming the
+lesson, makes the flip-it call, checks the gate hints, the mechanism
+feedback, the call verdict, and reads recap flips through the reveal.
+
+Independent `qa-verifier` pass: PASS on every claim (all six exercises,
+both units, both widths, gate edge cases, scene sweep showing no new
+collisions vs `main`). Its follow-ups, fixed after: on phones the
+flip-it "switch to B" hint had slid below the bridge card (it now sits
+right under the counter readout); compare mode showed a "switch to A"
+hint with both panes on screen; "Called the flip" toasted onto the
+rep-complete card (now listed on the card with the rep's other badges);
+the rep card vanished on a units toggle; slider and layer toggle are now
+40px on phones; small copy nits.
+
+Flagged by the verifier, not changed: the flip-it call can be answered by
+pattern — every counter's winner is the scheme that lost the main lesson,
+and the heading says "Now flip it". That is the PRD's hard rule (a
+counter-context always flips), so the call's value is in reading the New
+job; varying it would break the rule. Worth Justin's eye.
+
+**Still open / flagged (not done):**
+1. E5/E6 in-scene feature-tree text is ~7px on phones; an HTML tree above
+   the scene on narrow screens would fix it (new rendering path).
+2. E3/E5/E6 inch values still read as conversions (1.06 in, 0.47 in,
+   0.31 in) — no arithmetic is broken there, so left as is.
+3. Counter morals still lead with the rule reversal; the learning-design
+   review suggested leading with the intent.
+4. Everyday stays opt-in (CAD default). The UX review found it the
+   strongest phone "aha"; making it the default is still Justin's call.
+
+## What changed in the round before (everyday layer, inches, badges — 2026-10-20)
 
 Justin asked for three things in one message: default to inches; "a layer
 to toggle to trace everyday objects… fine if it's not actually Onshape

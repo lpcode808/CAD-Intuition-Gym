@@ -30,7 +30,6 @@ const unitToggleBtn = h('button', {
   'aria-pressed': getUnit() === 'in' ? 'true' : 'false',
   onclick: () => {
     toggleUnit();
-    award('kilos-pounds');
     unitToggleBtn.textContent = unitToggleLabel();
     unitToggleBtn.setAttribute('aria-label', unitToggleA11yLabel());
     unitToggleBtn.setAttribute('aria-pressed', getUnit() === 'in' ? 'true' : 'false');
@@ -53,10 +52,10 @@ const BADGES = [
   { id: 'called-it', glyph: '✓', name: 'Called it', how: 'Predict the consequence before it lands.' },
   { id: 'felt-the-miss', glyph: '✕', name: 'Felt the miss', how: 'Finish one you predicted wrong. The miss is the workout.' },
   { id: 'spotter', glyph: 'AB', name: 'Spotter', how: 'Watch both schemes side by side.' },
-  { id: 'cross-trainer', glyph: 'IRL', name: 'Cross-trainer', how: 'Flip a scene to the everyday layer.' },
-  { id: 'kilos-pounds', glyph: '⇄', name: 'Kilos & pounds', how: 'Switch the units.' },
+  { id: 'cross-trainer', glyph: 'IRL', name: 'Cross-trainer', how: 'See a scene in the everyday layer.' },
+  { id: 'called-the-flip', glyph: '⇄', name: 'Called the flip', how: 'In “Flip it”, call the right scheme before you run it.' },
   { id: 'sharp-eye', glyph: '3×', name: 'Sharp eye', how: 'Call three predictions right.' },
-  { id: 'second-set', glyph: '↺', name: 'Second set', how: 'Redo an exercise you already finished.' },
+  { id: 'second-set', glyph: '↺', name: 'Second set', how: 'Come back on a later day and redo one you finished.' },
   { id: 'into-the-cockpit', glyph: '↗', name: 'Into the cockpit', how: 'Open Onshape from a “Try the real thing” card.' },
   { id: 'full-circuit', glyph: '★', name: 'Full circuit', how: 'Finish every exercise.' },
 ];
@@ -70,14 +69,17 @@ function loadBadges() {
   catch { return sessionBadges; }
 }
 
-function award(id) {
+// Returns the badge if this call earned it. `quiet` skips the toast — finish()
+// lists its badges on the rep-complete card instead of stacking toasts on it.
+function award(id, { quiet = false } = {}) {
   const earned = loadBadges();
   const badge = BADGES.find((b) => b.id === id);
-  if (!badge || earned[id]) return;
+  if (!badge || earned[id]) return null;
   earned[id] = new Date().toISOString();
   sessionBadges = earned;
   try { localStorage.setItem(BADGE_KEY, JSON.stringify(earned)); } catch { /* session-only */ }
-  showToast(badge);
+  if (!quiet) showToast(badge);
+  return badge;
 }
 
 /* Toasts sit outside #app (like the unit pill) so a route change — finishing
@@ -131,6 +133,9 @@ function h(tag, attrs = {}, ...children) {
 
 /* ------------------------------------------------------------------ home */
 
+// Set by finish(), read once by the next home render: the rep-complete card.
+let justFinished = null;
+
 function renderHome() {
   document.title = 'CAD Intuition Gym';
   rerenderCurrent = renderHome;
@@ -140,13 +145,19 @@ function renderHome() {
   const allDone = availableExercises.length > 0
     && availableExercises.every((ex) => prog[ex.id] && prog[ex.id].done);
   const nextUp = availableExercises.find((ex) => !(prog[ex.id] && prog[ex.id].done));
+  const doneList = availableExercises.filter((ex) => prog[ex.id] && prog[ex.id].done);
+  const called = doneList.filter((ex) => prog[ex.id].predictedRight).length;
+  const finished = justFinished && EXERCISES.find((ex) => ex.id === justFinished.id);
+  const justBadges = (justFinished && justFinished.badges) || [];
 
   const rows = EXERCISES.map((ex) => {
     const done = prog[ex.id] && prog[ex.id].done;
     const num = h('span', { class: 'ex-num' }, String(ex.num).padStart(2, '0'));
+    // The principle is the payoff: until it's earned, a row names the
+    // situation and its job, so the menu doesn't answer the prediction.
     const text = h('span', { class: 'ex-row-text' },
-      h('span', { class: 'ex-row-title' }, ex.title),
-      h('span', { class: 'ex-row-tag' }, ex.tagline));
+      h('span', { class: 'ex-row-title' }, done ? ex.title : ex.brief.heading),
+      h('span', { class: 'ex-row-tag' }, done ? ex.tagline : ex.brief.intent));
     if (!ex.available) {
       return h('div', { class: 'ex-row is-locked' },
         num, text, h('span', { class: 'ex-status' }, 'in authoring'));
@@ -158,27 +169,52 @@ function renderHome() {
         done ? 'done ✓' : startLabel));
   });
 
+  const repDone = finished && h('section', { class: 'rep-done', role: 'status' },
+    h('p', { class: 'rep-kicker' }, `Rep complete · ${doneList.length} of ${availableExercises.length}`),
+    h('p', { class: 'rep-title' }, finished.title),
+    h('p', { class: 'rep-line' }, finished.takeaway.line),
+    justBadges.length > 0 && h('ul', { class: 'rep-badges', 'aria-label': 'Badges earned' }, justBadges.map((b) =>
+      h('li', {},
+        h('span', { class: 'medal is-earned', 'aria-hidden': 'true' }, b.glyph),
+        h('span', {}, h('strong', {}, b.name), ' — ', b.how)))),
+    nextUp
+      ? h('a', { class: 'btn primary', href: `#/${nextUp.id}` }, `Next: ${nextUp.brief.heading} →`)
+      : h('button', {
+        class: 'btn primary',
+        onclick: () => document.querySelector('.recap')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      }, 'See what you leave with ↓'));
+
   appRoot.replaceChildren(
     h('main', { class: 'home' },
+      repDone,
       h('p', { class: 'kicker' }, 'CAD Intuition Gym'),
       h('h1', {}, 'Model your intent, not your accident.'),
       h('p', { class: 'lede' },
         'A gym for the CAD decisions that don’t have a button. You can sketch and extrude — but nothing you’ve modeled has ever broken on you. Here, it will. On purpose, a few minutes per exercise.'),
+      h('p', { class: 'rep-how' },
+        'One rep: read the job → guess what breaks → push the change through both ways → name the rule, then find where it flips. About three minutes.'),
+      !finished && nextUp && h('a', { class: 'btn primary hero-cta', href: `#/${nextUp.id}` },
+        anyDone ? `Continue: Exercise ${nextUp.num} →` : 'Start Exercise 1 →'),
       h('p', { class: 'sim-note' },
-        'This is a flight simulator: there’s no CAD engine behind it, and every consequence is hand-built so the lesson lands clean. The real cockpit — Onshape — is one tab away.'),
+        'It’s a flight simulator: crash here so you don’t crash in Onshape. There’s no CAD engine behind it — every consequence is hand-built so the lesson lands clean.'),
       h('h2', { class: 'section-label' }, 'Six decisions',
         anyDone && h('span', { class: 'section-count' },
           ` · ${availableExercises.filter((ex) => prog[ex.id] && prog[ex.id].done).length} done`)),
       h('div', { class: 'ex-list' }, rows),
-      allDone && h('section', { class: 'recap' },
-        h('h2', { class: 'section-label' }, 'What you leave with'),
-        h('p', { class: 'recap-lede' }, 'Every rule you just learned, next to the flip that keeps it honest. The rule was never the rule — the intent is.'),
-        h('div', { class: 'recap-list' }, availableExercises.map((ex) =>
+      anyDone && h('section', { class: 'recap' },
+        h('h2', { class: 'section-label' }, allDone ? 'What you leave with' : 'What you’ve earned so far'),
+        h('p', { class: 'recap-lede' }, 'Every rule you’ve earned, with the flip that keeps it honest. Say the exception to yourself before you open “Unless…?” — the rule was never the rule; the intent is.'),
+        h('p', { class: 'recap-score' }, called === doneList.length
+          ? `You called ${doneList.length === 1 ? 'your prediction' : `all ${doneList.length} predictions`} before the change landed.`
+          : `You called ${called} of ${doneList.length} predictions before the change landed — and felt the rest.`),
+        h('div', { class: 'recap-list' }, doneList.map((ex) =>
           h('div', { class: 'recap-row' },
             h('span', { class: 'ex-num' }, String(ex.num).padStart(2, '0')),
             h('div', { class: 'recap-text' },
               h('p', { class: 'recap-line' }, ex.takeaway.line),
-              h('p', { class: 'recap-flip' }, ex.takeaway.flip)))))),
+              h('details', { class: 'recap-flip' },
+                h('summary', {}, 'Unless…?'),
+                h('p', {}, ex.takeaway.flip))))))),
       locker(),
       h('footer', { class: 'home-foot' },
         h('span', {}, 'Progress lives in this browser and nowhere else.'),
@@ -188,6 +224,12 @@ function renderHome() {
 function locker() {
   const earned = loadBadges();
   const count = BADGES.filter((b) => earned[b.id]).length;
+  if (!count) {
+    // Ten empty slots shouldn't outweigh the exercises on a first visit.
+    return h('section', { class: 'locker' },
+      h('h2', { class: 'section-label' }, `Your locker · 0 of ${BADGES.length} badges`),
+      h('p', { class: 'locker-empty' }, 'Badges land as you train — for calling a consequence, watching both schemes, coming back on another day.'));
+  }
   return h('section', { class: 'locker' },
     h('h2', { class: 'section-label' }, `Your locker · ${count} of ${BADGES.length} badges`),
     h('ul', { class: 'locker-grid' }, BADGES.map((b) =>
@@ -212,7 +254,7 @@ function resetProgress() {
 /* ---------------------------------------------------------------- player */
 
 function renderPlayer(ex) {
-  document.title = `E${ex.num} · ${ex.title} — CAD Intuition Gym`;
+  justFinished = null;   // the rep card belongs to the home visit right after a finish
 
   const S = {
     step: 0, maxStep: 0,
@@ -221,12 +263,25 @@ function renderPlayer(ex) {
     view: null,           // the scheme currently on screen (flippable in step 3)
     t: 0, moved: false, compare: false, revealed: false,
     counterT: 0, counterPath: ex.counter.defaultPath, counterMoved: false,
+    seen: { a: false, b: false },          // each scheme watched under the change (t ≥ SEEN_T)
+    earned: [],                            // badges toasted during this rep, listed again on the rep card
+    counterCall: null,                     // their call in "Flip it", before running it
+    counterSeen: { a: false, b: false },
     featuresOpen: null,   // null until the learner toggles it — then it sticks
   };
+  // The flip's winner: whichever scheme holds at the full change.
+  const counterAnswer = ['a', 'b'].find((p) => ex.counter.outcome(p, 1).tone === 'good');
   const refs = {};
+
+  function earn(id) {
+    const b = award(id);
+    if (b) S.earned.push(b);
+  }
 
   function go(i) {
     S.step = i; S.maxStep = Math.max(S.maxStep, i);
+    // Choose starts on their guess — one tap to build it, or pick the other.
+    if (i === 2 && !S.built && S.predicted) { S.built = S.predicted; S.view = S.predicted; }
     render();
     // Keyboard users land on the new step's content, not back at the top.
     refs.rail.focus({ preventScroll: true });
@@ -238,6 +293,7 @@ function renderPlayer(ex) {
       step: 0, maxStep: 0, predicted: null, built: null, view: null,
       t: 0, moved: false, compare: false, revealed: false,
       counterT: 0, counterPath: ex.counter.defaultPath, counterMoved: false,
+      seen: { a: false, b: false }, counterCall: null, counterSeen: { a: false, b: false },
     });
     render();
   }
@@ -245,6 +301,8 @@ function renderPlayer(ex) {
   /* ---- shell ---- */
 
   function render() {
+    // The situation until "Name it", then the principle.
+    document.title = `E${ex.num} · ${S.step === 4 ? ex.title : ex.brief.heading} — CAD Intuition Gym`;
     refs.features = h('div', { class: 'features-body' });
     refs.viewport = h('div', { class: 'viewport' });
     refs.rail = h('div', { class: 'rail', tabindex: '-1' });
@@ -261,10 +319,10 @@ function renderPlayer(ex) {
         h('header', { class: 'ex-header' },
           h('div', { class: 'ex-header-row' },
             h('a', { class: 'backlink', href: '#/' }, '← All exercises'),
-            h('span', { class: 'ex-title' }, `Exercise ${ex.num} — ${ex.title}`),
+            h('span', { class: 'ex-title' }, `Exercise ${ex.num} — ${S.step === 4 ? ex.title : ex.brief.heading}`),
             h('button', { class: 'linklike', onclick: restart }, '↺ restart')),
           stepper()),
-        refs.body = h('div', { class: 'ex-body' },
+        refs.body = h('div', { class: 'ex-body', 'data-step': String(S.step) },
           featuresPanel,
           h('div', { class: 'viewport-panel' }, refs.viewport),
           h('aside', { class: 'rail-panel' }, refs.rail))));
@@ -284,9 +342,11 @@ function renderPlayer(ex) {
   }
 
   function renderStep() {
+    refs.continueBtn = refs.doneBtn = null;   // drawScenes() gates only what the new rail builds
     refreshFeatures();
     renderViewport();
     refs.rail.replaceChildren(...railContent());
+    updateGates();
   }
 
   function focusRef(name) {
@@ -357,15 +417,16 @@ function renderPlayer(ex) {
             onclick: () => {
               if (getLayer() === v) return;
               setLayer(v);
-              if (v === 'everyday') award('cross-trainer');
+              if (v === 'everyday') earn('cross-trainer');
               renderViewport();
               const again = refs.viewport.querySelector('.layer-bar .seg.is-on');
               if (again) again.focus();
             },
           }, label))),
       getLayer() === 'everyday'
-        ? h('span', { class: 'layer-thing' }, def.thing)
-        : h('span', { class: 'layer-hint' }, 'Flip to Everyday to see the real thing this part stands for.'));
+        ? h('span', { class: 'layer-thing' }, def.thing,
+          S.step >= 3 && h('span', { class: 'layer-note' }, ' Each slider position is a fresh one, built from your model.'))
+        : h('span', { class: 'layer-hint' }, 'Everyday shows the real object this part stands for.'));
   }
 
   /* Under → CAD scene → over. The CAD drawing stays on top as the trace. */
@@ -423,6 +484,50 @@ function renderPlayer(ex) {
         tone: o ? o.tone : null,
       });
       setChip(refs.single.chip, o);
+    }
+    markSeen();
+  }
+
+  /* Contrasting cases are the mechanism (PRD §5): both schemes have to be
+     watched under the change — in "The change" and again in "Flip it" —
+     before the lesson gets named. Compare mode counts for both. */
+  const SEEN_T = 0.55;
+
+  function markSeen() {
+    if (S.step === 3 && S.t >= SEEN_T) {
+      if (S.compare) { S.seen.a = true; S.seen.b = true; } else if (S.view) S.seen[S.view] = true;
+    }
+    if (S.step === 4 && S.counterCall && S.counterT >= SEEN_T) S.counterSeen[S.counterPath] = true;
+    updateGates();
+  }
+
+  function gateHint(seen, view, first) {
+    if (seen.a && seen.b) return null;
+    if (view === null) return 'Drag the change past halfway — both schemes are on screen.';
+    if (!seen.a && !seen.b) return first;
+    const other = seen.a ? 'b' : 'a';
+    return view === other
+      ? `Keep going — run ${other.toUpperCase()} through the change too.`
+      : `Now switch to ${other.toUpperCase()} and run the same change — the lesson is in the difference.`;
+  }
+
+  function updateGates() {
+    if (S.step === 3 && refs.continueBtn) {
+      refs.continueBtn.disabled = !(S.seen.a && S.seen.b);
+      const msg = gateHint(S.seen, S.compare ? null : S.view,
+        ex.change.hint || 'Drag the slider first — feel it before we name it.');
+      refs.moveHint.textContent = msg || '';
+      refs.moveHint.hidden = !msg;
+    }
+    if (S.step === 4 && refs.doneBtn) {
+      const both = S.counterSeen.a && S.counterSeen.b;
+      refs.doneBtn.disabled = !both;
+      refs.moral.hidden = !both;
+      refs.callChip.hidden = !both;
+      const msg = gateHint(S.counterSeen, S.counterPath,
+        ex.counter.hint || 'Run the change one more time — this part has a different job.');
+      refs.moveHint2.textContent = msg || '';
+      refs.moveHint2.hidden = !msg;
     }
   }
 
@@ -530,13 +635,8 @@ function renderPlayer(ex) {
         oninput: (t) => {
           S.t = t;
           refs.sliderVal.textContent = ex.change.format(t);
-          if (t > 0.15 && !S.moved) {
-            S.moved = true;
-            refs.continueBtn.disabled = false;
-            const hint = refs.rail.querySelector('[data-ref="movehint"]');
-            if (hint) hint.remove();
-          }
-          if (t > 0.55 && !S.revealed) { S.revealed = true; fillPredChip(); }
+          if (t > 0.15) S.moved = true;
+          if (t >= SEEN_T && !S.revealed) { S.revealed = true; fillPredChip(); }
           drawScenes();
           updateOutcomeNote();
         },
@@ -560,7 +660,7 @@ function renderPlayer(ex) {
         'aria-pressed': S.compare ? 'true' : 'false',
         onclick: () => {
           S.compare = !S.compare;
-          if (S.compare) award('spotter');
+          if (S.compare) earn('spotter');
           renderStep();
         },
       }, S.compare ? 'Back to one view' : 'Compare side by side')));
@@ -573,12 +673,9 @@ function renderPlayer(ex) {
     refs.continueBtn = h('button', {
       class: 'btn primary', 'data-ref': 'continue', onclick: advance,
     }, 'Name the lesson →');
-    refs.continueBtn.disabled = !S.moved;
     out.push(refs.continueBtn);
-    if (!S.moved) {
-      out.push(h('p', { class: 'fine', 'data-ref': 'movehint' },
-        ex.change.hint || 'Drag the slider first — feel it before we name it.'));
-    }
+    refs.moveHint = h('p', { class: 'fine gate-hint', 'data-ref': 'movehint', 'aria-live': 'polite' });
+    out.push(refs.moveHint);
 
     updateOutcomeNote();
     return out;
@@ -594,10 +691,10 @@ function renderPlayer(ex) {
     const right = S.predicted === ex.predict.answer;
     refs.predChip.hidden = false;
     refs.predChip.className = 'pred-chip ' + (right ? 'is-right' : 'is-wrong');
-    refs.predChip.textContent = right
-      ? 'Your prediction held. Flip to the other scheme anyway — watching it fail is half the workout.'
-      : 'Not what you predicted — good. Feeling the miss is the workout. Flip between A and B and watch why.';
-    if (right) award('called-it');
+    refs.predChip.textContent = (right
+      ? 'You called it. '
+      : 'Not what you predicted — good, that’s the workout. ') + (ex.predict.why || '');
+    if (right) earn('called-it');
   }
 
   /* step 4 — name it, then flip it (counter-context) */
@@ -608,7 +705,38 @@ function renderPlayer(ex) {
       h('p', { class: 'term-note' }, ex.takeaway.term),
       h('hr', { class: 'rule' }),
       h('h3', { class: 'flip-head' }, ex.counter.heading),
+      ex.counter.job && h('div', { class: 'intent-card' },
+        h('div', { class: 'intent-item' },
+          h('span', { class: 'intent-k' }, 'New job'),
+          h('span', { class: 'intent-v' }, ex.counter.job))),
       h('p', { class: 'prose' }, ex.counter.body),
+    ].filter(Boolean);
+
+    if (!S.counterCall) {
+      // A light tap, like Predict: commit before running anything.
+      out.push(
+        h('p', { class: 'call-prompt' }, 'Your call — which scheme serves this part?'),
+        h('div', { class: 'options' }, ['a', 'b'].map((p) =>
+          h('button', {
+            class: 'option',
+            'aria-pressed': 'false',
+            onclick: () => {
+              S.counterCall = p;
+              S.counterPath = p;
+              renderStep();
+              const slider = refs.rail.querySelector('input.slider');
+              if (slider) slider.focus({ preventScroll: true });
+            },
+          },
+            h('span', { class: 'option-key' }, p.toUpperCase()),
+            h('span', { class: 'option-text' },
+              h('span', { class: 'option-label' }, ex.counter.pathLabels[p]))))),
+        h('p', { class: 'fine' }, 'Just a call — you’ll run both.'));
+      return out;
+    }
+
+    out.push(
+      h('p', { class: 'call-made' }, `Your call: ${S.counterCall.toUpperCase()} · ${ex.counter.pathLabels[S.counterCall]}`),
       h('div', { class: 'viewrow' },
         h('span', { class: 'viewrow-label' }, 'scheme'),
         h('div', { class: 'segmented' }, ['a', 'b'].map((p) =>
@@ -625,34 +753,26 @@ function renderPlayer(ex) {
         oninput: (t) => {
           S.counterT = t;
           refs.sliderVal.textContent = ex.counter.format(t);
-          if (t > 0.15 && !S.counterMoved) {
-            S.counterMoved = true;
-            refs.moral.hidden = false;
-            refs.doneBtn.disabled = false;
-            const hint = refs.rail.querySelector('[data-ref="movehint2"]');
-            if (hint) hint.remove();
-          }
+          if (t > 0.15) S.counterMoved = true;
           drawScenes();
           updateCounterNote();
         },
-      }),
-    ];
+      }));
 
     refs.counterNote = h('p', { class: 'outcome-note' });
     out.push(refs.counterNote);
+    refs.moveHint2 = h('p', { class: 'fine gate-hint', 'data-ref': 'movehint2', 'aria-live': 'polite' });
+    out.push(refs.moveHint2);
+
+    const called = S.counterCall === counterAnswer;
+    refs.callChip = h('p', { class: 'pred-chip ' + (called ? 'is-right' : 'is-wrong') },
+      called ? 'You called the flip.' : 'The flip caught you — that’s what it’s for.');
+    refs.callChip.hidden = true;
+    out.push(refs.callChip);
 
     refs.moral = h('p', { class: 'moral' }, ex.counter.moral);
-    refs.moral.hidden = !S.counterMoved;
+    refs.moral.hidden = true;
     out.push(refs.moral);
-
-    refs.doneBtn = h('button', { class: 'btn primary', onclick: finish },
-      `Mark Exercise ${ex.num} done ✓`);
-    refs.doneBtn.disabled = !S.counterMoved;
-    out.push(refs.doneBtn);
-    if (!S.counterMoved) {
-      out.push(h('p', { class: 'fine', 'data-ref': 'movehint2' },
-        ex.counter.hint || 'Run the change one more time — this part has a different job.'));
-    }
 
     if (ex.bridge) {
       out.push(h('aside', { class: 'bridge-card' },
@@ -663,10 +783,15 @@ function renderPlayer(ex) {
           href: ex.bridge.href,
           target: '_blank',
           rel: 'noopener noreferrer',
-          onclick: () => award('into-the-cockpit'),
+          onclick: () => earn('into-the-cockpit'),
         }, 'Open Onshape ↗'),
         h('p', { class: 'fine' }, 'Optional — the gym taught the judgment; the real cockpit is one tab away.')));
     }
+
+    refs.doneBtn = h('button', { class: 'btn primary', onclick: finish },
+      `Mark Exercise ${ex.num} done ✓`);
+    refs.doneBtn.disabled = true;
+    out.push(refs.doneBtn);
 
     updateCounterNote();
     return out;
@@ -680,7 +805,8 @@ function renderPlayer(ex) {
 
   function finish() {
     const prog = loadProgress();
-    const again = !!(prog[ex.id] && prog[ex.id].done);
+    const before = prog[ex.id] && prog[ex.id].done ? new Date(prog[ex.id].finishedAt) : null;
+    const again = !!before && before.toDateString() !== new Date().toDateString();
     const right = S.predicted === ex.predict.answer;
     prog[ex.id] = {
       done: true,
@@ -690,12 +816,18 @@ function renderPlayer(ex) {
     };
     saveProgress(prog);
 
-    award('first-rep');
-    if (!right) award('felt-the-miss');
-    if (again) award('second-set');
-    if (EXERCISES.filter((e) => prog[e.id] && prog[e.id].predictedRight).length >= 3) award('sharp-eye');
-    if (EXERCISES.filter((e) => e.available).every((e) => prog[e.id] && prog[e.id].done)) award('full-circuit');
+    const quiet = { quiet: true };
+    const badges = [
+      ...S.earned,
+      S.counterCall === counterAnswer && award('called-the-flip', quiet),
+      award('first-rep', quiet),
+      !right && award('felt-the-miss', quiet),
+      again && award('second-set', quiet),
+      EXERCISES.filter((e) => prog[e.id] && prog[e.id].predictedRight).length >= 3 && award('sharp-eye', quiet),
+      EXERCISES.filter((e) => e.available).every((e) => prog[e.id] && prog[e.id].done) && award('full-circuit', quiet),
+    ].filter(Boolean);
 
+    justFinished = { id: ex.id, badges };
     location.hash = '#/';
   }
 

@@ -295,6 +295,7 @@ async function runE5SceneChecks(browser, vp, collectors) {
      own feature"); reshaping under b strands the notch feature off the bead
      and flags its row red. Scheme a folds the notch into the outline sketch,
      so it rides the reshape and never drifts. */
+  await page.locator('.rail .options .option').nth(1).click(); // the flip-it call: B
   await setSlider(page, 0.8);
   const errorRowsBefore = await page.locator('.viewport svg .ftree-row.is-error').count();
   rec(checks, `[${vp.label}] e5 counter: the notch filed as its own feature flags red once the outline reshapes without it`, errorRowsBefore > 0, `error rows=${errorRowsBefore}`);
@@ -396,6 +397,7 @@ async function runE6SceneChecks(browser, vp, collectors) {
   /* step 4 — counter-context. Default scheme is a (label chained to the
      hole): moving the hole drags the label off center. Scheme b anchors the
      label to the plate, so the hole moves alone. */
+  await page.locator('.rail .options .option').nth(0).click(); // the flip-it call: A
   await setSlider(page, 0.8);
   const counterTextA = await page.locator('.viewport svg').evaluate((el) => el.textContent);
   const counterDriftA = await page.locator('.viewport svg .offline').count();
@@ -485,12 +487,24 @@ async function runExercise(page, exId, { capture, shotDir, vpLabel }) {
   const disabledBefore = await primaryBtn.isDisabled();
   rec(steps, `${exId}: change-request Continue disabled before slider moves`, disabledBefore === true, `disabled=${disabledBefore}`);
 
-  await setSlider(page, 0.6); // drag the change-request slider
-  const enabledAfter = await pollUntil(async () => !(await primaryBtn.isDisabled()));
-  rec(steps, `${exId}: change-request Continue enabled after slider moves`, enabledAfter === true, `enabled=${enabledAfter}`);
+  await setSlider(page, 0.6); // drag the change-request slider on the built scheme
+  const stillGated = await primaryBtn.isDisabled();
+  const hintNow = (await page.locator('[data-ref="movehint"]').innerText()).trim();
+  rec(steps, `${exId}: Continue waits until the other scheme has run too`, stillGated === true && /switch to [AB]/.test(hintNow), `disabled=${stillGated} hint="${hintNow}"`);
 
-  const hintGone = await pollUntil(async () => (await page.locator('[data-ref="movehint"]').count()) === 0);
-  rec(steps, `${exId}: "drag first" hint removed after slider moves`, hintGone === true);
+  const viewSegs = page.locator('.rail .segmented .seg');
+  const viewOn = await viewSegs.evaluateAll((nodes) => nodes.findIndex((n) => n.classList.contains('is-on')));
+  await viewSegs.nth(viewOn === 0 ? 1 : 0).click(); // run the other scheme under the same change
+  const enabledAfter = await pollUntil(async () => !(await primaryBtn.isDisabled()));
+  rec(steps, `${exId}: change-request Continue enabled once both schemes have run`, enabledAfter === true, `enabled=${enabledAfter}`);
+
+  const hintGone = await pollUntil(async () => await page.locator('[data-ref="movehint"]').isHidden());
+  rec(steps, `${exId}: the gate hint clears once both schemes have run`, hintGone === true);
+
+  const why = (await page.locator('.rail .pred-chip').innerText()).trim();
+  // eslint-disable-next-line no-undef
+  const whyExpected = await page.evaluate((id) => EXERCISES.find((e) => e.id === id).predict.why, exId);
+  rec(steps, `${exId}: prediction feedback explains the mechanism`, !!whyExpected && why.includes(whyExpected), `chip="${why.slice(0, 80)}…"`);
 
   if (capture) {
     await fs.promises.mkdir(shotDir, { recursive: true });
@@ -511,13 +525,23 @@ async function runExercise(page, exId, { capture, shotDir, vpLabel }) {
   await page.locator('.viewport .compare').waitFor({ state: 'detached' });
   await primaryBtn.click(); // "Name the lesson →"
 
-  /* step 4 — takeaway + counter-context */
+  /* step 4 — takeaway + counter-context: a call first, then both schemes */
+  await page.locator('.rail .call-prompt').waitFor({ state: 'visible' });
+  const callPrompt = await page.locator('.rail .call-prompt').count();
+  const segsBeforeCall = await page.locator('.rail .segmented .seg').count();
+  const moralBeforeCall = await page.locator('.rail .moral').count();
+  const doneBeforeCall = await primaryBtn.count();
+  rec(steps, `${exId}: flip-it asks for a call before anything runs`,
+    callPrompt === 1 && segsBeforeCall === 0 && moralBeforeCall === 0 && doneBeforeCall === 0,
+    `prompt=${callPrompt} toggles=${segsBeforeCall} moral=${moralBeforeCall} done=${doneBeforeCall}`);
+  await page.locator('.rail .options .option').first().click(); // the call
+
   const moral = page.locator('.rail .moral');
   await moral.waitFor({ state: 'attached' });
   const moralHiddenBefore = await moral.isHidden();
   const doneDisabledBefore = await primaryBtn.isDisabled();
-  rec(steps, `${exId}: counter moral hidden before counter slider moves`, moralHiddenBefore === true, `hidden=${moralHiddenBefore}`);
-  rec(steps, `${exId}: counter Done button disabled before counter slider moves`, doneDisabledBefore === true, `disabled=${doneDisabledBefore}`);
+  rec(steps, `${exId}: counter moral hidden before the counter slider moves`, moralHiddenBefore === true, `hidden=${moralHiddenBefore}`);
+  rec(steps, `${exId}: counter Done button disabled before the counter slider moves`, doneDisabledBefore === true, `disabled=${doneDisabledBefore}`);
 
   /* bridge card — the optional real-Onshape postscript on the takeaway step */
   const bridge = page.locator('.rail .bridge-card');
@@ -552,15 +576,20 @@ async function runExercise(page, exId, { capture, shotDir, vpLabel }) {
     doneDisabledBefore === true && bridgeCount === 1,
     `disabled=${doneDisabledBefore} bridge=${bridgeCount}`);
 
+  await setSlider(page, 0.6); // run the called scheme
+  const moralHiddenOne = await moral.isHidden();
+  rec(steps, `${exId}: counter moral waits until both schemes have run`, moralHiddenOne === true, `hidden=${moralHiddenOne}`);
+
   const segs = page.locator('.rail .segmented .seg');
   const onIndex = await segs.evaluateAll((nodes) => nodes.findIndex((n) => n.classList.contains('is-on')));
-  await segs.nth(onIndex === 0 ? 1 : 0).click(); // use its scheme toggle
+  await segs.nth(onIndex === 0 ? 1 : 0).click(); // and the other one
 
-  await setSlider(page, 0.5); // drag its slider
   const moralVisibleAfter = await pollUntil(async () => !(await moral.isHidden()));
   const doneEnabledAfter = await pollUntil(async () => !(await primaryBtn.isDisabled()));
-  rec(steps, `${exId}: counter moral appears only after counter slider moves`, moralVisibleAfter === true, `visible=${moralVisibleAfter}`);
-  rec(steps, `${exId}: counter Done button enabled after counter slider moves`, doneEnabledAfter === true, `enabled=${doneEnabledAfter}`);
+  rec(steps, `${exId}: counter moral appears once both schemes have run`, moralVisibleAfter === true, `visible=${moralVisibleAfter}`);
+  rec(steps, `${exId}: counter Done button enabled once both schemes have run`, doneEnabledAfter === true, `enabled=${doneEnabledAfter}`);
+  const callChip = await page.locator('.rail .pred-chip').isVisible();
+  rec(steps, `${exId}: the call gets its verdict next to the moral`, callChip === true);
 
   if (capture) {
     await page.screenshot({ path: path.join(shotDir, `${exId}-counter-${vpLabel}.png`) });
@@ -688,6 +717,7 @@ async function runEverydayLayerChecks(browser, vp, collectors) {
     results.push(['compare', (await page.locator('.compare svg.scene').count()) === 2 && await skinned('.compare svg.scene')]);
     await page.locator('.rail button.btn.ghost').click();
     await primaryBtn.click();
+    await page.locator('.rail .options .option').first().click(); // the flip-it call
     for (const i of [0, 1]) {
       await page.locator('.rail .segmented .seg').nth(i).click();
       await setSlider(page, 1);
@@ -815,7 +845,7 @@ async function main() {
       const recapRows = await page.locator('.recap .recap-row').count();
       rec(allChecks, `[${vp.label}] recap row count matches available exercises`, recapRows === recapExpected.length, `rows=${recapRows} expected=${recapExpected.length}`);
 
-      const recapText = recapCount === 1 ? await page.locator('.recap').innerText() : '';
+      const recapText = recapCount === 1 ? await page.locator('.recap').evaluate((el) => el.textContent) : '';
       const recapMissing = recapExpected
         .filter((ex) => !recapText.includes(ex.line) || !recapText.includes(ex.flip))
         .map((ex) => ex.id);

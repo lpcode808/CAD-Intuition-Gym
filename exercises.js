@@ -19,6 +19,25 @@
    after touching copy. */
 'use strict';
 
+/* Inch-authored sizes. Most scenes are authored in round millimeters, but
+   the ones whose copy invites arithmetic — E1's half-width, E2's
+   half-spacing, E4's lid = box + 2 × overhang — are authored in round inches
+   (the default unit), with values chosen so the sums also add up in whole
+   millimeters. */
+const IN = 25.4;
+const E1_W0 = 4 * IN, E1_W1 = 8 * IN;            // plate width, today → after the change
+const E1_HALF = E1_W0 / 2;                       // centered today: half of the width (and the counter's bolt distance)
+const E1_DRIFT = (E1_W1 - E1_W0) / 2;            // how far an edge-anchored hole ends up off center
+const E2_S0 = 3 * IN, E2_S1 = 5.5 * IN;          // hole spacing, today → after the change
+const E2_HALF = E2_S0 / 2;                       // each hole's distance from center today
+const E2_DRIFT = (E2_S1 - E2_S0) / 2;            // how far a forgotten hole falls behind
+const E2_C1 = E2_HALF + E2_DRIFT;                // counter: the connector's far position
+const E4_BOX0 = 4 * IN, E4_BOX1 = 6 * IN;        // box width, today → the bigger version
+const E4_LIP = 0.08 * IN;                        // lid overhang per side
+const E4_LID = E4_BOX0 + 2 * E4_LIP;             // the typed lid
+const E4_SW = 0.75 * IN;                         // counter: the standard switch's diameter
+const E4_P0 = 4 * E4_SW, E4_P1 = 8 * E4_SW;      // counter: panel width (hole = panel ÷ 4 today)
+
 /* ---------------------------------------------------------------- E1 scenes
    A plate whose width changes. The hole's anchoring scheme is the decision.
    Main scene: the plate grows about its own center (the part changed shape;
@@ -28,21 +47,21 @@
 
 function e1MainScene(stage, { t, path }) {
   const cx = 260, cy = 160;
-  const W = lerp(120, 200, t);           // mm
+  const W = lerp(E1_W0, E1_W1, t);           // mm
   const Wpx = W * MM, Hpx = 60 * MM;
   const left = cx - Wpx / 2, right = cx + Wpx / 2;
   const top = cy - Hpx / 2, bot = cy + Hpx / 2;
 
   if (path === null) {
     // Before any scheme is chosen: show where the width is headed.
-    const gW = 200 * MM;
+    const gW = E1_W1 * MM;
     svgEl('rect', { x: cx - gW / 2, y: top, width: gW, height: Hpx, class: 'ghost' }, stage);
     sceneLabel(stage, cx + gW / 2, top - 10, 'where the width is headed', 'ghost-label', 'end');
   }
 
   svgEl('rect', { x: left, y: top, width: Wpx, height: Hpx, class: 'part' }, stage);
 
-  const hx = path === 'a' ? left + 60 * MM : cx;
+  const hx = path === 'a' ? left + E1_HALF * MM : cx;
   const offMm = Math.abs(hx - cx) / MM;
   const bad = offMm > 0.5;
 
@@ -55,7 +74,7 @@ function e1MainScene(stage, { t, path }) {
   if (path === 'a') {
     dimH(stage, {
       x1: left, x2: hx, y: top - 22, ext1: top, ext2: cy - 5 * MM,
-      label: fmtLen(60), cls: 'anchor',
+      label: fmtLen(E1_HALF), cls: 'anchor',
     });
   } else if (path === 'b') {
     centerlineV(stage, cx, top - 34, bot + 18);
@@ -78,12 +97,12 @@ function e1MainScene(stage, { t, path }) {
 
 function e1CounterScene(stage, { t, path }) {
   const wallX = 96, cy = 160;
-  const W = lerp(120, 200, t);
+  const W = lerp(E1_W0, E1_W1, t);
   const Wpx = W * MM, Hpx = 60 * MM;
   const top = cy - Hpx / 2, bot = cy + Hpx / 2;
   const right = wallX + Wpx;
 
-  // The wall (and the anchor bolt already set in it, 60 mm over).
+  // The wall (and the anchor bolt already set in it, a fixed distance over).
   const hatchId = stage.ownerSVGElement.querySelector('[data-pattern="hatch"]').id;
   svgEl('rect', { x: wallX - 30, y: 50, width: 30, height: 200, fill: `url(#${hatchId})`, class: 'wall' }, stage);
   svgEl('line', { x1: wallX, y1: 50, x2: wallX, y2: 250, class: 'wall-face' }, stage);
@@ -91,7 +110,7 @@ function e1CounterScene(stage, { t, path }) {
 
   svgEl('rect', { x: wallX, y: top, width: Wpx, height: Hpx, class: 'part' }, stage);
 
-  const intentX = wallX + 60 * MM;               // the bolt line: fixed, forever
+  const intentX = wallX + E1_HALF * MM;               // the bolt line: fixed, forever
   const hx = path === 'b' ? wallX + Wpx / 2 : intentX;
   const offMm = Math.abs(hx - intentX) / MM;
   const bad = offMm > 0.5;
@@ -108,7 +127,7 @@ function e1CounterScene(stage, { t, path }) {
   if (path === 'a') {
     dimH(stage, {
       x1: wallX, x2: hx, y: top - 22, ext1: top, ext2: cy - 5 * MM,
-      label: fmtLen(60), cls: 'anchor',
+      label: fmtLen(E1_HALF), cls: 'anchor',
     });
   } else {
     const mid = wallX + Wpx / 2;
@@ -141,9 +160,9 @@ const e1MainEveryday = {
   trace: true,
   under(stage, { t, path }) {
     const cx = 260, cy = 160;
-    const Wpx = lerp(120, 200, t) * MM, Hpx = 60 * MM;
+    const Wpx = lerp(E1_W0, E1_W1, t) * MM, Hpx = 60 * MM;
     const left = cx - Wpx / 2, top = cy - Hpx / 2;
-    const hx = path === 'a' ? left + 60 * MM : cx;
+    const hx = path === 'a' ? left + E1_HALF * MM : cx;
     const tilt = Math.min((Math.abs(hx - cx) / MM) * 0.45, 16);   // degrees, toward the long side
 
     edBackdrop(stage, 'ed-sky');
@@ -162,8 +181,8 @@ const e1MainEveryday = {
   },
   over(stage, { t, path }) {
     const cx = 260, cy = 160;
-    const left = cx - (lerp(120, 200, t) * MM) / 2;
-    const hx = path === 'a' ? left + 60 * MM : cx;
+    const left = cx - (lerp(E1_W0, E1_W1, t) * MM) / 2;
+    const hx = path === 'a' ? left + E1_HALF * MM : cx;
     svgEl('circle', { cx: hx, cy, r: 3.5, class: 'ed-metal-dark' }, stage);
     if (!path) return;
     if (Math.abs(hx - cx) / MM > 1) {
@@ -182,8 +201,8 @@ const e1CounterEveryday = {
   },
   over(stage, { t, path }) {
     const wallX = 96, cy = 160;
-    const Wpx = lerp(120, 200, t) * MM, bot = cy + 30 * MM;
-    const screwX = wallX + 60 * MM;
+    const Wpx = lerp(E1_W0, E1_W1, t) * MM, bot = cy + 30 * MM;
+    const screwX = wallX + E1_HALF * MM;
     const hx = path === 'b' ? wallX + Wpx / 2 : screwX;
     const on = Math.abs(hx - screwX) / MM <= 0.5;
 
@@ -212,21 +231,21 @@ function e2MainScene(stage, { t, path }) {
   const top = cy - Hpx / 2, bot = cy + Hpx / 2;
   const r = 5 * MM;
 
-  const S = lerp(80, 140, t);                    // hole spacing, mm
+  const S = lerp(E2_S0, E2_S1, t);                    // hole spacing, mm
   const targetL = cx - (S / 2) * MM;
   const targetR = cx + (S / 2) * MM;
 
   if (path === null) {
     // Before any scheme is chosen: show where the spacing is headed.
-    svgEl('circle', { cx: cx - 70 * MM, cy, r, class: 'ghost' }, stage);
-    svgEl('circle', { cx: cx + 70 * MM, cy, r, class: 'ghost' }, stage);
-    sceneLabel(stage, cx + 70 * MM + 10, cy - r - 12, 'where the spacing is headed', 'ghost-label', 'end');
+    svgEl('circle', { cx: cx - (E2_S1 / 2) * MM, cy, r, class: 'ghost' }, stage);
+    svgEl('circle', { cx: cx + (E2_S1 / 2) * MM, cy, r, class: 'ghost' }, stage);
+    sceneLabel(stage, cx + (E2_S1 / 2) * MM + 10, cy - r - 12, 'where the spacing is headed', 'ghost-label', 'end');
   }
 
   svgEl('rect', { x: left, y: top, width: Wpx, height: Hpx, class: 'part' }, stage);
 
   const hxL = targetL;                           // the hole you remembered to edit
-  const hxR = path === 'b' ? cx + 40 * MM : targetR;   // …and the one you forgot
+  const hxR = path === 'b' ? cx + E2_HALF * MM : targetR;   // …and the one you forgot
   const offMm = (targetR - hxR) / MM;
   const badR = offMm > 0.5;
 
@@ -239,7 +258,7 @@ function e2MainScene(stage, { t, path }) {
   if (path === 'b') {
     centerlineV(stage, cx, top - 30, bot + 14);
     dimH(stage, { x1: hxL, x2: cx, y: top - 22, ext1: cy - r, label: fmtLen(S / 2), cls: 'anchor' });
-    dimH(stage, { x1: cx, x2: hxR, y: top - 22, ext2: cy - r, label: fmtLen(40), cls: badR ? 'bad' : 'anchor' });
+    dimH(stage, { x1: cx, x2: hxR, y: top - 22, ext2: cy - r, label: fmtLen(E2_HALF), cls: badR ? 'bad' : 'anchor' });
   } else if (path === 'a') {
     centerlineV(stage, cx, top - 30, bot + 14);
     dimH(stage, { x1: hxL, x2: hxR, y: top - 22, ext1: cy - r, ext2: cy - r, label: fmtLen(S), cls: 'anchor' });
@@ -263,8 +282,8 @@ function e2CounterScene(stage, { t, path }) {
   const top = cy - Hpx / 2, bot = cy + Hpx / 2;
   const r = 5 * MM;
 
-  const R = lerp(40, 70, t);                     // connector target, mm right of center
-  const sensorX = cx - 40 * MM;                  // the sensor pad: glued down, forever
+  const R = lerp(E2_HALF, E2_C1, t);                     // connector target, mm right of center
+  const sensorX = cx - E2_HALF * MM;                  // the sensor pad: glued down, forever
   const connX = cx + R * MM;
   const hxL = path === 'a' ? cx - R * MM : sensorX;
   const offMm = (sensorX - hxL) / MM;
@@ -280,7 +299,7 @@ function e2CounterScene(stage, { t, path }) {
   svgEl('circle', { cx: connX, cy, r, class: 'hole is-good' }, stage);
 
   if (path === 'b') {
-    dimH(stage, { x1: sensorX, x2: cx, y: top - 22, ext1: cy - r, label: fmtLen(40), cls: 'anchor' });
+    dimH(stage, { x1: sensorX, x2: cx, y: top - 22, ext1: cy - r, label: fmtLen(E2_HALF), cls: 'anchor' });
     dimH(stage, { x1: cx, x2: connX, y: top - 22, ext2: cy - r, label: fmtLen(R), cls: 'anchor' });
   } else {
     dimH(stage, { x1: hxL, x2: connX, y: top - 22, ext1: cy - r, ext2: cy - r, label: fmtLen(2 * R), cls: 'anchor' });
@@ -310,9 +329,9 @@ const e2MainEveryday = {
   },
   over(stage, { t, path }) {
     const cx = 260, cy = 160;
-    const S = lerp(80, 140, t);
+    const S = lerp(E2_S0, E2_S1, t);
     const targetL = cx - (S / 2) * MM, targetR = cx + (S / 2) * MM;
-    const hxR = path === 'b' ? cx + 40 * MM : targetR;
+    const hxR = path === 'b' ? cx + E2_HALF * MM : targetR;
     const barY = cy - 16;          // low enough to clear the "short" dimension at cy − 24
     let fits = true;
 
@@ -342,7 +361,7 @@ const e2CounterEveryday = {
   thing: 'A wall shelf — its left screw has to bite the wooden stud hidden in the wall.',
   fill: '#e8d6b6',
   under(stage) {
-    const studX = 260 - 40 * MM;   // the sensor pad's spot: fixed, forever
+    const studX = 260 - E2_HALF * MM;   // the sensor pad's spot: fixed, forever
     edBackdrop(stage, 'ed-drywall');
     // Drawn narrower than a real stud on purpose: the glued sensor forgives
     // almost nothing, so the screw should leave the stud when the chip fails.
@@ -351,8 +370,8 @@ const e2CounterEveryday = {
   },
   over(stage, { t, path, tone }) {
     const cx = 260, cy = 160, bot = cy + 28 * MM;
-    const R = lerp(40, 70, t);
-    const studX = cx - 40 * MM, connX = cx + R * MM;
+    const R = lerp(E2_HALF, E2_C1, t);
+    const studX = cx - E2_HALF * MM, connX = cx + R * MM;
     const hxL = path === 'a' ? cx - R * MM : studX;
     const exact = tone !== 'warn' && tone !== 'bad';
     const onStud = tone !== 'bad';
@@ -490,9 +509,9 @@ const e3MainEveryday = {
 
     // y≈26, not 44: at full pull the CAD "pull" label reaches up to y≈40.
     if (path === 'a' && t > 0.02) {
-      edSay(stage, 260, 26, 'Tugged hard — the front holds and the roof still fits', 'good');
+      edSay(stage, 260, 26, 'Every line is fixed on the plan — the roof still fits', 'good');
     } else if (path === 'b' && off >= 3) {
-      edSay(stage, 260, 26, 'The front squirmed — the roof boards don’t fit anymore', 'bad');
+      edSay(stage, 260, 26, 'The plan never fixed the peak — the roof boards don’t fit', 'bad');
     }
   },
 };
@@ -533,15 +552,15 @@ const e3CounterEveryday = {
 
 function e4MainScene(stage, { t, path }) {
   const cx = 260;
-  const B = lerp(100, 160, t);                   // box outer width, mm
+  const B = lerp(E4_BOX0, E4_BOX1, t);                   // box outer width, mm
   const Bpx = B * MM;
   const boxL = cx - Bpx / 2, boxR = cx + Bpx / 2;
   const boxTop = 142, boxBot = 230, wall = 8 * MM;
   const innerBot = boxBot - wall;
 
   if (path === null) {
-    svgEl('rect', { x: cx - 80 * MM, y: boxTop, width: 160 * MM, height: boxBot - boxTop, class: 'ghost' }, stage);
-    sceneLabel(stage, cx + 80 * MM, 120, 'where the box is headed', 'ghost-label', 'end');
+    svgEl('rect', { x: cx - (E4_BOX1 / 2) * MM, y: boxTop, width: E4_BOX1 * MM, height: boxBot - boxTop, class: 'ghost' }, stage);
+    sceneLabel(stage, cx + (E4_BOX1 / 2) * MM, 120, 'where the box is headed', 'ghost-label', 'end');
   }
 
   // Open-topped box, drawn as a U cross-section.
@@ -552,7 +571,7 @@ function e4MainScene(stage, { t, path }) {
   }, stage);
   sceneLabel(stage, cx, boxBot - 4.5, 'box', 'muted');
 
-  const Lmm = path === 'b' ? B + 4 : 104;        // the lid: linked, or frozen at day one
+  const Lmm = path === 'b' ? B + 2 * E4_LIP : E4_LID;        // the lid: linked, or frozen at day one
   const Lpx = Lmm * MM;
   const lidL = cx - Lpx / 2, lidR = cx + Lpx / 2;
   const lidTop = 126;
@@ -560,13 +579,13 @@ function e4MainScene(stage, { t, path }) {
   svgEl('rect', { x: lidL, y: lidTop, width: Lpx, height: 14, class: 'part alt' }, stage);
   sceneLabel(stage, lidL - 8, 134, 'lid', 'muted', 'end');
 
-  const tickL = cx - (B / 2 + 2) * MM, tickR = cx + (B / 2 + 2) * MM;
+  const tickL = cx - (B / 2 + E4_LIP) * MM, tickR = cx + (B / 2 + E4_LIP) * MM;
   svgEl('line', { x1: tickL, y1: 64, x2: tickL, y2: 148, class: 'intent-line' }, stage);
   svgEl('line', { x1: tickR, y1: 64, x2: tickR, y2: 148, class: 'intent-line' }, stage);
 
   dimH(stage, {
     x1: lidL, x2: lidR, y: 94, ext1: lidTop, ext2: lidTop,
-    label: path === 'b' ? `= box width + ${fmtLen(4)}` : path === 'a' ? fmtLen(104) : `? ${getUnit()}`,
+    label: path === 'b' ? `= box width + ${fmtLen(2 * E4_LIP)}` : path === 'a' ? fmtLen(E4_LID) : `? ${getUnit()}`,
     cls: path ? 'anchor' : '',
   });
   dimH(stage, { x1: boxL, x2: boxR, y: boxBot + 26, ext1: boxBot, ext2: boxBot, label: fmtLen(B), cls: 'live' });
@@ -585,21 +604,21 @@ function e4MainScene(stage, { t, path }) {
       });
     }
   } else if (path === 'b') {
-    dimH(stage, { x1: boxR, x2: lidR, y: 118, ext1: boxTop, ext2: lidTop, label: fmtLen(2), cls: 'anchor' });
+    dimH(stage, { x1: boxR, x2: lidR, y: 118, ext1: boxTop, ext2: lidTop, label: fmtLen(E4_LIP), cls: 'anchor' });
   }
 
-  svgEl('text', { x: tickL + 6, y: 74, class: 'intent-label', 'text-anchor': 'start', text: `intent: ${fmtLen(2)} past the box` }, stage);
+  svgEl('text', { x: tickL + 6, y: 74, class: 'intent-label', 'text-anchor': 'start', text: `intent: ${fmtLen(E4_LIP)} past the box` }, stage);
 }
 
 function e4CounterScene(stage, { t, path }) {
   const cx = 260, cy = 168;
-  const P = lerp(80, 160, t);                    // panel width, mm
+  const P = lerp(E4_P0, E4_P1, t);                    // panel width, mm
   const Ppx = P * MM;
   const pTop = 106, pBot = 238;
-  const dHole = path === 'b' ? P / 4 : 20;       // linked scales; typed holds
+  const dHole = path === 'b' ? P / 4 : E4_SW;       // linked scales; typed holds
   const rH = (dHole / 2) * MM;
-  const rS = 10 * MM;                            // the switch: ⌀20, off a shelf
-  const oversize = dHole - 20;
+  const rS = (E4_SW / 2) * MM;                            // the switch: ⌀20, off a shelf
+  const oversize = dHole - E4_SW;
   const bad = oversize > 0.5;
 
   svgEl('rect', { x: cx - Ppx / 2, y: pTop, width: Ppx, height: pBot - pTop, class: 'part' }, stage);
@@ -609,12 +628,12 @@ function e4CounterScene(stage, { t, path }) {
   svgEl('line', { x1: cx - 7, y1: cy, x2: cx + 7, y2: cy, class: 'switch-mark' }, stage);
   svgEl('line', { x1: cx, y1: cy - 7, x2: cx, y2: cy + 7, class: 'switch-mark' }, stage);
 
-  sceneLabel(stage, cx, 98, `a standard ⌀${fmtLen(20)} switch must drop in here`, 'muted');
+  sceneLabel(stage, cx, 98, `a standard ⌀${fmtLen(E4_SW)} switch must drop in here`, 'muted');
   svgEl('circle', { cx, cy, r: rS + 3, class: 'intent-ring' }, stage);
-  svgEl('text', { x: cx, y: pBot - 8, class: 'intent-label', 'text-anchor': 'middle', text: `intent: fit the switch — ⌀${fmtLen(20)}, forever` }, stage);
+  svgEl('text', { x: cx, y: pBot - 8, class: 'intent-label', 'text-anchor': 'middle', text: `intent: fit the switch — ⌀${fmtLen(E4_SW)}, forever` }, stage);
 
   sceneLabel(stage, cx, cy + rH + 18,
-    path === 'b' ? `⌀${fmtLen(dHole)} = panel width ÷ 4` : `⌀${fmtLen(20)} — typed in`,
+    path === 'b' ? `⌀${fmtLen(dHole)} = panel width ÷ 4` : `⌀${fmtLen(E4_SW)} — typed in`,
     bad ? 'bad' : 'accent');
 
   if (oversize >= 4) {
@@ -640,7 +659,7 @@ const e4MainEveryday = {
   },
   over(stage, { t, path }) {
     const cx = 260;
-    const B = lerp(100, 160, t);
+    const B = lerp(E4_BOX0, E4_BOX1, t);
     const innerBot = 230 - 8 * MM;
 
     // Lunch on the cavity floor, either side of the CAD "box" label.
@@ -656,7 +675,7 @@ const e4MainEveryday = {
 
     if (!path) return;
     const boxR = cx + (B * MM) / 2;
-    const lidR = cx + ((path === 'b' ? B + 4 : 104) * MM) / 2;
+    const lidR = cx + ((path === 'b' ? B + 2 * E4_LIP : E4_LID) * MM) / 2;
     if (path === 'a' && boxR - lidR > 1) {
       edSay(stage, cx, 40, 'Lid’s too small now — lunch is out in the open', 'bad');
     } else {
@@ -674,8 +693,8 @@ const e4CounterEveryday = {
   },
   over(stage, { t, path }) {
     const cx = 260, cy = 168;
-    const dHole = path === 'b' ? lerp(80, 160, t) / 4 : 20;
-    const rH = (dHole / 2) * MM, rS = 10 * MM;
+    const dHole = path === 'b' ? lerp(E4_P0, E4_P1, t) / 4 : E4_SW;
+    const rH = (dHole / 2) * MM, rS = (E4_SW / 2) * MM;
 
     // The button's dome and a glint, inside the CAD switch body.
     svgEl('circle', { cx, cy, r: rS - 5, class: 'ed-red' }, stage);
@@ -683,7 +702,7 @@ const e4CounterEveryday = {
       cx: cx - 4, cy: cy - 4.5, rx: 3.2, ry: 1.8, transform: `rotate(-35 ${cx - 4} ${cy - 4.5})`, class: 'ed-paper',
     }, stage);
 
-    if (dHole - 20 > 0.5) {
+    if (dHole - E4_SW > 0.5) {
       // Nothing left for its rim to sit on: a small arrow in the gap below it.
       const y1 = cy + rS + 3, y2 = Math.min(y1 + 10, cy + rH + 5);
       if (y2 - y1 >= 5) {
@@ -1207,38 +1226,39 @@ const EXERCISES = [
       heading: 'A plate, a hole, one promise',
       body: 'This is a mounting plate. A sensor bolts through that one hole, and everything downstream assumes the hole sits dead center.',
       intent: 'Keep the hole at the exact center of the plate.',
-      get change() { return `The plate’s width. It’s ${fmtLen(120)} today. The client is still deciding — the dashed outline is where it’s headed.`; },
+      get change() { return `The plate’s width. It’s ${fmtLen(E1_W0)} today. The client is still deciding — the dashed outline is where it’s headed.`; },
     },
 
     predict: {
       prompt: 'There are two reasonable-looking ways to pin that hole down. The plate is about to get wider. Which one keeps the hole centered?',
       note: 'Just a guess — you’ll test both in a minute.',
       answer: 'b',
+      why: 'A dimension remembers a reference, not a reason: the plate grew from its middle, so its left edge moved out — and took the edge-measured hole with it.',
     },
 
     choose: {
-      prompt: 'Now build it. Pick either scheme — including the one you suspect fails. You’ll get to flip between them and watch.',
+      prompt: 'You’re the modeler. Which one goes into the model? You’ll run both before we name the lesson.',
     },
 
     paths: {
       a: {
-        get label() { return `Measure ${fmtLen(60)} from the left edge`; },
-        get sub() { return `${fmtLen(60)} is half of ${fmtLen(120)}, so it’s perfectly centered today.`; },
+        get label() { return `Measure ${fmtLen(E1_HALF)} from the left edge`; },
+        get sub() { return `One dimension: ${fmtLen(E1_HALF)} from the left edge — exactly half of today’s ${fmtLen(E1_W0)}.`; },
         short: 'edge-anchored',
         kind: 'accident',
       },
       b: {
         label: 'Tie it to the plate’s midline',
-        sub: 'No number at all. Just: stay in the middle, whatever happens.',
+        sub: 'The hole’s center is held to the plate’s midline. No distance typed.',
         short: 'midline-tied',
         kind: 'intent',
       },
     },
 
     change: {
-      get request() { return `“We’re going bigger — take the plate out toward ${fmtLen(200)}. The sensor still needs to be dead center.”`; },
+      get request() { return `“We’re going bigger — take the plate out toward ${fmtLen(E1_W1)}. The sensor still needs to be dead center.”`; },
       sliderLabel: 'Plate width',
-      format: (t) => fmtLen(lerp(120, 200, t)),
+      format: (t) => fmtLen(lerp(E1_W0, E1_W1, t)),
       hint: 'Drag the width first — feel it before we name it.',
     },
 
@@ -1246,7 +1266,7 @@ const EXERCISES = [
     everyday: e1MainEveryday,
 
     outcome(path, t) {
-      const off = Math.round(40 * t);   // thresholds in whole mm; readouts print the exact value, as the scene does
+      const off = Math.round(E1_DRIFT * t);   // thresholds in whole mm; readouts print the exact value, as the scene does
       if (t < 0.02) {
         return {
           tone: 'idle',
@@ -1258,14 +1278,14 @@ const EXERCISES = [
         if (off < 6) {
           return {
             tone: 'warn',
-            headline: `hole is ${fmtLen(40 * t)} off center`,
+            headline: `hole is ${fmtLen(E1_DRIFT * t)} off center`,
             note: 'Only a hair off so far. Keep going.',
           };
         }
         return {
           tone: 'bad',
-          headline: `hole is ${fmtLen(40 * t)} off center`,
-          note: `The ${fmtLen(60)} dimension is doing exactly what you said — not what you meant. It keeps the hole loyal to an edge that stopped mattering.`,
+          headline: `hole is ${fmtLen(E1_DRIFT * t)} off center`,
+          note: `The ${fmtLen(E1_HALF)} dimension is doing exactly what you said — not what you meant. It keeps the hole loyal to an edge that stopped mattering.`,
         };
       }
       return {
@@ -1282,8 +1302,8 @@ const EXERCISES = [
         path === null
           ? { label: 'Sketch 2 — sensor hole', sub: 'not anchored yet. that’s your call', active: true }
           : path === 'a'
-            ? { label: 'Sketch 2 — sensor hole', sub: `${fmtLen(60)} off the left edge · a linear dimension`, active: true }
-            : { label: 'Sketch 2 — sensor hole', sub: 'held to the midline · a symmetric constraint', active: true },
+            ? { label: 'Sketch 2 — sensor hole', sub: `${fmtLen(E1_HALF)} off the left edge · a linear dimension`, active: true }
+            : { label: 'Sketch 2 — sensor hole', sub: 'held to the midline · a midpoint constraint', active: true },
         { label: 'Extrude 1', sub: `${fmtLen(6)} thick` },
         { label: 'Extrude 2 — cut', sub: 'removes the hole, through all' },
       ];
@@ -1291,7 +1311,7 @@ const EXERCISES = [
 
     takeaway: {
       line: 'Dimension to the thing that expresses your intent — here, the center — not to whatever edge is closest.',
-      term: 'Plain words: “tie it to the midline.” Onshape’s word for it: a symmetric constraint. (A midpoint constraint gets you there too.)',
+      term: 'Plain words: “tie it to the middle.” Onshape’s word for it: a Midpoint constraint — or, when the plate is drawn centered on the origin, Coincident to the origin (the try-it card does exactly that).',
       flip: 'Unless the intent points at an edge — then edge-anchoring is exactly right.',
     },
 
@@ -1302,19 +1322,20 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
-      get body() { return `Same plate, same two schemes — different job. This one hangs on a wall, and its hole must land on an anchor bolt already set in that wall, ${fmtLen(60)} over. The client still wants the plate wider.`; },
+      job: 'Land the hole on a bolt already set in the wall — a fixed distance from the wall edge, however wide the plate gets.',
+      get body() { return `Same plate, same two schemes — different job. This one hangs on a wall, and its hole must land on an anchor bolt already set in that wall, ${fmtLen(E1_HALF)} over. The client still wants the plate wider.`; },
       defaultPath: 'b',
       scene: e1CounterScene,
       everyday: e1CounterEveryday,
       sliderLabel: 'Plate width',
-      format: (t) => fmtLen(lerp(120, 200, t)),
+      format: (t) => fmtLen(lerp(E1_W0, E1_W1, t)),
       hint: 'Run the width change one more time — this part has a different job.',
       pathLabels: {
-        get a() { return `Measure ${fmtLen(60)} from the wall edge`; },
+        get a() { return `Measure ${fmtLen(E1_HALF)} from the wall edge`; },
         b: 'Tie it to the plate’s midline',
       },
       outcome(path, t) {
-        const off = Math.round(40 * t);
+        const off = Math.round(E1_DRIFT * t);
         if (t < 0.02) {
           return {
             tone: 'idle',
@@ -1324,18 +1345,18 @@ const EXERCISES = [
         }
         if (path === 'b') {
           if (off < 6) {
-            return { tone: 'warn', headline: `hole is ${fmtLen(40 * t)} off the bolt`, note: 'Drifting already.' };
+            return { tone: 'warn', headline: `hole is ${fmtLen(E1_DRIFT * t)} off the bolt`, note: 'Drifting already.' };
           }
           return {
             tone: 'bad',
-            headline: `hole is ${fmtLen(40 * t)} off the bolt`,
+            headline: `hole is ${fmtLen(E1_DRIFT * t)} off the bolt`,
             note: '“Stay centered” was never this part’s job. The midline moved; the bolt didn’t.',
           };
         }
         return {
           tone: 'good',
           headline: 'still on the bolt line',
-          note: `${fmtLen(60)} from the wall, at every width. Here, the edge is the intent.`,
+          note: `${fmtLen(E1_HALF)} from the wall, at every width. Here, the edge is the intent.`,
         };
       },
       features(path) {
@@ -1343,8 +1364,8 @@ const EXERCISES = [
           { label: 'Origin', sub: 'the one reference that never moves' },
           { label: 'Sketch 1 — plate outline', sub: 'left edge sits on the wall' },
           path === 'a'
-            ? { label: 'Sketch 2 — bolt hole', sub: `${fmtLen(60)} off the wall edge · a linear dimension`, active: true }
-            : { label: 'Sketch 2 — bolt hole', sub: 'held to the midline · a symmetric constraint', active: true },
+            ? { label: 'Sketch 2 — bolt hole', sub: `${fmtLen(E1_HALF)} off the wall edge · a linear dimension`, active: true }
+            : { label: 'Sketch 2 — bolt hole', sub: 'held to the midline · a midpoint constraint', active: true },
           { label: 'Extrude 1', sub: `${fmtLen(6)} thick` },
           { label: 'Extrude 2 — cut', sub: 'removes the hole, through all' },
         ];
@@ -1365,38 +1386,39 @@ const EXERCISES = [
       heading: 'One bracket, two holes, one promise',
       body: 'This bracket bolts onto two standoffs. Two mounting holes — and the whole point of them is symmetry. They must sit the same distance either side of the center, or the bracket goes on crooked.',
       intent: 'Keep the two holes perfectly symmetric about the center.',
-      get change() { return `The spacing between them. It’s ${fmtLen(80)} today, and the client is already muttering about moving the standoffs — the dashed circles are where the holes are headed.`; },
+      get change() { return `The spacing between them. It’s ${fmtLen(E2_S0)} today, and the client is already muttering about moving the standoffs — the dashed circles are where the holes are headed.`; },
     },
 
     predict: {
       prompt: 'Two reasonable-looking ways to put two holes in a plate. The spacing is about to change. Which one keeps the pair symmetric through the edit?',
       note: 'Just a guess — you’ll test both in a minute.',
       answer: 'a',
+      why: 'Two dimensions are two separate facts: when the spacing changes, only the one you edit hears about it. A mirrored copy has nothing of its own to forget.',
     },
 
     choose: {
-      prompt: 'Now build it. Pick either scheme — including the one you suspect fails. You’ll flip between them and watch.',
+      prompt: 'You’re the modeler. Which one goes into the model? You’ll run both before we name the lesson.',
     },
 
     paths: {
       a: {
         label: 'Sketch one hole, mirror it',
-        sub: 'Draw only the left hole. Reflect it across the centerline — the right one is a copy that can’t disagree.',
+        sub: 'Draw the left hole, then reflect it across the centerline to make the right one.',
         short: 'mirrored',
         kind: 'intent',
       },
       b: {
         label: 'Place two holes, one dimension each',
-        get sub() { return `Left hole: ${fmtLen(40)} from center. Right hole: ${fmtLen(40)} from center. Two dimensions, perfectly symmetric today.`; },
+        get sub() { return `Left hole: ${fmtLen(E2_HALF)} from center. Right hole: ${fmtLen(E2_HALF)} from center. One dimension each.`; },
         short: 'two copies',
         kind: 'accident',
       },
     },
 
     change: {
-      get request() { return `“The standoffs moved — take the hole spacing from ${fmtLen(80)} out to ${fmtLen(140)}. The pair still has to be dead symmetric.”`; },
+      get request() { return `“The standoffs moved — take the hole spacing from ${fmtLen(E2_S0)} out to ${fmtLen(E2_S1)}. The pair still has to be dead symmetric.”`; },
       sliderLabel: 'Hole spacing',
-      format: (t) => fmtLen(lerp(80, 140, t)),
+      format: (t) => fmtLen(lerp(E2_S0, E2_S1, t)),
       hint: 'Drag the spacing first — feel it before we name it.',
     },
 
@@ -1404,7 +1426,7 @@ const EXERCISES = [
     everyday: e2MainEveryday,
 
     outcome(path, t) {
-      const off = Math.round(30 * t);
+      const off = Math.round(E2_DRIFT * t);
       if (t < 0.02) {
         return {
           tone: 'idle',
@@ -1416,14 +1438,14 @@ const EXERCISES = [
         if (off < 5) {
           return {
             tone: 'warn',
-            headline: `right hole is ${fmtLen(30 * t)} behind`,
+            headline: `right hole is ${fmtLen(E2_DRIFT * t)} behind`,
             note: 'Barely visible yet — but notice only one hole is listening to you.',
           };
         }
         return {
           tone: 'bad',
-          headline: `right hole is ${fmtLen(30 * t)} out of place`,
-          note: `You dutifully updated the left dimension. The right one is a separate copy, still sitting at ${fmtLen(40)} — nobody told it. Two copies means two edits, every time, forever.`,
+          headline: `right hole is ${fmtLen(E2_DRIFT * t)} out of place`,
+          note: `In this model there is no “spacing” to change — only two separate distances, and the change reached one of them. The other is still ${fmtLen(E2_HALF)} from center. Two copies means two edits, every time, forever.`,
         };
       }
       return {
@@ -1443,7 +1465,7 @@ const EXERCISES = [
       } else if (path === 'a') {
         base.push({ label: 'Sketch 2 — mounting holes', sub: 'one hole drawn, its twin mirrored across the centerline · a sketch mirror', active: true });
       } else {
-        base.push({ label: 'Sketch 2 — mounting holes', sub: `two holes, two separate ${fmtLen(40)} dimensions`, active: true });
+        base.push({ label: 'Sketch 2 — mounting holes', sub: `two holes, two separate ${fmtLen(E2_HALF)} dimensions`, active: true });
       }
       base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
       base.push({ label: 'Extrude 2 — cut', sub: 'removes the holes, through all' });
@@ -1463,12 +1485,13 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
+      job: 'The left hole stays over a sensor glued in place; the right hole follows a connector that keeps moving.',
       body: 'Same plate, same two schemes — but now the holes have different jobs. The left one sits over a sensor that’s already glued in place. The right one holds a connector the client keeps moving. The request: “shift the connector outward — and don’t you dare touch my sensor.”',
       defaultPath: 'a',
       scene: e2CounterScene,
       everyday: e2CounterEveryday,
       sliderLabel: 'Connector position',
-      format: (t) => `${fmtLen(lerp(40, 70, t))} right of center`,
+      format: (t) => `${fmtLen(lerp(E2_HALF, E2_C1, t))} right of center`,
       hint: 'Move the connector — this pair has a different job.',
       pathLabels: {
         a: 'One hole, mirrored',
@@ -1476,7 +1499,7 @@ const EXERCISES = [
       },
       short: { a: 'mirrored', b: 'independent' },
       outcome(path, t) {
-        const off = Math.round(30 * t);
+        const off = Math.round(E2_DRIFT * t);
         if (t < 0.02) {
           return {
             tone: 'idle',
@@ -1486,11 +1509,11 @@ const EXERCISES = [
         }
         if (path === 'a') {
           if (off < 5) {
-            return { tone: 'warn', headline: `sensor hole dragged ${fmtLen(30 * t)}`, note: 'The left hole is moving. Nobody asked it to.' };
+            return { tone: 'warn', headline: `sensor hole dragged ${fmtLen(E2_DRIFT * t)}`, note: 'The left hole is moving. Nobody asked it to.' };
           }
           return {
             tone: 'bad',
-            headline: `sensor hole dragged ${fmtLen(30 * t)} off its pad`,
+            headline: `sensor hole dragged ${fmtLen(E2_DRIFT * t)} off its pad`,
             note: 'The mirror is doing its one job: keeping the two identical. But these holes were never twins — they only matched by coincidence on day one.',
           };
         }
@@ -1508,7 +1531,7 @@ const EXERCISES = [
         if (path === 'a') {
           base.push({ label: 'Sketch 2 — both holes', sub: 'connector hole drawn · sensor hole a mirrored copy — moves whenever the connector moves', active: true });
         } else {
-          base.push({ label: 'Sketch 2 — sensor hole', sub: `${fmtLen(40)} left of center · its own dimension`, active: true });
+          base.push({ label: 'Sketch 2 — sensor hole', sub: `${fmtLen(E2_HALF)} left of center · its own dimension`, active: true });
           base.push({ label: 'Sketch 3 — connector hole', sub: 'its own dimension · free to move alone', active: true });
         }
         base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
@@ -1529,7 +1552,7 @@ const EXERCISES = [
 
     brief: {
       heading: 'A sketch that looks finished',
-      body: 'This tab profile is headed for an extrude, with more features stacked on top. It matches the drawing exactly. Here’s the catch: looking like the drawing and being locked to the drawing are two different things.',
+      body: 'This tab profile is headed for an extrude, with more features stacked on top. It matches the drawing exactly.',
       intent: 'This profile must hold exactly this shape, no matter who touches it next.',
       change: 'Someone will bump it — a stray drag, an edited dimension upstream. In a shared model that’s a when, not an if. Today it’s a deliberate pull on the apex.',
     },
@@ -1538,22 +1561,23 @@ const EXERCISES = [
       prompt: 'Two copies of this sketch, pixel-identical today. Someone grabs the apex and pulls. Which one still matches the drawing afterward?',
       note: 'Just a guess — you’ll pull on both in a minute.',
       answer: 'a',
+      why: 'A sketch that only looks right still has slack: anything not pinned by a dimension or constraint is free to move the moment something pulls on it.',
     },
 
     choose: {
-      prompt: 'Now build it. Pick either version — including the one you suspect gives way. You’ll flip between them and pull.',
+      prompt: 'You’re the modeler. Which one goes into the model? You’ll run both before we name the lesson.',
     },
 
     paths: {
       a: {
         label: 'Pin it down first',
-        sub: 'Add dimensions and constraints until nothing is free to move. The lines turn black.',
+        sub: 'Add dimensions and constraints until every line turns black.',
         short: 'pinned down',
         kind: 'intent',
       },
       b: {
         label: 'Leave it — it looks right',
-        sub: 'It already matches the drawing. More dimensions feel like busywork.',
+        sub: 'Stop here — the shape already matches the drawing.',
         short: 'left loose',
         kind: 'accident',
       },
@@ -1620,6 +1644,7 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
+      job: 'Find good proportions fast — nothing depends on this sketch yet.',
       body: 'Ten minutes into a brand-new idea, you’re roughing out a bracket profile just to find its proportions. Nothing depends on it yet — it might not survive the afternoon. Same two disciplines. Which one serves you now?',
       defaultPath: 'a',
       scene: e3CounterScene,
@@ -1674,40 +1699,41 @@ const EXERCISES = [
 
     brief: {
       heading: 'A lid with one job',
-      get body() { return `This box gets a snap-on lid. The lid must overhang the box by ${fmtLen(2)} on each side — enough to grab, not enough to snag. The box is ${fmtLen(100)} wide today, so the correct lid is ${fmtLen(104)}.`; },
-      get intent() { return `Keep the lid exactly ${fmtLen(2)} past the box on each side.`; },
+      get body() { return `This box gets a snap-on lid. The lid must overhang the box by ${fmtLen(E4_LIP)} on each side — enough to grab, not enough to snag. The box is ${fmtLen(E4_BOX0)} wide today, so the correct lid is ${fmtLen(E4_LID)}.`; },
+      get intent() { return `Keep the lid exactly ${fmtLen(E4_LIP)} past the box on each side.`; },
       change: 'The box. A bigger version keeps coming up in meetings — the dashed outline is where it’s headed.',
     },
 
     predict: {
-      get prompt() { return `Two ways to size the lid, and both come out to ${fmtLen(104)} today. The box is about to grow. Which lid still fits the day it does?`; },
+      get prompt() { return `Two ways to size the lid, and both come out to ${fmtLen(E4_LID)} today. The box is about to grow. Which lid still fits the day it does?`; },
       note: 'Just a guess — you’ll test both in a minute.',
       answer: 'b',
+      why: 'A typed number is a snapshot of one day: when the box grew, nothing told the lid. The linked lid asks the box again on every rebuild.',
     },
 
     choose: {
-      prompt: 'Now build it. Pick either lid — including the one you suspect fails. You’ll flip between them and watch the box grow.',
+      prompt: 'You’re the modeler. Which one goes into the model? You’ll run both before we name the lesson.',
     },
 
     paths: {
       a: {
-        get label() { return `Type the lid at ${fmtLen(104)}`; },
-        get sub() { return `Box is ${fmtLen(100)}, plus ${fmtLen(2)} per side. Do the math once, type the answer.`; },
+        get label() { return `Type the lid at ${fmtLen(E4_LID)}`; },
+        get sub() { return `Box is ${fmtLen(E4_BOX0)}, plus ${fmtLen(E4_LIP)} per side. Add it up and type the lid’s width in.`; },
         short: 'hardcoded',
         kind: 'accident',
       },
       b: {
-        get label() { return `Make the lid “box width + ${fmtLen(4)}”`; },
-        sub: 'No number of its own — the lid asks the box how wide to be.',
+        get label() { return `Make the lid “box width + ${fmtLen(2 * E4_LIP)}”`; },
+        sub: 'The lid’s width is written as the box’s width plus the overhang.',
         short: 'linked',
         kind: 'intent',
       },
     },
 
     change: {
-      get request() { return `“The bigger version is approved — take the box out toward ${fmtLen(160)}. And yes, the lid still owes us its ${fmtLen(2)}.”`; },
+      get request() { return `“The bigger version is approved — take the box out toward ${fmtLen(E4_BOX1)}. And yes, the lid still owes us its ${fmtLen(E4_LIP)}.”`; },
       sliderLabel: 'Box width',
-      format: (t) => fmtLen(lerp(100, 160, t)),
+      format: (t) => fmtLen(lerp(E4_BOX0, E4_BOX1, t)),
       hint: 'Grow the box first — feel it before we name it.',
     },
 
@@ -1715,7 +1741,7 @@ const EXERCISES = [
     everyday: e4MainEveryday,
 
     outcome(path, t) {
-      const over = 2 - 30 * t;                   // lid overhang per side, mm
+      const over = E4_LIP - ((E4_BOX1 - E4_BOX0) / 2) * t;                   // lid overhang per side, mm
       if (t < 0.02) {
         return {
           tone: 'idle',
@@ -1728,7 +1754,7 @@ const EXERCISES = [
           return {
             tone: 'warn',
             headline: `overhang down to ${fmtLen(over, { mmDecimals: 1 })}`,
-            note: `The lid isn’t growing. Its ${fmtLen(2)} of grace is being spent.`,
+            note: `The lid isn’t growing. Its ${fmtLen(E4_LIP)} of grace is being spent.`,
           };
         }
         if (over > -1.5) {
@@ -1741,12 +1767,12 @@ const EXERCISES = [
         return {
           tone: 'bad',
           headline: `box sticks out ${fmtLen(Math.abs(over))} past the lid`,
-          note: `${fmtLen(104)} was the right answer to a question the box stopped asking. The number didn’t drift — the world did, and a typed number never hears about it.`,
+          note: `${fmtLen(E4_LID)} was the right answer to a question the box stopped asking. The number didn’t drift — the world did, and a typed number never hears about it.`,
         };
       }
       return {
         tone: 'good',
-        headline: `always ${fmtLen(2)} past the box`,
+        headline: `always ${fmtLen(E4_LIP)} past the box`,
         note: 'The lid doesn’t know a number — it knows a relationship. The box grew, the lid heard about it, and nobody edited anything.',
       };
     },
@@ -1759,15 +1785,15 @@ const EXERCISES = [
         path === null
           ? { label: 'Sketch 2 — lid plate', sub: 'how wide? that’s your call', active: true }
           : path === 'a'
-            ? { label: 'Sketch 2 — lid plate', sub: `width typed in: ${fmtLen(104)}`, active: true }
-            : { label: 'Sketch 2 — lid plate', sub: `width = box width + ${fmtLen(4)} · a linked dimension`, active: true },
+            ? { label: 'Sketch 2 — lid plate', sub: `width typed in: ${fmtLen(E4_LID)}`, active: true }
+            : { label: 'Sketch 2 — lid plate', sub: `width = box width + ${fmtLen(2 * E4_LIP)} · a linked dimension`, active: true },
         { label: 'Extrude 2 — lid', sub: `${fmtLen(7)} thick` },
       ];
     },
 
     takeaway: {
       line: 'A relationship is intent made durable. When two dimensions belong together, link them — don’t make one memorize the other.',
-      get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable (#box_width), then an equation typed right into the lid’s dimension: #box_width + ${fmtLen(4)}.`; },
+      get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable (#box_width), then an equation typed right into the lid’s dimension: #box_width + ${fmtLen(2 * E4_LIP)}.`; },
       flip: 'Unless a standard already decided the number — then typing it is correct.',
     },
 
@@ -1778,19 +1804,20 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
-      get body() { return `Same instinct, different hole. This control panel takes a standard ⌀${fmtLen(20)} push-button switch. The switch comes off a shelf and will never change — but the panel is about to get wider.`; },
+      job: 'Fit a switch that only comes in one size, however wide the panel gets.',
+      get body() { return `Same instinct, different hole. This control panel takes a standard ⌀${fmtLen(E4_SW)} push-button switch. The switch comes off a shelf and will never change — but the panel is about to get wider. On day one the hole happened to be exactly a quarter of the panel, so the link habit says: make it panel ÷ 4.`; },
       defaultPath: 'b',
       scene: e4CounterScene,
       everyday: e4CounterEveryday,
       sliderLabel: 'Panel width',
-      format: (t) => fmtLen(lerp(80, 160, t)),
+      format: (t) => fmtLen(lerp(E4_P0, E4_P1, t)),
       hint: 'Grow the panel — this hole answers to a standard, not a neighbor.',
       pathLabels: {
-        get a() { return `Type the hole at ⌀${fmtLen(20)}`; },
+        get a() { return `Type the hole at ⌀${fmtLen(E4_SW)}`; },
         b: 'Link the hole to the panel width',
       },
       outcome(path, t) {
-        const g = Math.round(20 * t);            // how oversize the linked hole runs, mm
+        const g = Math.round(E4_SW * t);            // how oversize the linked hole runs, mm
         if (t < 0.02) {
           return {
             tone: 'idle',
@@ -1800,17 +1827,17 @@ const EXERCISES = [
         }
         if (path === 'b') {
           if (g < 4) {
-            return { tone: 'warn', headline: `hole is ${fmtLen(20 * t)} oversize`, note: 'The hole is growing with the panel. The switch is not.' };
+            return { tone: 'warn', headline: `hole is ${fmtLen(E4_SW * t)} oversize`, note: 'The hole is growing with the panel. The switch is not.' };
           }
           return {
             tone: 'bad',
-            headline: `hole is ⌀${fmtLen(20 + 20 * t)} — the switch is ⌀${fmtLen(20)}`,
+            headline: `hole is ⌀${fmtLen(E4_SW + E4_SW * t)} — the switch is ⌀${fmtLen(E4_SW)}`,
             note: 'The link is doing what links do: passing the change along. But the switch doesn’t scale with your panel. This dimension answers to a standard, not to a neighbor.',
           };
         }
         return {
           tone: 'good',
-          headline: `⌀${fmtLen(20)} at every panel size`,
+          headline: `⌀${fmtLen(E4_SW)} at every panel size`,
           note: 'A typed number — the villain a minute ago — is exactly right here, because the real reference is a standard that never moves.',
         };
       },
@@ -1819,7 +1846,7 @@ const EXERCISES = [
           { label: 'Origin', sub: 'the one reference that never moves' },
           { label: 'Sketch 1 — panel outline', sub: 'its width is the thing that will change' },
           path === 'a'
-            ? { label: 'Sketch 2 — switch hole', sub: `⌀${fmtLen(20)} typed in — quoting the standard`, active: true }
+            ? { label: 'Sketch 2 — switch hole', sub: `⌀${fmtLen(E4_SW)} typed in — quoting the standard`, active: true }
             : { label: 'Sketch 2 — switch hole', sub: '⌀ linked to panel width ÷ 4', active: true },
           { label: 'Extrude 1', sub: `${fmtLen(3)} panel` },
           { label: 'Extrude 2 — cut', sub: 'removes the switch hole, through all' },
@@ -1848,22 +1875,23 @@ const EXERCISES = [
       prompt: 'Two reasonable places for four circles to live. The hole pattern is about to be reworked — count, positions, everything. Which structure lets that rework land without putting the outline at risk?',
       note: 'Just a guess — you’ll test both in a minute.',
       answer: 'b',
+      why: 'Editing the holes reopens whatever sketch they live in: share a sketch with the outline, and every rework puts the outline on the table too.',
     },
 
     choose: {
-      prompt: 'Now build it. Pick either structure — including the one you suspect fails. You’ll flip between them and watch the rework land.',
+      prompt: 'You’re the modeler. Which one goes into the model? You’ll run both before we name the lesson.',
     },
 
     paths: {
       a: {
         label: 'Draw the holes inside the base sketch',
-        sub: 'One sketch carries everything — outline and holes together. One line in the tree. Feels tidy.',
+        sub: 'Outline and holes drawn together in one sketch. One line in the tree.',
         short: 'one sketch',
         kind: 'accident',
       },
       b: {
         label: 'Give the holes their own feature',
-        sub: 'The base sketch stays a clean outline. The holes get their own sketch and cut, one line further down the tree.',
+        sub: 'The base sketch has only the outline. The holes get their own sketch and cut, one line further down the tree.',
         short: 'own feature',
         kind: 'intent',
       },
@@ -1899,7 +1927,7 @@ const EXERCISES = [
         return {
           tone: 'bad',
           headline: `outline gouged ${fmtLen(off)} out of true`,
-          note: 'The holes came out right. But they shared a sketch with the outline, and deleting them took a stray edge along. In a crowded sketch, everything is on the operating table, every time.',
+          note: 'Reworking the holes reopened the sketch that defines the whole part. With the outline in the same sketch, one slip reshapes the part itself — a separate feature makes that slip impossible, not just unlikely.',
         };
       }
       return {
@@ -1942,6 +1970,7 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
+      job: 'Reshape a one-off part whose notch is part of its outline.',
       body: 'A one-off spacer bracket, shipping Friday, never to be opened again. Its silhouette has a notch that clears a weld bead — and the notch isn’t a bolt-on decision, it is the silhouette. One last request lands: reshape the whole thing for the new bead. Same two structures. Which serves you now?',
       defaultPath: 'b',
       scene: e5CounterScene,
@@ -1969,7 +1998,7 @@ const EXERCISES = [
           return {
             tone: 'bad',
             headline: `notch is ${fmtLen(off)} off the bead`,
-            note: 'You filed the notch as its own future edit — but it was never a separate decision. It belongs to the silhouette, and the silhouette just left without it. That extra line in the tree wasn’t organization; it was a place for the part to disagree with itself.',
+            note: 'The notch and the silhouette now live in two sketches, so one reshape needs two edits — and the notch sketch never got its edit. It was one decision; you gave it two homes. That extra line in the tree wasn’t organization; it was a place for the part to disagree with itself.',
           };
         }
         return {
@@ -1988,7 +2017,7 @@ const EXERCISES = [
         } else {
           base.push({ label: 'Sketch 1 — bracket outline', sub: 'the silhouette, being reshaped', active: true });
           base.push({ label: 'Extrude 1', sub: `${fmtLen(5)} thick` });
-          base.push({ label: 'Sketch 2 — notch', sub: 'still drawn against the old edge' });
+          base.push({ label: 'Sketch 2 — notch', sub: 'its own sketch — never got the reshape' });
           base.push({ label: 'Extrude 2 — cut', sub: 'cuts where the notch used to belong' });
         }
         return base;
@@ -2015,10 +2044,11 @@ const EXERCISES = [
       prompt: 'The same four features, two possible orders in the tree. The opening is about to grow again. Which order lets the screws keep their gap — without anyone re-placing them?',
       note: 'Just a guess — you’ll test both in a minute.',
       answer: 'a',
+      why: 'A feature can only measure from what’s above it in the tree: screws placed before the opening can’t see it, so they can’t follow it.',
     },
 
     choose: {
-      prompt: 'Now build it. Pick either order — including the one you suspect fails. You’ll flip between them and watch the spec change land.',
+      prompt: 'You’re the modeler. Which one goes into the model? You’ll run both before we name the lesson.',
     },
 
     paths: {
@@ -2095,7 +2125,7 @@ const EXERCISES = [
     },
 
     takeaway: {
-      line: 'The tree is a sequence — a feature can only see what’s above it. Put a thing downstream of what it must follow, and every rebuild carries it along for free.',
+      line: 'The tree is a sequence — a feature can only see what’s above it. Put a thing downstream of what it must follow, measure it from that thing, and every rebuild carries it along for free.',
       term: 'Plain words: “cut the opening first, then hang the screws on it.” In Onshape the feature list is that sequence, top to bottom — drag the rollback bar up the list and watch each feature’s world shrink to what came before it.',
       flip: 'Unless the link isn’t real — a chain nobody needed just drags bystanders.',
     },
@@ -2107,6 +2137,7 @@ const EXERCISES = [
 
     counter: {
       heading: 'Now flip it',
+      job: 'Keep the label centered on the plate while the mounting hole moves.',
       body: 'A nameplate: one mounting hole near the left end, one engraved label that must sit dead center. Two features, two jobs, nothing shared. The downstream habit is ready to “organize” this — chain the label to the hole so the tree reads connected. Then a request lands: move the hole inboard. Same two schemes. Which serves you now?',
       defaultPath: 'a',
       scene: e6CounterScene,
