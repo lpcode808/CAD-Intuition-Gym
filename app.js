@@ -87,6 +87,15 @@ function award(id, { quiet = false } = {}) {
 const toastHost = h('div', { class: 'toast-host', role: 'status', 'aria-live': 'polite' });
 document.body.appendChild(toastHost);
 
+// Screen readers hear the moments that matter (a verdict, a gate opening) —
+// once, on the transition — not every slider tick.
+const srStatus = h('div', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+document.body.appendChild(srStatus);
+function announce(text) {
+  srStatus.textContent = '';
+  setTimeout(() => { srStatus.textContent = text; }, 50);
+}
+
 function showToast(badge) {
   const el = h('div', { class: 'toast' },
     h('span', { class: 'medal is-earned', 'aria-hidden': 'true' }, badge.glyph),
@@ -267,6 +276,7 @@ function renderPlayer(ex) {
     earned: [],                            // badges toasted during this rep, listed again on the rep card
     counterCall: null,                     // their call in "Flip it", before running it
     counterSeen: { a: false, b: false },
+    flipDone: false,                       // the flip's verdict has been announced
     featuresOpen: null,   // null until the learner toggles it — then it sticks
   };
   // The flip's winner: whichever scheme holds at the full change.
@@ -283,6 +293,13 @@ function renderPlayer(ex) {
     // Choose starts on their guess — one tap to build it, or pick the other.
     if (i === 2 && !S.built && S.predicted) { S.built = S.predicted; S.view = S.predicted; }
     render();
+    // On phones the scene is pinned on top: land the new step's first line
+    // just below it instead of wherever the last step's scroll left it.
+    const vp = refs.body.querySelector('.viewport-panel');
+    const cover = window.matchMedia('(max-width: 980px)').matches && getComputedStyle(vp).position === 'sticky'
+      ? vp.offsetHeight : 0;
+    const top = refs.rail.getBoundingClientRect().top;
+    if (top < cover) window.scrollBy(0, top - cover - 12);
     // Keyboard users land on the new step's content, not back at the top.
     refs.rail.focus({ preventScroll: true });
   }
@@ -294,8 +311,11 @@ function renderPlayer(ex) {
       t: 0, moved: false, compare: false, revealed: false,
       counterT: 0, counterPath: ex.counter.defaultPath, counterMoved: false,
       seen: { a: false, b: false }, counterCall: null, counterSeen: { a: false, b: false },
+      flipDone: false,
     });
     render();
+    window.scrollTo(0, 0);
+    refs.rail.focus({ preventScroll: true });
   }
 
   /* ---- shell ---- */
@@ -341,12 +361,17 @@ function renderPlayer(ex) {
     }));
   }
 
-  function renderStep() {
+  function renderStep(focusName) {
+    const y = window.scrollY;
     refs.continueBtn = refs.doneBtn = null;   // drawScenes() gates only what the new rail builds
     refreshFeatures();
     renderViewport();
     refs.rail.replaceChildren(...railContent());
     updateGates();
+    // Replacing the rail under a focused control would drop focus to <body>
+    // and clamp the scroll; put both back.
+    if (window.scrollY !== y) window.scrollTo(0, y);
+    if (focusName) focusRef(focusName);
   }
 
   function focusRef(name) {
@@ -511,23 +536,35 @@ function renderPlayer(ex) {
       : `Now switch to ${other.toUpperCase()} and run the same change — the lesson is in the difference.`;
   }
 
+  function setHint(node, msg) {
+    if (node.textContent !== (msg || '')) node.textContent = msg || '';
+    node.hidden = !msg;
+  }
+
   function updateGates() {
     if (S.step === 3 && refs.continueBtn) {
-      refs.continueBtn.disabled = !(S.seen.a && S.seen.b);
-      const msg = gateHint(S.seen, S.compare ? null : S.view,
-        ex.change.hint || 'Drag the slider first — feel it before we name it.');
-      refs.moveHint.textContent = msg || '';
-      refs.moveHint.hidden = !msg;
+      const both = S.seen.a && S.seen.b;
+      refs.continueBtn.disabled = !both;
+      setHint(refs.moveHint, gateHint(S.seen, S.compare ? null : S.view,
+        ex.change.hint || 'Drag the slider first — feel it before we name it.'));
+      // The verdict waits for the comparison, like the flip's moral does.
+      if (both && !S.revealed) {
+        S.revealed = true;
+        fillPredChip();
+        announce(`${refs.predChip.textContent} Both schemes have run — Name the lesson is ready.`);
+      }
     }
     if (S.step === 4 && refs.doneBtn) {
       const both = S.counterSeen.a && S.counterSeen.b;
       refs.doneBtn.disabled = !both;
       refs.moral.hidden = !both;
       refs.callChip.hidden = !both;
-      const msg = gateHint(S.counterSeen, S.counterPath,
-        ex.counter.hint || 'Run the change one more time — this part has a different job.');
-      refs.moveHint2.textContent = msg || '';
-      refs.moveHint2.hidden = !msg;
+      setHint(refs.moveHint2, gateHint(S.counterSeen, S.counterPath,
+        ex.counter.hint || 'Run the change one more time — this part has a different job.'));
+      if (both && !S.flipDone) {
+        S.flipDone = true;
+        announce(`${refs.callChip.textContent} ${ex.counter.moral}`);
+      }
     }
   }
 
@@ -549,7 +586,8 @@ function renderPlayer(ex) {
       h('button', {
         class: 'option' + (selected === p ? ' is-selected' : ''),
         'aria-pressed': selected === p ? 'true' : 'false',
-        onclick: () => onPick(p),
+        disabled: !onPick,
+        onclick: onPick ? () => onPick(p) : null,
       },
         h('span', { class: 'option-key' }, p.toUpperCase()),
         h('span', { class: 'option-text' },
@@ -558,14 +596,25 @@ function renderPlayer(ex) {
         guessed === p ? h('span', { class: 'guess-tag' }, 'your guess') : null)));
   }
 
-  function sliderBlock({ label, value, format, oninput }) {
+  function sliderBlock({ label, value, format, oninput, valuetext }) {
     refs.sliderVal = h('span', { class: 'slider-val' }, format(value));
     const input = h('input', {
       type: 'range', min: '0', max: '1000',
       value: String(Math.round(value * 1000)),
       class: 'slider', 'aria-label': label,
     });
-    input.addEventListener('input', () => oninput(input.valueAsNumber / 1000));
+    const describe = () => input.setAttribute('aria-valuetext', valuetext(input.valueAsNumber / 1000));
+    describe();
+    input.addEventListener('input', () => { oninput(input.valueAsNumber / 1000); describe(); });
+    // Fine-grained for dragging, but arrows move 5% (PageUp/PageDown 20%):
+    // reaching the halfway reveal shouldn't take hundreds of key presses.
+    input.addEventListener('keydown', (e) => {
+      const steps = { ArrowRight: 50, ArrowUp: 50, ArrowLeft: -50, ArrowDown: -50, PageUp: 200, PageDown: -200 };
+      if (!(e.key in steps)) return;
+      e.preventDefault();
+      input.value = String(Math.max(0, Math.min(1000, input.valueAsNumber + steps[e.key])));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     return h('div', { class: 'slider-block' },
       h('div', { class: 'slider-head' },
         h('span', { class: 'slider-label' }, label),
@@ -592,16 +641,19 @@ function renderPlayer(ex) {
 
   /* step 1 — predict (light tap; see PRD §11.5) */
   function railPredict() {
+    // Once the change has landed, the guess is on record — coming back here
+    // can't rewrite "You called it", the score, or the badges.
+    const locked = S.maxStep >= 3;
     const out = [
       h('p', { class: 'kicker' }, 'Predict'),
       h('p', { class: 'prose' }, ex.predict.prompt),
-      optionButtons(S.predicted, (p) => { S.predicted = p; renderStep(); focusRef('continue'); }, null),
-      h('p', { class: 'fine' }, ex.predict.note),
+      optionButtons(S.predicted, locked ? null : (p) => { S.predicted = p; renderStep('continue'); }, locked ? S.predicted : null),
+      h('p', { class: 'fine' }, locked ? 'Your guess is locked in — you made it before the change landed.' : ex.predict.note),
     ];
     if (S.predicted) {
       out.push(h('button', {
-        class: 'btn primary', 'data-ref': 'continue', onclick: advance,
-      }, 'Lock it in →'));
+        class: 'btn primary', 'data-ref': 'continue', onclick: locked ? () => go(S.maxStep) : advance,
+      }, locked ? 'Back to where you were →' : 'Lock it in →'));
     }
     return out;
   }
@@ -611,7 +663,7 @@ function renderPlayer(ex) {
     const out = [
       h('p', { class: 'kicker' }, 'Choose'),
       h('p', { class: 'prose' }, ex.choose.prompt),
-      optionButtons(S.built, (p) => { S.built = p; S.view = p; renderStep(); focusRef('continue'); }, S.predicted),
+      optionButtons(S.built, (p) => { S.built = p; S.view = p; renderStep('continue'); }, S.predicted),
     ];
     if (S.built) {
       out.push(h('button', {
@@ -636,15 +688,19 @@ function renderPlayer(ex) {
           S.t = t;
           refs.sliderVal.textContent = ex.change.format(t);
           if (t > 0.15) S.moved = true;
-          if (t >= SEEN_T && !S.revealed) { S.revealed = true; fillPredChip(); }
           drawScenes();
           updateOutcomeNote();
         },
+        valuetext: (t) => (S.compare
+          ? `${ex.change.format(t)} — A: ${ex.outcome('a', t).headline}; B: ${ex.outcome('b', t).headline}`
+          : `${ex.change.format(t)} — ${ex.outcome(S.view, t).headline}`),
       }),
     ];
 
     refs.outcomeNote = h('p', { class: 'outcome-note' });
     out.push(refs.outcomeNote);
+    refs.moveHint = h('p', { class: 'fine gate-hint', 'data-ref': 'movehint', 'aria-live': 'polite' });
+    out.push(refs.moveHint);
 
     out.push(h('div', { class: 'viewrow' },
       h('span', { class: 'viewrow-label' }, 'viewing'),
@@ -652,16 +708,18 @@ function renderPlayer(ex) {
         h('button', {
           class: 'seg' + (S.view === p ? ' is-on' : ''),
           'aria-pressed': S.view === p ? 'true' : 'false',
+          'data-ref': `view-${p}`,
           disabled: S.compare,
-          onclick: () => { S.view = p; renderStep(); },
+          onclick: () => { S.view = p; renderStep(`view-${p}`); },
         }, `${p.toUpperCase()} · ${ex.paths[p].short}`))),
       h('button', {
         class: 'btn ghost',
         'aria-pressed': S.compare ? 'true' : 'false',
+        'data-ref': 'compare',
         onclick: () => {
           S.compare = !S.compare;
           if (S.compare) earn('spotter');
-          renderStep();
+          renderStep('compare');
         },
       }, S.compare ? 'Back to one view' : 'Compare side by side')));
 
@@ -674,8 +732,6 @@ function renderPlayer(ex) {
       class: 'btn primary', 'data-ref': 'continue', onclick: advance,
     }, 'Name the lesson →');
     out.push(refs.continueBtn);
-    refs.moveHint = h('p', { class: 'fine gate-hint', 'data-ref': 'movehint', 'aria-live': 'polite' });
-    out.push(refs.moveHint);
 
     updateOutcomeNote();
     return out;
@@ -744,7 +800,8 @@ function renderPlayer(ex) {
             class: 'seg' + (S.counterPath === p ? ' is-on' : ''),
             'aria-pressed': S.counterPath === p ? 'true' : 'false',
             title: ex.counter.pathLabels[p],
-            onclick: () => { S.counterPath = p; renderStep(); },
+            'data-ref': `cpath-${p}`,
+            onclick: () => { S.counterPath = p; renderStep(`cpath-${p}`); },
           }, `${p.toUpperCase()} · ${(ex.counter.short || {})[p] || ex.paths[p].short}`)))),
       sliderBlock({
         label: ex.counter.sliderLabel,
@@ -757,6 +814,7 @@ function renderPlayer(ex) {
           drawScenes();
           updateCounterNote();
         },
+        valuetext: (t) => `${ex.counter.format(t)} — ${ex.counter.outcome(S.counterPath, t).headline}`,
       }));
 
     refs.counterNote = h('p', { class: 'outcome-note' });

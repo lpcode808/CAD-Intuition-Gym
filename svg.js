@@ -162,7 +162,8 @@ function sceneLabel(parent, x, y, text, cls = '', anchor = 'middle') {
    E5's and E6's consequences live partly in the feature tree, so the tree is drawn
    inside the scene itself (each compare pane needs its own copy — the left
    Features panel can only show one). Rows: { label, state } where state is
-   '' | 'active' (open in the editor right now) | 'error' (broken reference).
+   '' | 'active' (open in the editor right now) | 'error' (fails to rebuild —
+   Onshape's red; never for a feature that rebuilds but lands in the wrong place).
    Returns one { x, y } anchor per row (right edge, mid-height) so a leader
    line can tie the edited row to the geometry it puts on the table. */
 function featureTree(parent, x, y, rows) {

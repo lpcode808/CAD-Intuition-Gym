@@ -411,8 +411,12 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 
 /* The scene stays in view while the rail scrolls — the slider and the
    consequence belong on screen together (phones get this below 980px). */
-@media (min-width: 981px) {
+@media (min-width: 981px) and (min-height: 560px) {
   .viewport-panel { position: sticky; top: 12px; }
+}
+/* Compare panes stack below ~1150px wide — too tall to pin. */
+@media (min-width: 981px) and (max-width: 1150px) {
+  .ex-body.is-compare .viewport-panel { position: static; }
 }
 
 /* Compare mode: the features panel can only describe one scheme, and two
@@ -588,6 +592,9 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   transition: border-color 0.12s, background-color 0.12s;
 }
 .option:hover { border-color: var(--border-strong); }
+.option:disabled { color: inherit; cursor: default; }
+.option:disabled:hover { border-color: var(--border); }
+.option.is-selected:disabled:hover { border-color: var(--accent); }
 .option.is-selected {
   border-color: var(--accent);
   background: var(--accent-soft);
@@ -924,7 +931,9 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   .home { padding: 40px 20px 56px; }
 }
 
-@media (max-width: 980px) {
+/* Pinned only in tall windows: in phone landscape or at 150-200% zoom the
+   scene is taller than the window and would cover every control. */
+@media (max-width: 980px) and (min-height: 600px) {
   .ex-body[data-step="3"]:not(.is-compare) .viewport-panel,
   .ex-body[data-step="4"] .viewport-panel {
     position: sticky;

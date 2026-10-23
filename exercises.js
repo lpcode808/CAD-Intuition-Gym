@@ -459,7 +459,7 @@ function e3CounterScene(stage, { t, path }) {
   svgEl('path', { d, class: 'part' + (path === 'a' ? '' : ' is-loose') }, stage);
 
   if (path === 'a') {
-    sceneLabel(stage, 260, 284, 'fully defined — it will not be argued with', 'muted');
+    sceneLabel(stage, 260, 284, 'concept sketch — fully defined, every line dimensioned', 'muted');
     dimH(stage, { x1: 204, x2: 316, y: 259, ext1: 235, ext2: 235, label: fmtLen(70), cls: 'anchor' });
     dimV(stage, { y1: 115, y2: 235, x: 176, ext1: 204, ext2: 204, label: fmtLen(75), cls: 'anchor' });
     dimH(stage, { x1: 204, x2: 244, y: 97, ext1: 115, ext2: 115, label: fmtLen(25), cls: 'anchor' });
@@ -729,8 +729,8 @@ function e5MainScene(stage, { t, path }) {
   const left = cx - Wpx / 2, right = cx + Wpx / 2;
   const top = cy - Hpx / 2, bot = cy + Hpx / 2;
   const r = 4 * MM;
-  const gouge = path === 'a' ? 12 * t : 0;       // mm bitten out of the right edge
-  const gpx = gouge * MM;
+  const shift = path === 'a' ? 12 * t : 0;       // mm the right edge slid in (a mis-edited width)
+  const gpx = shift * MM;
 
   const rows = path === 'a'
     ? [{ label: 'Sketch 1 · plate', state: 'active' }, { label: 'Extrude 1' }]
@@ -741,12 +741,8 @@ function e5MainScene(stage, { t, path }) {
   const anchors = featureTree(stage, 14, 30, rows);
   if (path === null) sceneLabel(stage, 14, 92, '+ four holes — where?', 'muted', 'start');
 
-  // The plate, with the path-a bite taken out of its right edge.
-  svgEl('path', {
-    d: `M ${left} ${top} L ${right} ${top} L ${right} ${top + 28} L ${right - gpx} ${cy} ` +
-       `L ${right} ${bot - 28} L ${right} ${bot} L ${left} ${bot} Z`,
-    class: 'part',
-  }, stage);
+  // The plate — on path a its right edge slides in: the width got the wrong number.
+  svgEl('rect', { x: left, y: top, width: Wpx - gpx, height: Hpx, class: 'part' }, stage);
 
   // Where the outline is supposed to be — the promise, visible when broken.
   svgEl('rect', { x: left, y: top, width: Wpx, height: Hpx, class: 'intent-outline' }, stage);
@@ -797,16 +793,13 @@ function e5MainScene(stage, { t, path }) {
     leaderLine(stage, anchors[2].x, anchors[2].y, k1[0] - r - 8, k1[1]);
   }
 
-  if (path === 'a' && gouge >= 1) {
-    svgEl('path', {
-      d: `M ${right} ${top + 28} L ${right - gpx} ${cy} L ${right} ${bot - 28} Z`,
-      class: 'gap-bad',
-    }, stage);
+  if (path === 'a' && shift >= 1) {
+    svgEl('rect', { x: right - gpx, y: top, width: gpx, height: Hpx, class: 'gap-bad' }, stage);
   }
-  if (path === 'a' && gouge >= 3) {
+  if (path === 'a' && shift >= 3) {
     dimH(stage, {
-      x1: right - gpx, x2: right, y: 123, ext1: cy, ext2: top + 28,
-      label: `${fmtLen(Math.round(gouge))} out of true`, cls: 'bad',
+      x1: right - gpx, x2: right, y: 123, ext1: top, ext2: top,
+      label: `${fmtLen(Math.round(shift))} narrower`, cls: 'bad',
     });
   }
 }
@@ -824,7 +817,7 @@ function e5CounterScene(stage, { t, path }) {
   const rows = path === 'a'
     ? [{ label: 'Sketch 1 · bracket', state: 'active' }, { label: 'Extrude 1' }]
     : [{ label: 'Sketch 1 · outline', state: 'active' }, { label: 'Extrude 1' },
-       { label: 'Sketch 2 · notch', state: bad ? 'error' : '' }, { label: 'Extrude 2 · cut' }];
+       { label: 'Sketch 2 · notch' }, { label: 'Extrude 2 · cut' }];
   const anchors = featureTree(stage, 14, 30, rows);
 
   sceneLabel(stage, 330, 86, 'one-off — ships Friday, never opens again', 'muted');
@@ -883,8 +876,8 @@ const e5MainEveryday = {
     const cx = 340, cy = 163;
     const right = cx + (130 * MM) / 2;
     const r = 4 * MM;
-    const gouge = path === 'a' ? 12 * t : 0;
-    const gpx = gouge * MM;
+    const shift = path === 'a' ? 12 * t : 0;
+    const gpx = shift * MM;
     const keep = [
       [lerp(cx - 30 * MM, cx - 45 * MM, t), lerp(cy - 16 * MM, cy, t)],
       [lerp(cx + 30 * MM, cx + 45 * MM, t), lerp(cy + 16 * MM, cy, t)],
@@ -924,12 +917,12 @@ const e5MainEveryday = {
       const g = svgEl('g', { opacity: String(1 - t) }, stage);
       for (const [x, y] of old) svgEl('circle', { cx: x, cy: y, r: r + 3, class: 'ed-pencil' }, g);
     }
-    if (path === 'a' && gouge >= 1) {
+    if (path === 'a' && shift >= 1) {
       const sx = right - gpx / 2 - 2;
       svgEl('ellipse', {
         cx: sx, cy, rx: gpx / 2 + 7, ry: 30, transform: `rotate(-6 ${sx} ${cy})`, class: 'ed-smudge',
       }, stage);
-      edSay(stage, 280, 284, 'Erasing the old marks scuffed the edge of the sheet', 'bad');
+      edSay(stage, 280, 284, 'Redoing the marks moved the sheet’s edge too', 'bad');
     }
   },
 };
@@ -1005,14 +998,13 @@ function e6MainScene(stage, { t, path }) {
   intentMark(stage, hx, cy - ideal);
   intentMark(stage, hx, cy + ideal, 'intent: ride the opening', 40);
 
-  const breached = path === 'b' && wallMm <= 0;
+  const breached = path === 'b' && Math.round(wallMm) <= 0;   // same rounding as outcome()
+  // B's screws never get green once the opening starts closing in on them.
+  const holeTone = !path ? '' : breached ? ' is-bad' : (path === 'b' && t >= 0.02 ? '' : ' is-good');
   for (const sgn of [-1, 1]) {
     const y = cy + sgn * hy;
     if (path === 'a') svgEl('circle', { cx: hx, cy: y, r: holeR + 5, class: 'edit-scope' }, stage);
-    svgEl('circle', {
-      cx: hx, cy: y, r: holeR,
-      class: 'hole' + (path ? (breached ? ' is-bad' : ' is-good') : ''),
-    }, stage);
+    svgEl('circle', { cx: hx, cy: y, r: holeR, class: 'hole' + holeTone }, stage);
     if (breached) {
       svgEl('line', { x1: hx, y1: cy + sgn * ideal, x2: hx, y2: y, class: 'offline' }, stage);
     }
@@ -1529,7 +1521,7 @@ const EXERCISES = [
           { label: 'Sketch 1 — plate outline', sub: `${fmtLen(160)} wide` },
         ];
         if (path === 'a') {
-          base.push({ label: 'Sketch 2 — both holes', sub: 'connector hole drawn · sensor hole a mirrored copy — moves whenever the connector moves', active: true });
+          base.push({ label: 'Sketch 2 — both holes', sub: 'connector hole drawn · sensor hole a mirrored copy of it', active: true });
         } else {
           base.push({ label: 'Sketch 2 — sensor hole', sub: `${fmtLen(E2_HALF)} left of center · its own dimension`, active: true });
           base.push({ label: 'Sketch 3 — connector hole', sub: 'its own dimension · free to move alone', active: true });
@@ -1681,7 +1673,7 @@ const EXERCISES = [
         return [
           { label: 'Origin', sub: 'the one reference that never moves' },
           path === 'a'
-            ? { label: 'Sketch 1 — concept profile', sub: 'fully defined — and fighting you', active: true }
+            ? { label: 'Sketch 1 — concept profile', sub: 'fully defined — dimensioned and constrained, drawn black', active: true }
             : { label: 'Sketch 1 — concept profile', sub: 'loose on purpose — blue and proud', active: true },
         ];
       },
@@ -1920,14 +1912,14 @@ const EXERCISES = [
         if (off < 4) {
           return {
             tone: 'warn',
-            headline: `outline nicked — ${fmtLen(off)} out of true`,
-            note: 'You’re inside the base sketch to touch holes — and every line of the outline is within reach of every click.',
+            headline: `outline nudged — ${fmtLen(off)} narrower`,
+            note: 'You’re inside the base sketch to touch holes — and every dimension of the outline is in there too, one mis-click away.',
           };
         }
         return {
           tone: 'bad',
-          headline: `outline gouged ${fmtLen(off)} out of true`,
-          note: 'Reworking the holes reopened the sketch that defines the whole part. With the outline in the same sketch, one slip reshapes the part itself — a separate feature makes that slip impossible, not just unlikely.',
+          headline: `outline ${fmtLen(off)} narrower — signed off, and moved`,
+          note: 'Reworking the holes reopened the sketch that defines the whole part. The outline is still fully defined — it just got the wrong number: in a crowded sketch, one mis-click edits the plate’s width instead of a hole’s. Holes in their own feature never put that number in front of you.',
         };
       }
       return {
@@ -2017,8 +2009,8 @@ const EXERCISES = [
         } else {
           base.push({ label: 'Sketch 1 — bracket outline', sub: 'the silhouette, being reshaped', active: true });
           base.push({ label: 'Extrude 1', sub: `${fmtLen(5)} thick` });
-          base.push({ label: 'Sketch 2 — notch', sub: 'its own sketch — never got the reshape' });
-          base.push({ label: 'Extrude 2 — cut', sub: 'cuts where the notch used to belong' });
+          base.push({ label: 'Sketch 2 — notch', sub: 'its own sketch — just the notch' });
+          base.push({ label: 'Extrude 2 — cut', sub: 'removes the notch, through all' });
         }
         return base;
       },
@@ -2131,7 +2123,7 @@ const EXERCISES = [
     },
 
     bridge: {
-      task: 'Extrude a thin plate, cut a notch in one edge, then sketch a circle dimensioned off the notch’s edge and cut it through. Edit the notch wider — the hole keeps its distance without you touching it. Then try to drag the hole’s sketch above the notch in the feature list: Onshape refuses, because up there the edge it needs doesn’t exist yet.',
+      task: 'Extrude a thin plate, cut a notch in one edge, then sketch a circle dimensioned off the notch’s edge and cut it through. Edit the notch wider — the hole keeps its distance without you touching it. Then drag the hole’s sketch above the notch in the feature list. Onshape lets you — and the sketch turns red: up there, the edge it was measured from doesn’t exist yet. Undo, and it heals.',
       href: 'https://cad.onshape.com',
     },
 
@@ -2178,7 +2170,7 @@ const EXERCISES = [
       features(path) {
         const base = [
           { label: 'Origin', sub: 'the one reference that never moves' },
-          { label: 'Sketch 1 — nameplate', sub: 'the blank the label answers to' },
+          { label: 'Sketch 1 — nameplate', sub: 'the blank, already sized' },
           { label: 'Extrude 1', sub: `${fmtLen(3)} thick` },
           { label: 'Hole 1 — mount', sub: 'the thing being moved', active: true },
         ];

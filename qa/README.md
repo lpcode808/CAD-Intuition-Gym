@@ -145,15 +145,15 @@ harness explicitly seeds it):
    with exactly one active row, a `.leader` line tying that row to a
    violet `.edit-scope` halo, and a two-row tree. After dragging the hole
    rework through and opening compare, it confirms pane A (one shared
-   sketch) keeps its two-row tree and shows the outline gouged "out of
-   true," while pane B (holes filed on their own feature) grows to four
-   rows and never shows that gouge — both panes drawing their own tree.
+   sketch) keeps its two-row tree and shows the outline knocked
+   "narrower," while pane B (holes filed on their own feature) grows to four
+   rows and never touches the outline — both panes drawing their own tree.
    In the counter-context, whose default scheme files the notch as its
    own feature, it confirms reshaping the silhouette strands the notch
-   feature "off the bead" and flags its row red (`.ftree-row.is-error`);
-   switching to the other scheme (the notch folded into the outline
-   sketch) confirms the error row and the "off the bead" text both
-   disappear and the tree collapses back to two rows.
+   feature "off the bead" while its tree row stays clean (no
+   `.ftree-row.is-error` — the part is wrong, not broken); switching to the
+   other scheme (the notch folded into the outline sketch) confirms the
+   "off the bead" text disappears and the tree collapses back to two rows.
 
 10. **E6's tree order.** E6's consequence is the ORDER of the same four
     tree rows, so its scene pass asserts the order itself: path A files

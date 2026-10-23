@@ -275,8 +275,8 @@ async function runE5SceneChecks(browser, vp, collectors) {
 
   const paneAText = await paneA.locator('svg').evaluate((el) => el.textContent);
   const paneBText = await paneB.locator('svg').evaluate((el) => el.textContent);
-  rec(checks, `[${vp.label}] e5: compare pane A shows the outline gouged "out of true"`, paneAText.includes('out of true'), `paneA snippet="${paneAText.slice(0, 120)}"`);
-  rec(checks, `[${vp.label}] e5: compare pane B never gouges the outline`, !paneBText.includes('out of true'), `paneB snippet="${paneBText.slice(0, 120)}"`);
+  rec(checks, `[${vp.label}] e5: compare pane A shows the outline knocked "narrower"`, paneAText.includes('narrower'), `paneA snippet="${paneAText.slice(0, 120)}"`);
+  rec(checks, `[${vp.label}] e5: compare pane B never touches the outline`, !paneBText.includes('narrower'), `paneB snippet="${paneBText.slice(0, 120)}"`);
 
   const paneARows = await paneA.locator('svg .ftree-row').count();
   const paneBRows = await paneB.locator('svg .ftree-row').count();
@@ -292,13 +292,14 @@ async function runE5SceneChecks(browser, vp, collectors) {
   await primaryBtn.click(); // "Name the lesson →"
 
   /* step 4 — counter-context. Default scheme is b ("File the notch as its
-     own feature"); reshaping under b strands the notch feature off the bead
-     and flags its row red. Scheme a folds the notch into the outline sketch,
-     so it rides the reshape and never drifts. */
+     own feature"); reshaping under b strands the notch off the bead — and the
+     tree still reads clean, because the part is wrong, not broken (Onshape
+     shows nothing red; E6 makes the same point). Scheme a folds the notch
+     into the outline sketch, so it rides the reshape and never drifts. */
   await page.locator('.rail .options .option').nth(1).click(); // the flip-it call: B
   await setSlider(page, 0.8);
   const errorRowsBefore = await page.locator('.viewport svg .ftree-row.is-error').count();
-  rec(checks, `[${vp.label}] e5 counter: the notch filed as its own feature flags red once the outline reshapes without it`, errorRowsBefore > 0, `error rows=${errorRowsBefore}`);
+  rec(checks, `[${vp.label}] e5 counter: scheme B's tree reads clean while the notch sits off the bead (wrong, not broken)`, errorRowsBefore === 0, `error rows=${errorRowsBefore}`);
 
   const counterTextBefore = await page.locator('.viewport svg').evaluate((el) => el.textContent);
   rec(checks, `[${vp.label}] e5 counter: scheme B drifts "off the bead"`, counterTextBefore.includes('off the bead'), `snippet="${counterTextBefore.slice(0, 120)}"`);
