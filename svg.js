@@ -56,9 +56,10 @@ const MM_PER_IN = 25.4;
 
 /* Format a millimeter quantity in whichever unit the toggle is set to. */
 function fmtLen(mm, { mmDecimals = 0, inDecimals = 2 } = {}) {
+  const snap = (x) => Math.round(x * 1e9) / 1e9;
   return getUnit() === 'in'
-    ? `${(mm / MM_PER_IN).toFixed(inDecimals)} in`
-    : `${mm.toFixed(mmDecimals)} mm`;
+    ? `${snap(mm / MM_PER_IN).toFixed(inDecimals)} in`
+    : `${snap(mm).toFixed(mmDecimals)} mm`;
 }
 
 /* A scene viewport: grid background + a stage group that scenes draw into. */

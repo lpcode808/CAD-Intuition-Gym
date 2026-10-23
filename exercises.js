@@ -648,7 +648,7 @@ function e4CounterScene(stage, { t, path }) {
 
   sceneLabel(stage, cx, 98, `a standard ⌀${fmtLen(E4_SW)} switch must drop in here`, 'muted');
   svgEl('circle', { cx, cy, r: rS + 3, class: 'intent-ring' }, stage);
-  svgEl('text', { x: cx, y: pBot - 8, class: 'intent-label', 'text-anchor': 'middle', text: `intent: fit the switch — ⌀${fmtLen(E4_SW)}, forever` }, stage);
+  svgEl('text', { x: cx, y: pBot + 46, class: 'intent-label', 'text-anchor': 'middle', text: `intent: fit the switch — ⌀${fmtLen(E4_SW)}, forever` }, stage);
 
   sceneLabel(stage, cx, cy + rH + 18,
     path === 'b' ? `⌀${fmtLen(dHole)} = panel width ÷ 4` : `⌀${fmtLen(E4_SW)} — typed in`,
@@ -705,7 +705,8 @@ const e4MainEveryday = {
 const e4CounterEveryday = {
   thing: 'An arcade button — it only comes in one size.',
   fill: '#d5dbe4',
-  fillAlt: '#e2574c',
+  // Oversize: the CAD switch body becomes an outline where the button belongs.
+  fillAlt: ({ t, path }) => (path === 'b' && lerp(E4_P0, E4_P1, t) / 4 - E4_SW > 0.5 ? 'none' : '#e2574c'),
   under(stage) {
     edBackdrop(stage, 'ed-wall');
   },
@@ -713,14 +714,17 @@ const e4CounterEveryday = {
     const cx = 260, cy = 168;
     const dHole = path === 'b' ? lerp(E4_P0, E4_P1, t) / 4 : E4_SW;
     const rH = (dHole / 2) * MM, rS = (E4_SW / 2) * MM;
+    const oversize = dHole - E4_SW > 0.5;
 
-    // The button's dome and a glint, inside the CAD switch body.
-    svgEl('circle', { cx, cy, r: rS - 5, class: 'ed-red' }, stage);
+    // The button — body, dome and a glint. Oversize, it sinks into the hole.
+    const btn = svgEl('g', oversize ? { transform: `translate(0 ${rH - rS})`, opacity: '0.85' } : {}, stage);
+    svgEl('circle', { cx, cy, r: rS, class: 'ed-red' }, btn);
+    svgEl('circle', { cx, cy, r: rS - 5, class: 'ed-red' }, btn);
     svgEl('ellipse', {
       cx: cx - 4, cy: cy - 4.5, rx: 3.2, ry: 1.8, transform: `rotate(-35 ${cx - 4} ${cy - 4.5})`, class: 'ed-paper',
-    }, stage);
+    }, btn);
 
-    if (dHole - E4_SW > 0.5) {
+    if (oversize) {
       // Nothing left for its rim to sit on: a small arrow in the gap below it.
       const y1 = cy + rS + 3, y2 = Math.min(y1 + 10, cy + rH + 5);
       if (y2 - y1 >= 5) {
@@ -946,7 +950,7 @@ const e5MainEveryday = {
 };
 
 const e5CounterEveryday = {
-  thing: 'A shelf bracket with a notch that has to clear a water pipe.',
+  thing: 'A shelf bracket, redrawn so its notch clears a water pipe that got moved.',
   fill: '#c9d0d8',
   under(stage) {
     edBackdrop(stage, 'ed-wall');
@@ -1078,7 +1082,7 @@ function e6CounterScene(stage, { t, path }) {
   const rows = [
     { label: 'Sketch 1 · plate' }, { label: 'Extrude 1' },
     { label: 'Hole 1 · mount', state: 'active' },
-    { label: path === 'a' ? 'Engrave · off hole' : 'Engrave · off plate' },
+    { label: path === 'a' ? 'Text · off hole' : 'Text · off plate' },
   ];
   const anchors = featureTree(stage, 14, 30, rows);
   sceneLabel(stage, cx, 86, 'two features, two jobs — nothing shared', 'muted');
@@ -1731,7 +1735,7 @@ const EXERCISES = [
       a: {
         get label() { return `Type the lid at ${fmtLen(E4_LID)}`; },
         get sub() { return `Box is ${fmtLen(E4_BOX0)}, plus ${fmtLen(E4_LIP)} per side. Add it up and type the lid’s width in.`; },
-        short: 'hardcoded',
+        short: 'typed number',
         kind: 'accident',
       },
       b: {
@@ -1792,25 +1796,29 @@ const EXERCISES = [
     features(path) {
       return [
         { label: 'Origin', sub: 'the one reference that never moves' },
-        { label: 'Sketch 1 — box body', sub: 'its width is the thing that will change' },
-        { label: 'Extrude 1 — box', sub: 'hollow, open on top' },
+        ...(path === 'b'
+          ? [{ label: 'Variable — box width', sub: 'the one number both sketches read · the change request edits only this' }]
+          : []),
+        { label: 'Sketch 1 — box body', sub: path === 'b' ? 'width = box width (the variable)' : 'its width is the thing that will change' },
+        { label: 'Extrude 1 — box', sub: 'the box the lid has to fit' },
         path === null
           ? { label: 'Sketch 2 — lid plate', sub: 'how wide? that’s your call', active: true }
           : path === 'a'
             ? { label: 'Sketch 2 — lid plate', sub: `width typed in: ${fmtLen(E4_LID)}`, active: true }
-            : { label: 'Sketch 2 — lid plate', sub: `width = box width + ${fmtLen(2 * E4_LIP)} · a linked dimension`, active: true },
-        { label: 'Extrude 2 — lid', sub: `${fmtLen(7)} thick` },
+            : { label: 'Sketch 2 — lid plate', sub: `width = box width + ${fmtLen(2 * E4_LIP)} · reads the same variable`, active: true },
+        { label: 'Extrude 2 — lid', sub: `${fmtLen(0.25 * IN)} thick` },
       ];
     },
 
     takeaway: {
       line: 'A relationship is intent made durable. When two dimensions belong together, link them — don’t make one memorize the other.',
-      get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable (#box_width), then an equation typed right into the lid’s dimension: #box_width + ${fmtLen(2 * E4_LIP)}.`; },
+      get term() { return `Plain words: “the lid asks the box.” Onshape’s tools for it: a variable, #box_width, that the box’s width and the lid’s both read — the lid’s dimension is the equation #box_width + ${fmtLen(2 * E4_LIP)}.`; },
       flip: 'Unless a standard already decided the number — then typing it is correct.',
+      tool: 'A Variable at the top of the feature list, read by both dimensions as #name.',
     },
 
     bridge: {
-      task: 'In a Part Studio, create a variable named base and type #base into one sketch dimension. Type a matching plain number into a second dimension. Now change #base and watch: the linked dimension follows, the typed one just sits there.',
+      task: 'In a Part Studio, add a Variable named base — it goes at the top of the feature list, above the sketches that read it — and type #base into one sketch dimension. Type a matching plain number into a second dimension. Now edit the Variable: the linked dimension follows, the typed one just sits there.',
       href: 'https://cad.onshape.com',
     },
 
@@ -1857,10 +1865,10 @@ const EXERCISES = [
         return [
           { label: 'Origin', sub: 'the one reference that never moves' },
           { label: 'Sketch 1 — panel outline', sub: 'its width is the thing that will change' },
+          { label: 'Extrude 1', sub: `${fmtLen(3)} panel` },
           path === 'a'
             ? { label: 'Sketch 2 — switch hole', sub: `⌀${fmtLen(E4_SW)} typed in — quoting the standard`, active: true }
-            : { label: 'Sketch 2 — switch hole', sub: '⌀ linked to panel width ÷ 4', active: true },
-          { label: 'Extrude 1', sub: `${fmtLen(3)} panel` },
+            : { label: 'Sketch 2 — switch hole', sub: '⌀ = panel width ÷ 4 · reads a variable', active: true },
           { label: 'Extrude 2 — cut', sub: 'removes the switch hole, through all' },
         ];
       },
@@ -1878,9 +1886,9 @@ const EXERCISES = [
 
     brief: {
       heading: 'One part, two schedules',
-      body: 'This mounting plate is two things at once. The outline already fits its enclosure — signed off, settled, done. The four bezel holes are the opposite: marketing redraws that bezel every other sprint. Two parts of one part, on very different schedules.',
+      body: 'This mounting plate is two things at once. The outline already fits its enclosure — signed off, settled, done. The four holes are the opposite: they hold a front cover that marketing redesigns every few weeks. Two parts of one part, on very different schedules.',
       intent: 'The outline never moves. The holes stay easy to rework.',
-      change: 'The hole pattern — count and positions. A two-hole bezel is already circulating in meetings, and when it lands, someone opens this part and reworks the holes.',
+      change: 'The hole pattern — count and positions. A two-hole cover design is already circulating, and when it lands, someone opens this part and reworks the holes.',
     },
 
     predict: {
@@ -1903,14 +1911,14 @@ const EXERCISES = [
       },
       b: {
         label: 'Give the holes their own feature',
-        sub: 'The base sketch has only the outline. The holes get their own sketch and cut, one line further down the tree.',
+        sub: 'The base sketch has only the outline. The holes get their own sketch and cut, further down the tree.',
         short: 'own feature',
         kind: 'intent',
       },
     },
 
     change: {
-      request: '“The two-hole bezel is approved — rework the pattern: four holes down to two, moved out toward the ends. And the outline is signed off. Do not move my outline.”',
+      request: '“The two-hole cover is approved — rework the pattern: four holes down to two, moved out toward the ends. And the outline is signed off. Do not move my outline.”',
       sliderLabel: 'Hole rework',
       format: (t) => `${Math.round(t * 100)}% reworked`,
       hint: 'Drag the rework through first — feel it before we name it.',
@@ -1932,7 +1940,7 @@ const EXERCISES = [
         if (off < 4) {
           return {
             tone: 'warn',
-            headline: `outline nudged — ${fmtLen(off)} narrower`,
+            headline: off === 0 ? 'holes moving — outline untouched so far' : `outline nudged — ${fmtLen(off)} narrower`,
             note: 'You’re inside the base sketch to touch holes — and every dimension of the outline is in there too, one mis-click away.',
           };
         }
@@ -1945,7 +1953,7 @@ const EXERCISES = [
       return {
         tone: 'good',
         headline: 'holes reworked — the outline never flinched',
-        note: 'The rework happened one line down the tree, in a sketch whose only job is holes. The outline wasn’t just safe — it was never even in the room.',
+        note: 'The rework happened down the tree, in a sketch whose only job is holes. The outline wasn’t just safe — it was never even in the room.',
       };
     },
 
@@ -1955,15 +1963,15 @@ const EXERCISES = [
       ];
       if (path === 'a') {
         base.push({ label: 'Sketch 1 — outline + four holes', sub: 'one crowded sketch — the outline and the holes share every edit', active: true });
-        base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
+        base.push({ label: 'Extrude 1', sub: `${fmtLen(0.25 * IN)} thick` });
       } else if (path === 'b') {
         base.push({ label: 'Sketch 1 — plate outline', sub: 'clean — nothing in it but the part’s identity' });
-        base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
+        base.push({ label: 'Extrude 1', sub: `${fmtLen(0.25 * IN)} thick` });
         base.push({ label: 'Sketch 2 — hole pattern', sub: 'the part that keeps changing, on its own line', active: true });
         base.push({ label: 'Extrude 2 — cut', sub: 'removes the holes, through all' });
       } else {
         base.push({ label: 'Sketch 1 — plate outline', sub: 'settled — it already fits the enclosure' });
-        base.push({ label: 'Extrude 1', sub: `${fmtLen(6)} thick` });
+        base.push({ label: 'Extrude 1', sub: `${fmtLen(0.25 * IN)} thick` });
         base.push({ label: 'the four holes', sub: 'marketing keeps moving them. where they live is your call', active: true });
       }
       return base;
@@ -1971,19 +1979,20 @@ const EXERCISES = [
 
     takeaway: {
       line: 'The base sketch is the part’s identity — keep it clean. Anything you expect to revisit deserves its own line in the tree: a feature is a future edit, filed in advance.',
-      term: 'Plain words: “give the holes their own drawer.” Onshape’s shape for it: a second sketch plus an Extrude set to Remove — or a Hole feature — stacked after the base extrude in the feature list.',
+      term: 'Plain words: “give the holes their own drawer.” Onshape’s shape for it: a second sketch plus an Extrude set to Remove — or a Hole feature — stacked after the base extrude in the tree, which Onshape calls the Feature list.',
       flip: 'Unless the decision was never separate — then one clean sketch wins.',
+      tool: 'A second sketch plus an Extrude set to Remove — or a Hole feature — after the base extrude.',
     },
 
     bridge: {
-      task: 'Extrude a simple plate from one rectangle sketch. Add two holes the filed-in-advance way: a new sketch on the plate’s face, two circles, then an Extrude set to Remove. Now edit that hole sketch and move a circle — watch the feature list: only your hole feature rebuilds, and the base sketch never opens.',
+      task: 'Extrude a simple plate from one rectangle sketch. Add two holes the filed-in-advance way: a new sketch on the plate’s face, two circles, then an Extrude set to Remove. Now edit that hole sketch and drag a circle. Then try dragging one of the plate’s edges: it won’t budge — its lines live in Sketch 1, not here. Exit the sketch: the holes follow, the plate doesn’t.',
       href: 'https://cad.onshape.com',
     },
 
     counter: {
       heading: 'Now flip it',
-      job: 'Reshape a one-off part whose notch is part of its outline.',
-      body: 'A one-off spacer bracket, shipping Friday, never to be opened again. Its silhouette has a notch that clears a weld bead — and the notch isn’t a bolt-on decision, it is the silhouette. One last request lands: reshape the whole thing for the new bead. Same two structures. Which serves you now?',
+      job: 'Reshape a one-off bracket so its notch still clears the weld.',
+      body: 'A one-off spacer bracket, shipping Friday, never to be opened again. Its silhouette has a notch that clears a lump of weld on the frame — and the notch isn’t a bolt-on decision, it is the silhouette. One last request lands: reshape the whole thing for where the weld ended up.',
       defaultPath: 'b',
       scene: e5CounterScene,
       everyday: e5CounterEveryday,
@@ -2053,7 +2062,7 @@ const EXERCISES = [
     },
 
     predict: {
-      prompt: 'The same four features, two possible orders in the tree. The opening is about to grow again. Which order lets the screws keep their gap — without anyone re-placing them?',
+      prompt: 'The same features, two possible orders in the tree. The opening is about to grow again. Which order lets the screws keep their gap — without anyone re-placing them?',
       note: 'Just a guess — you’ll test both in a minute.',
       answer: 'a',
       why: 'A feature can only measure from what’s above it in the tree: screws placed before the opening can’t see it, so they can’t follow it.',
@@ -2065,15 +2074,15 @@ const EXERCISES = [
 
     paths: {
       a: {
-        label: 'Cut the opening first, hang the screws on it',
-        sub: 'The opening lands above the screws in the tree, so the screws can be dimensioned off its edge.',
-        short: 'downstream',
+        label: 'Cut the opening first, drill the screws after',
+        sub: 'When the screws go in, the opening is already in the tree, one line above them.',
+        short: 'opening first',
         kind: 'intent',
       },
       b: {
         label: 'Drill the screws first, cut the opening after',
-        sub: 'The screws come first, measured from the plate’s own edges. The opening arrives one line later, cut wherever the spec says.',
-        short: 'upstream',
+        sub: 'When the screws go in, the opening isn’t in the tree yet — it’s cut one line below them, wherever the spec says.',
+        short: 'screws first',
         kind: 'accident',
       },
     },
@@ -2101,7 +2110,7 @@ const EXERCISES = [
         if (wall > 0) {
           return {
             tone: 'warn',
-            headline: `gap down to ${fmtLen(wall)}`,
+            headline: wall >= 8 ? `gap still ${fmtLen(8)} — for now` : `gap down to ${fmtLen(wall)}`,
             note: 'The opening is coming for the screws — and the screws can’t see it coming. It sits below them in the tree, and a feature only sees what came before it.',
           };
         }
@@ -2125,13 +2134,17 @@ const EXERCISES = [
         { label: 'Extrude 1', sub: `${fmtLen(4)} thick` },
       ];
       if (path === 'a') {
-        base.push({ label: 'Extrude 2 — connector opening', sub: 'cut through · the thing that keeps growing', active: true });
-        base.push({ label: 'Hole 1 — cover screws', sub: `hung ${fmtLen(8)} off the opening’s edge` });
+        base.push({ label: 'Sketch 2 — connector opening', sub: 'the profile that keeps growing', active: true });
+        base.push({ label: 'Extrude 2 — cut', sub: 'removes the opening, through all' });
+        base.push({ label: 'Sketch 3 — screw points', sub: `${fmtLen(8)} off the opening’s edge` });
+        base.push({ label: 'Hole 1 — cover screws', sub: 'drilled at Sketch 3’s points' });
       } else if (path === 'b') {
-        base.push({ label: 'Hole 1 — cover screws', sub: 'measured from the plate’s edges — final, they think' });
-        base.push({ label: 'Extrude 2 — connector opening', sub: 'cut through · arrives below the screws — they can’t see it', active: true });
+        base.push({ label: 'Sketch 2 — screw points', sub: 'measured from the plate’s edges — final, they think' });
+        base.push({ label: 'Hole 1 — cover screws', sub: 'drilled at Sketch 2’s points' });
+        base.push({ label: 'Sketch 3 — connector opening', sub: 'arrives below the screws — they can’t see it', active: true });
+        base.push({ label: 'Extrude 2 — cut', sub: 'removes the opening, through all' });
       } else {
-        base.push({ label: 'an opening + two screws', sub: 'four features, two possible orders. the order is your call', active: true });
+        base.push({ label: 'an opening + two screws', sub: 'each a sketch plus a feature. the order is your call', active: true });
       }
       return base;
     },
@@ -2140,6 +2153,7 @@ const EXERCISES = [
       line: 'The tree is a sequence — a feature can only see what’s above it. Put a thing downstream of what it must follow, measure it from that thing, and every rebuild carries it along for free.',
       term: 'Plain words: “cut the opening first, then hang the screws on it.” In Onshape the feature list is that sequence, top to bottom — drag the rollback bar up the list and watch each feature’s world shrink to what came before it.',
       flip: 'Unless the link isn’t real — a chain nobody needed just drags bystanders.',
+      tool: 'The order of the feature list — drag the rollback bar to see what each feature can see.',
     },
 
     bridge: {
@@ -2150,12 +2164,12 @@ const EXERCISES = [
     counter: {
       heading: 'Now flip it',
       job: 'Keep the label centered on the plate while the mounting hole moves.',
-      body: 'A nameplate: one mounting hole near the left end, one engraved label that must sit dead center. Two features, two jobs, nothing shared. The downstream habit is ready to “organize” this — chain the label to the hole so the tree reads connected. Then a request lands: move the hole inboard. Same two schemes. Which serves you now?',
+      body: 'A nameplate: one mounting hole near the left end, one engraved label that must sit dead center. The downstream habit is ready to “organize” this — chain the label to the hole so the tree reads connected. Then a request lands: move the hole in toward the middle.',
       defaultPath: 'a',
       scene: e6CounterScene,
       everyday: e6CounterEveryday,
-      sliderLabel: 'Move the hole inboard',
-      format: (t) => `${fmtLen(Math.round(30 * t))} inboard`,
+      sliderLabel: 'Move the hole',
+      format: (t) => `${fmtLen(Math.round(30 * t))} toward center`,
       hint: 'Move the hole — this part has a different job.',
       pathLabels: {
         a: 'Chain the label to the hole',
@@ -2192,14 +2206,16 @@ const EXERCISES = [
           { label: 'Origin', sub: 'the one reference that never moves' },
           { label: 'Sketch 1 — nameplate', sub: 'the blank, already sized' },
           { label: 'Extrude 1', sub: `${fmtLen(3)} thick` },
-          { label: 'Hole 1 — mount', sub: 'the thing being moved', active: true },
+          { label: 'Sketch 2 — mount point', sub: 'where the hole is drilled — the thing being moved', active: true },
+          { label: 'Hole 1 — mount', sub: 'drilled at that point' },
         ];
         base.push(path === 'a'
-          ? { label: 'Engrave 1 — label', sub: 'chained: measured off Hole 1' }
-          : { label: 'Engrave 1 — label', sub: 'anchored to the plate outline' });
+          ? { label: 'Sketch 3 — label text', sub: 'chained: measured off the hole' }
+          : { label: 'Sketch 3 — label text', sub: 'anchored to the plate outline' });
+        base.push({ label: 'Extrude 3 — engrave', sub: 'cuts the text in, shallow' });
         return base;
       },
-      moral: 'Downstream — the habit you just built — is a claim about dependency, and here the claim is false. The label answers to the plate, not the hole. The rule was never “chain everything.” It’s: real dependents go downstream; strangers stay strangers.',
+      moral: 'Chaining — the habit you just built — is a claim about dependency, and here the claim is false. The label answers to the plate, not the hole. Both trees list it below the hole; order was never the issue — the reference was. The rule was never “chain everything.” It’s: real dependents hang off what they follow; strangers anchor to the part.',
     },
   },
 ];
