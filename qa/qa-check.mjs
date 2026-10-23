@@ -779,6 +779,13 @@ async function runUnitAudit(browser, vp, { loadUnit, toggleTo, flagRe, label }, 
    pinned-scene checks run at the widths where they matter. */
 const optionIndex = (p) => (p === 'a' ? 0 : 1);
 
+// Web fonts load without blocking the app, so a late swap can reflow the page
+// (and scroll anchoring moves it) mid-check. Land every face before measuring.
+async function settleFonts(page) {
+  await pollUntil(() => page.evaluate(() => [...document.querySelectorAll('link[rel="stylesheet"]')].every((l) => l.media !== 'print')));
+  await page.evaluate(() => Promise.all([...document.fonts].map((f) => f.load().catch(() => null))).then(() => document.fonts.ready).then(() => true));
+}
+
 async function openExercise(page, exId) {
   await page.evaluate((id) => { location.hash = `#/${id}`; }, exId);
   await page.locator('.player').waitFor({ state: 'visible' });
@@ -988,6 +995,7 @@ async function runStateChecks(browser, collectors) {
     const page = await ctx.newPage();
     attachErrorListeners(page, '390x844 state:focus', collectors);
     await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await settleFonts(page);
     await walkToChange(page, 'e1', { guess: await answerOf(page, 'e1') });
     await setSlider(page, 1);
     const segB = page.locator('.rail .segmented .seg').nth(1);
@@ -1011,12 +1019,73 @@ async function runStateChecks(browser, collectors) {
     await ctx.close();
   }
 
+  /* A redo isn't a cold prediction: the stored guess, the score and the
+     prediction badges keep the first attempt. */
+  {
+    const seeded = JSON.stringify({ e1: { done: true, predicted: 'a', predictedRight: false, finishedAt: '2026-01-05T12:00:00.000Z' } });
+    const { ctx, page } = await fresh('redo');
+    await page.evaluate(({ key, value }) => { localStorage.setItem(key, value); localStorage.removeItem('cad-gym.badges'); }, { key: STORE_KEY, value: seeded });
+    await page.reload();
+    await page.locator('.home').waitFor({ state: 'visible' });
+    await finishExercise(page, 'e1', { guess: await answerOf(page, 'e1') });
+    const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).e1, STORE_KEY);
+    const card = await page.locator('.rep-done').innerText();
+    rec(checks, 'state: a redo keeps the first attempt\'s prediction', stored.predicted === 'a' && stored.predictedRight === false, JSON.stringify(stored));
+    rec(checks, 'state: a redo earns "Second set" but no prediction badges',
+      card.includes('Second set') && !card.includes('Called it') && !card.includes('Called the flip'), `card="${card.replace(/\s+/g, ' ').slice(0, 160)}"`);
+    await ctx.close();
+  }
+
+  /* Progress from before badges existed: home awards what it proves, quietly. */
+  {
+    const all = Object.fromEntries(EXERCISE_IDS.map((id, i) => [id, { done: true, predicted: 'a', predictedRight: i < 3, finishedAt: '2026-07-20T12:00:00.000Z' }]));
+    const { ctx, page } = await fresh('backfill');
+    await page.evaluate(({ key, value }) => { localStorage.setItem(key, value); localStorage.removeItem('cad-gym.badges'); }, { key: STORE_KEY, value: JSON.stringify(all) });
+    await page.reload();
+    await page.locator('.home').waitFor({ state: 'visible' });
+    const earned = await page.locator('.locker .badge.is-earned .badge-name').allInnerTexts();
+    const toasts = await page.locator('.toast-host .toast').count();
+    const want = ['First rep', 'Called it', 'Felt the miss', 'Sharp eye', 'Full circuit'];
+    rec(checks, 'state: a finished circuit from before badges gets the badges its progress proves, quietly',
+      want.every((n) => earned.includes(n)) && earned.length === want.length && toasts === 0, `earned=${JSON.stringify(earned)} toasts=${toasts}`);
+    await ctx.close();
+  }
+
+  /* A stalled Google Fonts request can't hold the app hostage. */
+  {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+    await ctx.route(FONT_HOST_RE, () => { /* never answer */ });
+    const page = await ctx.newPage();
+    attachErrorListeners(page, `${vp.label} state:fonts-stalled`, collectors);
+    await page.goto(APP_URL, { waitUntil: 'commit', timeout: 15000 });
+    const rendered = await page.locator('.home').waitFor({ state: 'visible', timeout: 1500 }).then(() => true, () => false);
+    rec(checks, 'state: home renders while the fonts request hangs', rendered === true);
+    await ctx.close();
+  }
+
+  /* Windows contrast themes: the selected option still shows. */
+  {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, forcedColors: 'active' });
+    const page = await ctx.newPage();
+    attachErrorListeners(page, `${vp.label} state:forced-colors`, collectors);
+    await page.goto(`${APP_URL}#/e1`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.locator('.rail button.btn.primary').click();
+    await page.locator('.rail .options .option').nth(1).click();
+    const cue = await page.locator('.rail .option.is-selected').evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { style: cs.outlineStyle, width: parseFloat(cs.outlineWidth) };
+    });
+    rec(checks, 'state: in forced colors, the selected option keeps a visible cue', cue.style === 'solid' && cue.width >= 2, JSON.stringify(cue));
+    await ctx.close();
+  }
+
   /* Phone landscape: the scene isn't pinned, so it can't cover the slider. */
   {
     const ctx = await browser.newContext({ viewport: { width: 844, height: 390 } });
     const page = await ctx.newPage();
     attachErrorListeners(page, '844x390 state:landscape', collectors);
     await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await settleFonts(page);
     const hit = async () => {
       const slider = page.locator('.rail input.slider');
       await slider.scrollIntoViewIfNeeded();

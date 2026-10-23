@@ -45,7 +45,8 @@ Then open `http://localhost:8000`.
 - `_planning/FABLE-BUILD-BRIEF.md` — original build dispatch brief.
 - `_planning/V2-SCOPE.md` — v2 scope, fully shipped 2026-07-11.
 - `_planning/V3-SCOPE.md` — v3 scope, approved 2026-07-12, merged to `main` 2026-07-16.
-- `_planning/FABLE-PROMPT-2026-07-12.md` — ready-to-paste prompt for the next Fable/Opus thread (current). Earlier dated prompts in `_planning/` are superseded prior rounds.
+- `_planning/FABLE-PROMPT-2026-07-12.md` — the July v3 dispatch prompt (superseded; `HANDOFF.md` is the current state). Earlier dated prompts in `_planning/` are prior rounds too.
+- `ASK.md` — open questions for Justin (format in `AGENTS.md`).
 - `HANDOFF.md` — current continuation state.
 - `CLAUDE.md` + `.claude/agents/` — Claude Code project notes and committed subagent definitions (slice-builder, qa-verifier, copy-auditor) for the orchestrator/executor split.
 - `index.html`, `style.css`, `app.js`, `svg.js`, `exercises.js` — static app.

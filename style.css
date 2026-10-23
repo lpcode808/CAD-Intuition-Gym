@@ -1010,6 +1010,13 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   }
 }
 
+/* Windows contrast themes drop backgrounds and shadows, which is all that
+   marks a selected option or segment — give them a cue that survives. */
+@media (forced-colors: active) {
+  .option.is-selected, .seg.is-on { outline: 2px solid Highlight; outline-offset: -3px; }
+  .seg.is-on, .option.is-selected .option-label { font-weight: 700; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

@@ -163,6 +163,15 @@ function renderHome() {
   const nextUp = availableExercises.find((ex) => !(prog[ex.id] && prog[ex.id].done));
   const doneList = availableExercises.filter((ex) => prog[ex.id] && prog[ex.id].done);
   const called = doneList.filter((ex) => prog[ex.id].predictedRight).length;
+  // Badges arrived after the circuit had been live for months: quietly award
+  // whatever stored progress already proves, so a finished circuit doesn't
+  // sit next to an empty locker. (No-ops once earned; finish() awards first.)
+  const quiet = { quiet: true };
+  if (anyDone) award('first-rep', quiet);
+  if (allDone) award('full-circuit', quiet);
+  if (called >= 3) award('sharp-eye', quiet);
+  if (called > 0) award('called-it', quiet);
+  if (doneList.some((ex) => !prog[ex.id].predictedRight)) award('felt-the-miss', quiet);
   const finished = justFinished && EXERCISES.find((ex) => ex.id === justFinished.id);
   const justBadges = (justFinished && justFinished.badges) || [];
 
@@ -286,6 +295,9 @@ function resetProgress() {
 
 function renderPlayer(ex) {
   justFinished = null;   // the rep card belongs to the home visit right after a finish
+  // A redo isn't a cold prediction: its home row already shows the principle.
+  // The score and the prediction badges count first attempts only.
+  const isRedo = !!(loadProgress()[ex.id] && loadProgress()[ex.id].done);
 
   const S = reps[ex.id] || (reps[ex.id] = {
     step: 0, maxStep: 0,
@@ -782,7 +794,7 @@ function renderPlayer(ex) {
     refs.predChip.textContent = (right
       ? 'You called it. '
       : 'Not what you predicted — good, that’s the workout. ') + (ex.predict.why || '');
-    if (right) earn('called-it');
+    if (right && !isRedo) earn('called-it');
   }
 
   /* step 4 — name it, then flip it (counter-context) */
@@ -899,13 +911,13 @@ function renderPlayer(ex) {
     finishing = true;
     delete reps[ex.id];   // a finished rep starts fresh next time
     const prog = loadProgress();
-    const before = prog[ex.id] && prog[ex.id].done ? new Date(prog[ex.id].finishedAt) : null;
-    const again = !!before && before.toDateString() !== new Date().toDateString();
+    const prev = prog[ex.id] && prog[ex.id].done ? prog[ex.id] : null;
+    const again = !!prev && new Date(prev.finishedAt).toDateString() !== new Date().toDateString();
     const right = S.predicted === ex.predict.answer;
     prog[ex.id] = {
       done: true,
-      predicted: S.predicted,
-      predictedRight: right,
+      predicted: prev ? prev.predicted : S.predicted,          // a redo keeps the cold guess
+      predictedRight: prev ? prev.predictedRight : right,
       finishedAt: new Date().toISOString(),
     };
     saveProgress(prog);
@@ -913,7 +925,7 @@ function renderPlayer(ex) {
     const quiet = { quiet: true };
     const badges = [
       ...S.earned,
-      S.counterCall === counterAnswer && award('called-the-flip', quiet),
+      !isRedo && S.counterCall === counterAnswer && award('called-the-flip', quiet),
       award('first-rep', quiet),
       !right && award('felt-the-miss', quiet),
       again && award('second-set', quiet),
