@@ -573,6 +573,13 @@ async function runExercise(page, exId, { capture, shotDir, vpLabel }) {
   }
   rec(steps, `${exId}: bridge link opens https://cad.onshape.com in a safe new tab`, linkOk, linkDetail);
 
+  const bridgeAfterDone = bridgeCount === 1 && await page.evaluate(() => {
+    const done = [...document.querySelectorAll('.rail button.btn.primary')].pop();
+    const card = document.querySelector('.rail .bridge-card');
+    return !!(done && card && (done.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING));
+  });
+  rec(steps, `${exId}: the bridge card is a postscript after Done`, bridgeAfterDone === true);
+
   rec(steps, `${exId}: Done stays gated while the bridge card is already showing`,
     doneDisabledBefore === true && bridgeCount === 1,
     `disabled=${doneDisabledBefore} bridge=${bridgeCount}`);
@@ -763,6 +770,275 @@ async function runUnitAudit(browser, vp, { loadUnit, toggleTo, flagRe, label }, 
 
 /* -------------------------------------------------------------------- main */
 
+/* -------------------------------------------------------- state machine
+   The forward walk above never restarts, steps back, double-activates,
+   leaves mid-rep or loses storage. These paths broke before (restart kept
+   old badges, reset kept the rep card, a blocked write re-toasted every
+   render), so each gets a regression check here. State logic doesn't vary
+   with width, so most of this runs once at 1400×900; the focus/scroll and
+   pinned-scene checks run at the widths where they matter. */
+const optionIndex = (p) => (p === 'a' ? 0 : 1);
+
+async function openExercise(page, exId) {
+  await page.evaluate((id) => { location.hash = `#/${id}`; }, exId);
+  await page.locator('.player').waitFor({ state: 'visible' });
+}
+
+// Intent → Predict (guess) → Choose (build) → The change.
+async function walkToChange(page, exId, { guess = 'a', build = 'a' } = {}) {
+  const primary = page.locator('.rail button.btn.primary');
+  await openExercise(page, exId);
+  await primary.click();
+  await page.locator('.rail .options .option').nth(optionIndex(guess)).click();
+  await primary.click();
+  await page.locator('.rail .options .option').nth(optionIndex(build)).click();
+  await primary.click();
+  await page.locator('.rail input.slider').waitFor({ state: 'visible' });
+}
+
+// Run the built scheme to the end of the change, then the other one.
+async function runBothSchemes(page) {
+  await setSlider(page, 1);
+  const segs = page.locator('.rail .segmented .seg');
+  const on = await segs.evaluateAll((nodes) => nodes.findIndex((n) => n.classList.contains('is-on')));
+  await segs.nth(on === 0 ? 1 : 0).click();
+}
+
+// From a finished change step: Name it → call → run both → (Done enabled).
+async function walkFlip(page, { call = 'a' } = {}) {
+  await page.locator('.rail button.btn.primary').click();
+  await page.locator('.rail .call-prompt').waitFor({ state: 'visible' });
+  await page.locator('.rail .options .option').nth(optionIndex(call)).click();
+  await runBothSchemes(page);
+}
+
+async function finishExercise(page, exId, { guess = 'a', how = 'click' } = {}) {
+  await walkToChange(page, exId, { guess });
+  await runBothSchemes(page);
+  await walkFlip(page);
+  const done = page.locator('.rail button.btn.primary');
+  await pollUntil(async () => !(await done.isDisabled()));
+  if (how === 'dblclick') await done.dblclick();
+  else await done.click();
+  await page.locator('.home').waitFor({ state: 'visible' });
+}
+
+async function answerOf(page, exId) {
+  // eslint-disable-next-line no-undef
+  return page.evaluate((id) => EXERCISES.find((e) => e.id === id).predict.answer, exId);
+}
+const other = (p) => (p === 'a' ? 'b' : 'a');
+
+async function runStateChecks(browser, collectors) {
+  const checks = [];
+  const vp = { width: 1400, height: 900, label: '1400x900' };
+  const fresh = async (label, init) => {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+    if (init) await ctx.addInitScript(init);
+    const page = await ctx.newPage();
+    attachErrorListeners(page, `${vp.label} state:${label}`, collectors);
+    page.on('dialog', (d) => d.accept());
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.locator('.home').waitFor({ state: 'visible' });
+    return { ctx, page };
+  };
+
+  /* Stepping back after the reveal can't re-pick the prediction; compare
+     labels its note; restart forgets the earlier attempt's badges; reset
+     clears the rep card; focus lands on the rep card. */
+  {
+    const { ctx, page } = await fresh('restart');
+    const right = await answerOf(page, 'e1');
+    await walkToChange(page, 'e1', { guess: right });
+    await runBothSchemes(page);
+    await page.locator('.stepper button.step-btn', { hasText: 'Predict' }).click();
+    const locked = await page.locator('.rail .options .option').evaluateAll((n) => n.length === 2 && n.every((b) => b.disabled));
+    rec(checks, 'state: after the reveal, stepping back to Predict shows the guess locked', locked === true);
+    await page.locator('.stepper button.step-btn', { hasText: 'The change' }).click();
+    await page.locator('.rail button.btn.ghost').click();   // compare
+    const note = (await page.locator('.rail .outcome-note').innerText()).trim();
+    rec(checks, 'state: in compare, the rail note names the scheme it explains', /^[AB] · /.test(note), `note="${note.slice(0, 60)}"`);
+    await page.locator('.rail button.btn.ghost').click();
+
+    await page.locator('.ex-header-row .linklike', { hasText: 'restart' }).click();
+    await walkToChange(page, 'e1', { guess: other(right) });
+    await runBothSchemes(page);
+    await walkFlip(page);
+    await page.locator('.rail button.btn.primary').click();
+    await page.locator('.home').waitFor({ state: 'visible' });
+    const card = await page.locator('.rep-done').innerText();
+    rec(checks, 'state: after restart, the rep card lists only this attempt\'s badges',
+      card.includes('Felt the miss') && !card.includes('Called it'), `card="${card.replace(/\s+/g, ' ').slice(0, 140)}"`);
+    const focused = await page.evaluate(() => document.activeElement?.classList.contains('rep-done'));
+    rec(checks, 'state: after a finish, focus lands on the rep card', focused === true);
+
+    await page.locator('.home-foot button.linklike', { hasText: 'Reset progress' }).click();
+    const cardAfter = await pollUntil(async () => (await page.locator('.rep-done').count()) === 0);
+    rec(checks, 'state: reset progress clears the rep card too', cardAfter === true);
+    await ctx.close();
+  }
+
+  /* A second activation of Done can't wipe the rep card. */
+  {
+    const { ctx, page } = await fresh('dblclick');
+    await finishExercise(page, 'e1', { how: 'dblclick' });
+    const card = await page.locator('.rep-done').innerText();
+    rec(checks, 'state: double-clicking Done still shows the rep card with its badges', card.includes('First rep'), `card="${card.replace(/\s+/g, ' ').slice(0, 120)}"`);
+    await ctx.close();
+  }
+
+  /* Leaving mid-rep and coming back keeps the rep; a finished rep starts fresh. */
+  {
+    const { ctx, page } = await fresh('rep-memory');
+    await walkToChange(page, 'e1');
+    await runBothSchemes(page);
+    await page.locator('.backlink').click();
+    await page.locator('.home').waitFor({ state: 'visible' });
+    await page.goBack();
+    await page.locator('.player').waitFor({ state: 'visible' });
+    const current = (await page.locator('.stepper .is-current').innerText()).trim();
+    const open = !(await page.locator('.rail button.btn.primary').isDisabled());
+    rec(checks, 'state: Back to home and Forward again keeps the rep where it was', /The change/.test(current) && open, `current="${current}" continue=${open}`);
+    await page.locator('.rail button.btn.primary').click();
+    await page.locator('.rail .options .option').first().click();
+    await runBothSchemes(page);
+    await page.locator('.rail button.btn.primary').click();
+    await page.locator('.home').waitFor({ state: 'visible' });
+    await openExercise(page, 'e1');
+    const restarted = (await page.locator('.stepper .is-current').innerText()).trim();
+    rec(checks, 'state: a finished rep starts fresh next time', /Intent/.test(restarted), `current="${restarted}"`);
+    await ctx.close();
+  }
+
+  /* Storage that reads but won't write: progress still counts, and a badge
+     toasts once rather than on every re-render. */
+  {
+    const { ctx, page } = await fresh('no-writes', () => {
+      Storage.prototype.setItem = function () { throw new DOMException('blocked', 'QuotaExceededError'); };
+      window.__toastNames = [];
+      document.addEventListener('DOMContentLoaded', () => {
+        new MutationObserver((muts) => {
+          for (const m of muts) for (const n of m.addedNodes) {
+            if (n.classList?.contains('toast')) window.__toastNames.push(n.querySelector('.toast-name')?.textContent);
+          }
+        }).observe(document.body, { childList: true, subtree: true });
+      });
+    });
+    await finishExercise(page, 'e1', { guess: await answerOf(page, 'e1') });
+    await finishExercise(page, 'e2', { guess: await answerOf(page, 'e2') });
+    const statuses = await page.locator('a.ex-row .ex-status').allInnerTexts();
+    const toasts = await page.evaluate(() => window.__toastNames);
+    const calledIt = toasts.filter((n) => n === 'Called it').length;
+    rec(checks, 'state: with storage writes blocked, finished exercises still read done',
+      /done/i.test(statuses[0]) && /done/i.test(statuses[1]), `statuses=${JSON.stringify(statuses.slice(0, 2))}`);
+    rec(checks, 'state: with storage writes blocked, "Called it" toasts once', calledIt === 1, `toasts=${JSON.stringify(toasts)}`);
+    await ctx.close();
+  }
+
+  /* A scheme counts as watched only once its chip shows its final verdict —
+     E6's B is still "warn" just past halfway. */
+  {
+    const { ctx, page } = await fresh('settled');
+    // eslint-disable-next-line no-undef
+    const lateB = await page.evaluate(() => { const ex = EXERCISES.find((e) => e.id === 'e6'); return ex.outcome('b', 0.56).tone !== ex.outcome('b', 1).tone; });
+    await walkToChange(page, 'e6', { build: 'a' });
+    await setSlider(page, 0.56);
+    await page.locator('.rail .segmented .seg').nth(1).click();
+    const primary = page.locator('.rail button.btn.primary');
+    const gated = await primary.isDisabled();
+    await setSlider(page, 0.9);
+    await page.locator('.rail .segmented .seg').nth(0).click();
+    const opened = await pollUntil(async () => !(await primary.isDisabled()));
+    rec(checks, 'state: E6 waits for scheme B\'s final verdict before Continue opens',
+      lateB && gated === true && opened === true, `B late at 0.56=${lateB} gated=${gated} opened=${opened}`);
+    await ctx.close();
+  }
+
+  /* No warning or failure headline reads a zero length ("0.00 in nick"). */
+  for (const unit of ['in', 'mm']) {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+    await ctx.addInitScript(({ key, u }) => localStorage.setItem(key, u), { key: UNIT_KEY, u: unit });
+    const page = await ctx.newPage();
+    attachErrorListeners(page, `${vp.label} state:zero-${unit}`, collectors);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    const zeros = await page.evaluate(() => {
+      const bad = [];
+      const zero = /(^|[^\d.])0(\.0+)?\s*(in|mm)\b/;
+      // eslint-disable-next-line no-undef
+      for (const ex of EXERCISES.filter((e) => e.available)) {
+        for (const [where, fn] of [['outcome', ex.outcome], ['counter', ex.counter.outcome]]) {
+          for (const p of ['a', 'b']) {
+            for (let i = 1; i <= 100; i++) {
+              const o = fn(p, i / 100);
+              if ((o.tone === 'warn' || o.tone === 'bad') && zero.test(o.headline)) bad.push(`${ex.id}.${where}(${p}, ${i / 100}): ${o.headline}`);
+            }
+          }
+        }
+      }
+      return bad;
+    });
+    rec(checks, `state: no warn/bad headline reads a zero length (${unit})`, zeros.length === 0, zeros.slice(0, 3).join(' | '));
+    await ctx.close();
+  }
+
+  /* Phone: a tap on A/B or the call keeps focus and the scroll position, and
+     badges go to the rep card instead of toasting over the pinned scene. */
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await ctx.newPage();
+    attachErrorListeners(page, '390x844 state:focus', collectors);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await walkToChange(page, 'e1', { guess: await answerOf(page, 'e1') });
+    await setSlider(page, 1);
+    const segB = page.locator('.rail .segmented .seg').nth(1);
+    await segB.evaluate((el) => el.scrollIntoView({ block: 'end' }));   // clear of the pinned scene
+    const y0 = await page.evaluate(() => window.scrollY);
+    await segB.click();
+    const afterSeg = await page.evaluate(() => ({ y: window.scrollY, ref: document.activeElement?.dataset?.ref || document.activeElement?.tagName }));
+    rec(checks, 'state [390x844]: tapping B keeps focus on the toggle and the scroll in place',
+      afterSeg.ref === 'view-b' && Math.abs(afterSeg.y - y0) <= 2, `y ${y0}→${afterSeg.y} focus=${afterSeg.ref}`);
+    const toastCount = await page.locator('.toast-host .toast').count();
+    rec(checks, 'state [390x844]: the reveal\'s badge doesn\'t toast over the pinned scene', toastCount === 0, `toasts=${toastCount}`);
+
+    await page.locator('.rail button.btn.primary').click();
+    const callA = page.locator('.rail .options .option').first();
+    await callA.evaluate((el) => el.scrollIntoView({ block: 'end' }));
+    const y1 = await page.evaluate(() => window.scrollY);
+    await callA.click();
+    const afterCall = await page.evaluate(() => ({ y: window.scrollY, slider: !!document.activeElement?.matches('input.slider') }));
+    rec(checks, 'state [390x844]: making the call moves focus to its slider without a jump',
+      afterCall.slider && Math.abs(afterCall.y - y1) <= 2, `y ${y1}→${afterCall.y} slider=${afterCall.slider}`);
+    await ctx.close();
+  }
+
+  /* Phone landscape: the scene isn't pinned, so it can't cover the slider. */
+  {
+    const ctx = await browser.newContext({ viewport: { width: 844, height: 390 } });
+    const page = await ctx.newPage();
+    attachErrorListeners(page, '844x390 state:landscape', collectors);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    const hit = async () => {
+      const slider = page.locator('.rail input.slider');
+      await slider.scrollIntoViewIfNeeded();
+      return slider.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === el;
+      });
+    };
+    await walkToChange(page, 'e1');
+    const hitChange = await hit();
+    await setSlider(page, 1);
+    await runBothSchemes(page);
+    await page.locator('.rail button.btn.primary').click();
+    await page.locator('.rail .options .option').first().click();
+    const hitFlip = await hit();
+    rec(checks, 'state [844x390]: the change and flip sliders are reachable, not under the scene', hitChange && hitFlip, `change=${hitChange} flip=${hitFlip}`);
+    await ctx.close();
+  }
+
+  return checks;
+}
+
 async function main() {
   console.log('[qa] resolving Playwright…');
   const { chromium, how } = await resolvePlaywright();
@@ -842,15 +1118,15 @@ async function main() {
 
       // eslint-disable-next-line no-undef
       const recapExpected = await page.evaluate(() => EXERCISES.filter((ex) => ex.available)
-        .map((ex) => ({ id: ex.id, line: ex.takeaway.line, flip: ex.takeaway.flip })));
+        .map((ex) => ({ id: ex.id, title: ex.title, line: ex.takeaway.line, flip: ex.takeaway.flip, tool: ex.takeaway.tool })));
       const recapRows = await page.locator('.recap .recap-row').count();
       rec(allChecks, `[${vp.label}] recap row count matches available exercises`, recapRows === recapExpected.length, `rows=${recapRows} expected=${recapExpected.length}`);
 
       const recapText = recapCount === 1 ? await page.locator('.recap').evaluate((el) => el.textContent) : '';
       const recapMissing = recapExpected
-        .filter((ex) => !recapText.includes(ex.line) || !recapText.includes(ex.flip))
+        .filter((ex) => [ex.title, ex.line, ex.flip, ex.tool].some((s) => !s || !recapText.includes(s)))
         .map((ex) => ex.id);
-      rec(allChecks, `[${vp.label}] recap carries every takeaway line and flip verbatim`, recapCount === 1 && recapMissing.length === 0, `missing=${JSON.stringify(recapMissing)}`);
+      rec(allChecks, `[${vp.label}] recap carries every title, takeaway line, flip and Onshape move verbatim`, recapCount === 1 && recapMissing.length === 0, `missing=${JSON.stringify(recapMissing)}`);
 
       // Layout re-check inside a busy exercise view (compare pane), the most
       // likely place for a mobile overflow bug to show up.
@@ -888,6 +1164,8 @@ async function main() {
       console.log('[qa]   running everyday-layer checks…');
       allChecks.push(...await runEverydayLayerChecks(browser, vp, collectors));
     }
+    console.log('\n[qa] === state-machine checks ===');
+    allChecks.push(...await runStateChecks(browser, collectors));
   } finally {
     await browser.close();
   }

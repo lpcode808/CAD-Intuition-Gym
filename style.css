@@ -984,7 +984,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
      target the size of its text, not the whole row. */
   .ex-header-row { display: grid; grid-template-columns: auto 1fr; }
   .backlink { grid-column: 1 / -1; justify-self: start; }
-  .ex-header-row .linklike { justify-self: start; }
+  .ex-header-row .linklike { justify-self: start; white-space: nowrap; }
 }
 
 /* A scene drawn narrower than ~480px renders the viewBox at well under 1:1,
