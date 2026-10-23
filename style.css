@@ -11,7 +11,7 @@
   --border-strong: #b7c2ce;
   --ink: #1d2833;
   --muted: #5c6b7a;
-  --faint: #6b7886;
+  --faint: #5f6c7a;
   --accent: #1a66d6;
   --accent-deep: #1554b4;
   --accent-soft: #e8f0fc;
@@ -43,6 +43,10 @@ body {
 }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* These sit inside overflow:hidden containers, which would clip an outset ring. */
+.seg:focus-visible,
+.ex-row:focus-visible,
+.features-panel summary:focus-visible { outline-offset: -2px; }
 
 button { font-family: inherit; }
 
@@ -52,6 +56,7 @@ button { font-family: inherit; }
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
+  font-weight: 400;
   margin: 0;
 }
 
@@ -211,6 +216,13 @@ a.ex-row:hover { background: var(--panel-2); }
 
 .recap-text { flex: 1; min-width: 0; }
 
+.recap-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 2px;
+}
 .recap-line {
   font-family: var(--serif);
   font-size: 15px;
@@ -317,7 +329,7 @@ a.ex-row:hover { background: var(--panel-2); }
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #a07a1c;
+  color: var(--warn);
 }
 .toast-name { display: block; font-weight: 600; font-size: 14px; }
 .toast-how { display: block; font-size: 12px; color: var(--muted); line-height: 1.4; }
@@ -357,8 +369,8 @@ a.ex-row:hover { background: var(--panel-2); }
 }
 .backlink:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 /* Restart sits right after the title, not at the far right — that corner
-   belongs to the fixed unit pill, which would otherwise cover it. */
-.ex-title { font-weight: 600; }
+   belongs to the unit pill, which would otherwise cover it. */
+.ex-title { font-weight: 600; font-size: inherit; margin: 0; }
 
 .stepper {
   display: flex;
@@ -543,7 +555,9 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   padding: 18px;
 }
 .rail { display: flex; flex-direction: column; gap: 14px; }
-.rail:focus { outline: none; } /* focus lands here on each step so Tab starts in the step, not at the top */
+/* Focus lands on these programmatically (each step's heading, the rep card,
+   the recap heading) so Tab starts there, not at the top. No ring needed. */
+.rail:focus, [data-ref="stephead"]:focus, .rep-done:focus, .recap h2:focus { outline: none; }
 
 .rail-head { font-family: var(--serif); font-size: 22px; line-height: 1.2; margin: 0; }
 .prose { font-family: var(--serif); font-size: 15.5px; line-height: 1.6; margin: 0; }
@@ -656,8 +670,10 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   background: var(--accent-soft);
 }
 
+/* Absolute, not fixed: a floating pill covered rail text on laptops and the
+   restart link at 200% zoom. It sits top-right and scrolls away with the header. */
 .unit-toggle {
-  position: fixed;
+  position: absolute;
   top: 12px;
   right: 12px;
   z-index: 50;
@@ -830,6 +846,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   stroke-width: 3;
 }
 .leader { fill: none; stroke: var(--scope); stroke-width: 1.1; stroke-dasharray: 6 4; }
+.origin-dot { fill: var(--ink); stroke: none; }
 .intent-outline { fill: none; stroke: var(--accent); stroke-width: 1.1; stroke-dasharray: 3 3; }
 
 .centerline { stroke: #7b8ba0; stroke-width: 1; stroke-dasharray: 14 4 3 4; }
@@ -916,7 +933,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 }
 .ed-say.good { fill: var(--good); }
 .ed-say.bad { fill: var(--bad); }
-.ed-say.muted { fill: #8a7b66; font-weight: 500; }
+.ed-say.muted { fill: #76684f; font-weight: 500; }
 
 /* ------------------------------------------------------------- responsive */
 
@@ -961,10 +978,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   .toast-how { display: none; } /* name only — three at once shouldn't cover the screen */
 }
 
-@media (max-width: 600px) {
-  /* On phones the unit pill scrolls away with the header instead of
-     floating over the scene and the layer bar. */
-  .unit-toggle { position: absolute; }
+@media (max-width: 700px) {
   /* Back link gets its own line, beside the unit pill; title + restart drop
      below it where the pill can't reach. justify-self keeps the link's tap
      target the size of its text, not the whole row. */
