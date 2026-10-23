@@ -292,17 +292,17 @@ async function runE5SceneChecks(browser, vp, collectors) {
   await primaryBtn.click(); // "Name the lesson →"
 
   /* step 4 — counter-context. Default scheme is b ("File the notch as its
-     own feature"); reshaping under b strands the notch off the bead — and the
+     own feature"); reshaping under b strands the notch off the weld — and the
      tree still reads clean, because the part is wrong, not broken (Onshape
      shows nothing red; E6 makes the same point). Scheme a folds the notch
      into the outline sketch, so it rides the reshape and never drifts. */
   await page.locator('.rail .options .option').nth(1).click(); // the flip-it call: B
   await setSlider(page, 0.8);
   const errorRowsBefore = await page.locator('.viewport svg .ftree-row.is-error').count();
-  rec(checks, `[${vp.label}] e5 counter: scheme B's tree reads clean while the notch sits off the bead (wrong, not broken)`, errorRowsBefore === 0, `error rows=${errorRowsBefore}`);
+  rec(checks, `[${vp.label}] e5 counter: scheme B's tree reads clean while the notch sits off the weld (wrong, not broken)`, errorRowsBefore === 0, `error rows=${errorRowsBefore}`);
 
   const counterTextBefore = await page.locator('.viewport svg').evaluate((el) => el.textContent);
-  rec(checks, `[${vp.label}] e5 counter: scheme B drifts "off the bead"`, counterTextBefore.includes('off the bead'), `snippet="${counterTextBefore.slice(0, 120)}"`);
+  rec(checks, `[${vp.label}] e5 counter: scheme B drifts "off the weld"`, counterTextBefore.includes('off the weld'), `snippet="${counterTextBefore.slice(0, 120)}"`);
 
   await page.locator('.rail .segmented .seg').first().click(); // switch to scheme A
 
@@ -310,7 +310,7 @@ async function runE5SceneChecks(browser, vp, collectors) {
   rec(checks, `[${vp.label}] e5 counter: scheme A folds the notch into the outline — no error row`, errorRowsAfter === 0, `error rows=${errorRowsAfter}`);
 
   const counterTextAfter = await page.locator('.viewport svg').evaluate((el) => el.textContent);
-  rec(checks, `[${vp.label}] e5 counter: scheme A never drifts "off the bead"`, !counterTextAfter.includes('off the bead'), `snippet="${counterTextAfter.slice(0, 120)}"`);
+  rec(checks, `[${vp.label}] e5 counter: scheme A never drifts "off the weld"`, !counterTextAfter.includes('off the weld'), `snippet="${counterTextAfter.slice(0, 120)}"`);
 
   const rowCountAfter = await page.locator('.viewport svg .ftree-row').count();
   rec(checks, `[${vp.label}] e5 counter: scheme A's tree collapses back to two rows`, rowCountAfter === 2, `rows=${rowCountAfter}`);
@@ -1089,6 +1089,7 @@ async function runStateChecks(browser, collectors) {
     const hit = async () => {
       const slider = page.locator('.rail input.slider');
       await slider.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(450);   // past the rail's 400ms double-tap shield
       return slider.evaluate((el) => {
         const r = el.getBoundingClientRect();
         return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === el;

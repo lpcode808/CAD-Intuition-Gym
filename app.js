@@ -37,7 +37,7 @@ const unitToggleBtn = h('button', {
     rerenderCurrent();
   },
 }, unitToggleLabel());
-document.body.appendChild(unitToggleBtn);
+appRoot.before(unitToggleBtn);   // first in Tab order, where it sits (top-right)
 
 const STEP_NAMES = ['Intent', 'Predict', 'Choose', 'The change', 'Flip it'];
 const TONE_MARK = { good: '✓', bad: '✕', warn: '△', idle: '' };
@@ -173,6 +173,7 @@ function renderHome() {
   if (called > 0) award('called-it', quiet);
   if (doneList.some((ex) => !prog[ex.id].predictedRight)) award('felt-the-miss', quiet);
   const finished = justFinished && EXERCISES.find((ex) => ex.id === justFinished.id);
+  const inProgress = (ex) => !!(reps[ex.id] && reps[ex.id].maxStep > 0);
   const justBadges = (justFinished && justFinished.badges) || [];
 
   const rows = EXERCISES.map((ex) => {
@@ -187,7 +188,7 @@ function renderHome() {
       return h('div', { class: 'ex-row is-locked' },
         num, text, h('span', { class: 'ex-status' }, 'in authoring'));
     }
-    const startLabel = ex !== nextUp ? 'start →' : anyDone ? 'next →' : 'start here →';
+    const startLabel = inProgress(ex) ? 'resume →' : ex !== nextUp ? 'start →' : anyDone ? 'next →' : 'start here →';
     return h('a', { class: 'ex-row', href: `#/${ex.id}` },
       num, text,
       h('span', { class: 'ex-status' + (done ? ' is-done' : ' is-go') },
@@ -198,7 +199,8 @@ function renderHome() {
     h('p', { class: 'rep-kicker' }, `Rep complete · ${doneList.length} of ${availableExercises.length}`),
     h('p', { class: 'rep-title' }, finished.title),
     h('p', { class: 'rep-line' }, finished.takeaway.line),
-    justBadges.length > 0 && h('ul', { class: 'rep-badges', 'aria-label': 'Badges earned' }, justBadges.map((b) =>
+    justBadges.length > 0 && h('span', { class: 'sr-only' }, 'Badges earned: '),
+    justBadges.length > 0 && h('ul', { class: 'rep-badges' }, justBadges.map((b) =>
       h('li', {},
         h('span', { class: 'medal is-earned', 'aria-hidden': 'true' }, b.glyph),
         h('span', {}, h('strong', {}, b.name), ' — ', b.how)))),
@@ -227,7 +229,7 @@ function renderHome() {
       h('p', { class: 'rep-how' },
         'One rep: read the job → guess what breaks → push the change through both ways → name the rule, then find where it flips. About five minutes.'),
       !finished && nextUp && h('a', { class: 'btn primary hero-cta', href: `#/${nextUp.id}` },
-        anyDone ? `Continue: Exercise ${nextUp.num} →` : 'Start Exercise 1 →'),
+        inProgress(nextUp) ? `Resume Exercise ${nextUp.num} →` : anyDone ? `Continue: Exercise ${nextUp.num} →` : 'Start Exercise 1 →'),
       h('p', { class: 'sim-note' },
         'It’s a flight simulator: crash here so you don’t crash in Onshape. There’s no CAD engine behind it — every consequence is hand-built so the lesson lands clean.'),
       h('h2', { class: 'section-label' }, 'Six decisions',
@@ -247,16 +249,16 @@ function renderHome() {
               h('p', { class: 'recap-title' }, ex.title),
               h('p', { class: 'recap-line' }, ex.takeaway.line),
               h('details', { class: 'recap-flip' },
-                h('summary', {}, 'Unless…?'),
+                h('summary', {}, 'Unless…?', h('span', { class: 'sr-only' }, ` — ${ex.title}`)),
                 h('p', {}, ex.takeaway.flip)),
               ex.takeaway.tool && h('details', { class: 'recap-flip' },
-                h('summary', {}, 'In Onshape…?'),
+                h('summary', {}, 'In Onshape…?', h('span', { class: 'sr-only' }, ` — ${ex.title}`)),
                 h('p', {}, ex.takeaway.tool))))))),
       locker(),
       h('footer', { class: 'home-foot' },
         h('span', {}, 'Progress lives in this browser and nowhere else.'),
         h('button', { class: 'linklike', onclick: resetProgress }, 'Reset progress'))));
-  if (repDone) repDone.focus({ preventScroll: true });
+  if (repDone && !justFinished.focused) { justFinished.focused = true; repDone.focus({ preventScroll: true }); }
 }
 
 function locker() {
@@ -318,8 +320,9 @@ function renderPlayer(ex) {
   const refs = {};
 
   function earn(id) {
-    const b = award(id, { quiet: window.matchMedia('(max-width: 600px)').matches });
-    if (b) S.earned.push(b);
+    const quiet = window.matchMedia('(max-width: 600px)').matches;
+    const b = award(id, { quiet });
+    if (b) S.earned.push(quiet ? { ...b, quiet: true } : b);
   }
 
   function go(i) {
@@ -327,17 +330,27 @@ function renderPlayer(ex) {
     // Choose starts on their guess — one tap to build it, or pick the other.
     if (i === 2 && !S.built && S.predicted) { S.built = S.predicted; S.view = S.predicted; }
     render();
-    // On phones the scene is pinned on top: land the new step's first line
-    // just below it instead of wherever the last step's scroll left it.
+    landStep();
+  }
+  function advance() { go(S.step + 1); }
+  // Land the new step's first line in view — just below the pinned scene on
+  // phones, or scrolled up to in short windows — and focus its heading.
+  function landStep() {
     const vp = refs.body.querySelector('.viewport-panel');
     const cover = window.matchMedia('(max-width: 980px)').matches && getComputedStyle(vp).position === 'sticky'
       ? vp.offsetHeight : 0;
     const top = refs.rail.getBoundingClientRect().top;
-    if (top < cover) window.scrollBy(0, top - cover - 12);
-    // Keyboard and screen-reader users land on the new step's heading.
+    if (top < cover || top > window.innerHeight - 60) window.scrollBy(0, top - cover - 12);
     focusStep();
+    shieldRail();
   }
-  function advance() { go(S.step + 1); }
+  // The second click of a double-click or double-tap would land on whatever
+  // the new rail put under the pointer (a prediction, a scheme, the call).
+  function shieldRail() {
+    const rail = refs.rail;
+    rail.style.pointerEvents = 'none';
+    setTimeout(() => { rail.style.pointerEvents = ''; }, 400);
+  }
   function focusStep() {
     (refs.rail.querySelector('[data-ref="stephead"]') || refs.rail).focus({ preventScroll: true });
   }
@@ -348,11 +361,12 @@ function renderPlayer(ex) {
       t: 0, moved: false, compare: false, revealed: false,
       counterT: 0, counterPath: ex.counter.defaultPath, counterMoved: false,
       seen: { a: false, b: false }, counterCall: null, counterSeen: { a: false, b: false },
-      flipDone: false, earned: [],
+      flipDone: false,
+      earned: S.earned.filter((b) => b.quiet),   // never toasted (phone) — the rep card is their only showing
     });
     render();
     window.scrollTo(0, 0);
-    focusStep();
+    landStep();
   }
 
   /* ---- shell ---- */
@@ -569,9 +583,11 @@ function renderPlayer(ex) {
     updateGates();
   }
 
-  function gateHint(seen, view, first) {
+  function gateHint(seen, view, first, t) {
     if (seen.a && seen.b) return null;
-    if (view === null) return 'Drag the change past halfway — both schemes are on screen.';
+    const past = t >= SEEN_T;
+    if (view === null) return past ? 'Keep going — let both verdicts land.' : 'Drag the change past halfway — both schemes are on screen.';
+    if (!seen[view] && past) return 'Keep going — the verdict hasn’t landed yet.';
     if (!seen.a && !seen.b) return first;
     const other = seen.a ? 'b' : 'a';
     return view === other
@@ -589,7 +605,7 @@ function renderPlayer(ex) {
       const both = S.seen.a && S.seen.b;
       refs.continueBtn.disabled = !both;
       setHint(refs.moveHint, gateHint(S.seen, S.compare ? null : S.view,
-        ex.change.hint || 'Drag the slider first — feel it before we name it.'));
+        ex.change.hint || 'Drag the slider first — feel it before we name it.', S.t));
       // The verdict waits for the comparison, like the flip's moral does.
       if (both && !S.revealed) {
         S.revealed = true;
@@ -603,7 +619,7 @@ function renderPlayer(ex) {
       refs.moral.hidden = !both;
       refs.callChip.hidden = !both;
       setHint(refs.moveHint2, gateHint(S.counterSeen, S.counterPath,
-        ex.counter.hint || 'Run the change one more time — this part has a different job.'));
+        ex.counter.hint || 'Run the change one more time — this part has a different job.', S.counterT));
       if (both && !S.flipDone) {
         S.flipDone = true;
         announce(`${refs.callChip.textContent} ${ex.counter.moral}`);
@@ -824,6 +840,7 @@ function renderPlayer(ex) {
               S.counterCall = p;
               S.counterPath = p;
               renderStep();
+              shieldRail();
               const slider = refs.rail.querySelector('input.slider');
               if (slider) slider.focus({ preventScroll: true });
             },
