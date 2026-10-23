@@ -200,9 +200,11 @@ const e1CounterEveryday = {
     const top = cy - 30 * MM, bot = cy + 30 * MM;
     edBackdrop(stage, 'ed-wall');
 
-    // The real rack: when the hole misses its screw, it drops and tilts off
-    // it, while the dashed trace (your drawing) stays put.
-    const rack = svgEl('g', tone === 'bad' ? { transform: `translate(0 18) rotate(3 ${wallX} ${top})` } : {}, stage);
+    // The real rack: when the hole misses its screw, it slips and tilts off
+    // it, while the dashed trace (your drawing) stays put. Pivoting on the
+    // wall-side bottom corner keeps it out of the wall and its hooks off the
+    // width dimension.
+    const rack = svgEl('g', tone === 'bad' ? { transform: `translate(0 8) rotate(1.5 ${wallX} ${bot})` } : {}, stage);
     svgEl('rect', { x: wallX, y: top, width: Wpx, height: Hpx, rx: 3, class: 'ed-wood' }, rack);
 
     // Key hooks along the bottom edge (short, clear of the width dimension).
@@ -213,10 +215,11 @@ const e1CounterEveryday = {
   over(stage, { tone }) {
     const wallX = 96, cy = 160;
     const screwX = wallX + E1_HALF * MM;
-    const on = tone !== 'bad';   // keyed to the chip, so screw, line and chip agree
-
-    edScrew(stage, screwX, cy, on ? 'good' : 'bad', 5);
-    edSay(stage, 300, 44, on ? 'Hangs right on its screw' : 'The hole missed its screw — the rack won’t hang', on ? 'good' : 'bad');
+    // Keyed to the chip, so screw, line and chip agree. While the chip only
+    // warns, the screw stays neutral and the scene says nothing yet.
+    edScrew(stage, screwX, cy, tone === 'bad' ? 'bad' : tone === 'warn' ? '' : 'good', 5);
+    if (tone === 'bad') edSay(stage, 300, 44, 'The hole missed its screw — the rack won’t hang', 'bad');
+    else if (tone !== 'warn') edSay(stage, 300, 44, 'Hangs right on its screw', 'good');
   },
 };
 
@@ -435,7 +438,7 @@ function e3MainScene(stage, { t, path }) {
 
   if (path === 'b' && t > 0.02) {
     svgEl('path', { d: outline(A, B, C0, D0, E0), class: 'ghost' }, stage);
-    sceneLabel(stage, 354, 148, 'the drawing', 'ghost-label', 'start');
+    sceneLabel(stage, 246, 97, 'the drawing', 'ghost-label', 'end');   // by the drawing's apex — the right corner no longer moves
   }
 
   svgEl('path', { d: outline(A, B, C, D, E0), class: 'part' + (path === 'a' ? '' : ' is-loose') }, stage);
@@ -1638,7 +1641,7 @@ const EXERCISES = [
       return [
         { label: 'Origin', sub: 'the one reference that never moves' },
         path === null
-          ? { label: 'Sketch 1 — tab profile', sub: 'five lines, dimensioned like the drawing', active: true }
+          ? { label: 'Sketch 1 — tab profile', sub: 'five lines, matching the drawing', active: true }
           : path === 'a'
             ? { label: 'Sketch 1 — tab profile', sub: 'fully defined — dimensioned and constrained, drawn black', active: true }
             : { label: 'Sketch 1 — tab profile', sub: 'under-defined — the drawing’s numbers are in, lines still blue', active: true },
@@ -1776,7 +1779,7 @@ const EXERCISES = [
         if (over > -1.5) {
           return {
             tone: 'bad',
-            headline: `the lid is flush — ${fmtLen(0)} to grab`,
+            headline: 'the lid is flush — nothing left to grab',
             note: 'The overhang is gone. Keep going.',
           };
         }
@@ -1847,7 +1850,7 @@ const EXERCISES = [
         }
         if (path === 'b') {
           if (g < 4) {
-            return { tone: 'warn', headline: `hole is ${fmtLen(E4_SW * t)} oversize`, note: 'The hole is growing with the panel. The switch is not.' };
+            return { tone: 'warn', headline: `hole is ${fmtLen(E4_SW * t, { mmDecimals: 1 })} oversize`, note: 'The hole is growing with the panel. The switch is not.' };
           }
           return {
             tone: 'bad',
