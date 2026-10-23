@@ -1,9 +1,148 @@
 # HANDOFF — CAD Intuition Gym
 
-Last updated: 2026-10-21 by Claude Code (UX + learning-design review round —
+Last updated: 2026-10-23 by Claude Code (multi-agent fresh review round —
 see directly below; v3 status breadcrumb is still at the end of this file).
 
-## What changed in this round (UX + learning-design review, 2026-10-21)
+## What changed in this round (multi-agent fresh review, 2026-10-23)
+
+PR #8 was merged by Justin. This round ran a multi-lens review as a
+workflow (learner, instructional design, Onshape accuracy, a11y, visual,
+state/robustness, QA coverage), with every finding adversarially
+re-checked before anything was changed: 52 confirmed, 3 dropped (one was
+already fixed, two didn't reproduce). A completeness critic then looked
+for what the lenses missed. Fixes landed in four commits on top of the
+first batch (932201b); builders worked in isolated worktrees on E1–E3 and
+E4–E6, and I integrated, re-read their diffs and settled their open
+questions.
+
+**First batch (932201b) — reachable controls, no giveaways, true to Onshape**
+- Short windows (phone landscape, 150–200% zoom) no longer pin a scene
+  taller than the window over every control.
+- Rebuilding the rail keeps scroll and focus on the pressed control; the
+  guess locks once the change has landed; the verdict and "Called it" wait
+  until both schemes have run.
+- Before the flip call, the losing scheme's labels describe structure,
+  not outcome.
+- E5's stranded notch shows no red error row (Onshape shows nothing
+  wrong); E6's bridge says Onshape lets you reorder and the sketch turns
+  red.
+- Sliders carry `aria-valuetext`; verdicts are announced once; arrows
+  move 5%.
+
+**App (`app.js`, `style.css`)**
+- Structure: the player has an `h1` (exercise title), a `main`, and an
+  `h2` per step; each step change focuses that heading. After a finish
+  focus lands on the rep-complete card; "See what you leave with ↓"
+  moves focus to the recap heading and respects reduced motion.
+- The both-schemes gate counts a scheme as watched only once it's past
+  halfway **and** its chip shows its final verdict (E6 B was counted
+  while still "warn").
+- Compare: the rail note says which scheme it explains ("B · midline-tied
+  — …").
+- Robustness: restart forgets the earlier attempt's badges; Reset clears
+  the rep card and any rep in progress; Done can't run twice; storage that
+  reads but won't write keeps the session copy (no more re-toasting
+  "Called it" on every render); an in-progress rep survives Back/Forward
+  or a peek at home (memory only — no new storage key) until it's
+  finished.
+- Recap rows name their exercise and add an "In Onshape…?" reveal
+  (`takeaway.tool`) next to "Unless…?"; the bridge card sits after Done
+  as the postscript V2 scoped; home says "About five minutes."
+- Phones: player badges go to the rep card instead of toasting over the
+  pinned scene; "restart" stays on one line in the header.
+- Focus rings draw inset inside clipped containers (segmented toggles,
+  exercise rows, Features summary). Contrast: `--faint` #5f6c7a passes AA
+  on chrome, panel-2 and white (it only passed on white); the toast kicker
+  uses `--warn`; muted Everyday lines #76684f pass on their halo.
+- The unit pill is `position: absolute` at every width (it covered rail
+  text on laptops and "restart" at 200% zoom); the header grid now applies
+  at ≤700px.
+
+**Content (`exercises.js`, `svg.js`)**
+- True to Onshape: E1 names Coincident to a centered origin (and Midpoint
+  to a corner-to-corner construction line in the counter); E2 a sketch
+  Mirror across a construction line; E3 "fully defined" includes tying the
+  sketch to the origin (scheme A and the counter now show an origin mark);
+  E4 adds the Variable row at the top of the Feature list; E5 names the
+  Feature list; E6 lists each sketch + feature pair.
+- E3 is honest now: scheme B carries every number on the drawing, and the
+  pull slides the peak sideways — matching the numbers isn't the same as
+  fully defined.
+- Feature lists put Extrude 1 right after Sketch 1; thicknesses are
+  authored in inches (0.25 in).
+- Plain words: no "standoffs", "bezel" or "sprint"; option subs describe,
+  not argue.
+- No zero-length readouts at the first nudge (E3, E4, E5, E6, both
+  units); `fmtLen` snaps float noise (E4's gap reads 0.38 in, not 0.37).
+- E1 counter Everyday: the key rack slips off its screw at the bad tone
+  while the dashed trace stays put; E4 counter Everyday: the button sinks
+  into an oversize hole.
+
+**QA (`qa/qa-check.mjs`)** — 406/406 (with the critic and verification checks below). New state-machine pass: locked guess
+after the reveal, compare note label, restart badges, reset clearing the
+rep card, focus on the rep card, double-clicked Done, Back/Forward rep
+memory, blocked storage writes, E6's settled gate, no zero-length warn/bad
+headline in either unit, focus and scroll after A/B and the call on a
+phone, quiet phone toasts, slider reachability in phone landscape
+(844×390). runExercise checks the bridge card sits after Done; the recap
+check wants each title and Onshape move.
+
+**Completeness critic (what the lenses missed), all fixed:**
+- A stalled Google Fonts request left the app blank (the render-blocking
+  stylesheet held back all three scripts). The fonts link is now
+  non-blocking (`media="print" onload`); the harness checks home renders
+  while the fonts request hangs. Fallback fonts show until they land.
+- A redo overwrote the cold prediction, so the recap score and "Called
+  it"/"Called the flip" rewarded an answer already seen. A redo now keeps
+  the first attempt's guess and earns only "Second set".
+- Learners who finished before badges existed saw "6 done" next to an
+  empty locker. Home now quietly awards what stored progress proves
+  (First rep, Full circuit, Sharp eye, Called it, Felt the miss).
+- Windows contrast themes (forced colors) hid every selected option and
+  segment; a forced-colors block gives them an outline and weight.
+- `og-preview.png` was stale (mm, retired copy) — recaptured from the
+  current app at the same approved moment, in inches; alt text updated.
+- `ASK.md` created (the AGENTS.md convention no round had used yet) with
+  the three calls that were sitting in HANDOFF prose; README marks the
+  July prompt superseded.
+
+**Settled from earlier "flagged" lists (10-20, 10-21):** E5's counter vs E6
+(reframed 10-21); E5's V-bite (932201b: a mis-edited width now); E6's
+"refuses to drag" bridge (932201b: Onshape lets you reorder and the sketch
+turns red); E5's "only your hole feature rebuilds" (now a drag-the-edge
+test); "Engrave" (now Text); "bezel"/"weld bead" (plain words).
+
+**Open for Justin → `ASK.md`:** Everyday as the default layer; the share
+card showing E1's answer; the predictable flip call. Still in HANDOFF
+prose only: inches as decimals vs re-authored round values (10-20 #2) and
+whether this everyday layer is the one he meant (10-20 #1).
+
+**Still open (not done):** F19 — in-scene labels render below ~8px on
+phones (a bump clips five strings; needs a layout pass). The E4 counter
+hole label crosses the narrow panel at t=0, E3's peak-height label
+crosses the left wall at 390, and two E1/E2 label overlaps at 390 are
+pre-existing and unchanged.
+
+**Independent verification (5 lenses + an adversarial verifier each), all
+fixed:** 28 confirmed, 6 dropped. A double-tap's second half no longer
+lands on the next step's controls (the rail ignores the pointer for 400ms
+after a step change or the call — this was a phone regression from the
+new landing scroll); in short windows each step scrolls its heading into
+view; the rep card takes focus once, not on every units toggle; phone
+badges earned before a restart stay on the rep card; past halfway with a
+verdict not yet landed, the hint says "Keep going"; home says "resume →"
+for a rep in progress; the units pill is first in Tab order; the selected
+dark segment's focus ring passes 3:1; screen readers hear "Badges earned"
+and which exercise each recap reveal belongs to. Content: E3 counter
+labels its toggle "left loose", E3 option A leads with plain words ("Pin
+every line down"), E4's bridge creates the Variable first (Onshape inserts
+features at the rollback bar), E4's counter tree shows its Variable, E6's
+counter says Extrude 2, E5's counter says weld (not bead), E6 B prints no
+zero gap, E1's tilted rack leaves the width label clear, E4's counter
+Everyday follows the chip, and E2's recap no longer repeats its title.
+QA 406/406.
+
+## What changed in the round before (UX + learning-design review, 2026-10-21)
 
 PR #7 (everyday layer, inches, badges) was merged by Justin; this round
 restarted the branch from `main`. Two independent read-only reviews ran in

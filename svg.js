@@ -56,9 +56,10 @@ const MM_PER_IN = 25.4;
 
 /* Format a millimeter quantity in whichever unit the toggle is set to. */
 function fmtLen(mm, { mmDecimals = 0, inDecimals = 2 } = {}) {
+  const snap = (x) => Math.round(x * 1e9) / 1e9;
   return getUnit() === 'in'
-    ? `${(mm / MM_PER_IN).toFixed(inDecimals)} in`
-    : `${mm.toFixed(mmDecimals)} mm`;
+    ? `${snap(mm / MM_PER_IN).toFixed(inDecimals)} in`
+    : `${snap(mm).toFixed(mmDecimals)} mm`;
 }
 
 /* A scene viewport: grid background + a stage group that scenes draw into. */
@@ -162,7 +163,8 @@ function sceneLabel(parent, x, y, text, cls = '', anchor = 'middle') {
    E5's and E6's consequences live partly in the feature tree, so the tree is drawn
    inside the scene itself (each compare pane needs its own copy — the left
    Features panel can only show one). Rows: { label, state } where state is
-   '' | 'active' (open in the editor right now) | 'error' (broken reference).
+   '' | 'active' (open in the editor right now) | 'error' (fails to rebuild —
+   Onshape's red; never for a feature that rebuilds but lands in the wrong place).
    Returns one { x, y } anchor per row (right edge, mid-height) so a leader
    line can tie the edited row to the geometry it puts on the table. */
 function featureTree(parent, x, y, rows) {
