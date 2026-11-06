@@ -115,8 +115,10 @@ function dimH(parent, { x1, x2, y, ext1 = null, ext2 = null, label = '', cls = '
 }
 
 /* Vertical linear dimension: extension lines from the geometry (ext1/ext2 are
-   the x-coords being measured from), a dimension line at x, arrowheads, label. */
-function dimV(parent, { y1, y2, x, ext1 = null, ext2 = null, label = '', cls = '' }) {
+   the x-coords being measured from), a dimension line at x, arrowheads, label.
+   labelSide 'left' puts the label left of the line, for a line that sits
+   just outside the part's left edge. */
+function dimV(parent, { y1, y2, x, ext1 = null, ext2 = null, label = '', cls = '', labelSide = 'right' }) {
   const g = svgEl('g', { class: `dim ${cls}`.trim() }, parent);
   const a = Math.min(y1, y2);
   const b = Math.max(y1, y2);
@@ -128,8 +130,9 @@ function dimV(parent, { y1, y2, x, ext1 = null, ext2 = null, label = '', cls = '
     svgEl('path', { d: `M ${x} ${b} l -2.6 -7 h 5.2 z`, class: 'arrowhead' }, g);
   }
   if (label) {
+    const left = labelSide === 'left';
     svgEl('text', {
-      x: x + 5, y: (a + b) / 2 + 3.5, class: 'dimtext', 'text-anchor': 'start', text: label,
+      x: left ? x - 5 : x + 5, y: (a + b) / 2 + 3.5, class: 'dimtext', 'text-anchor': left ? 'end' : 'start', text: label,
     }, g);
   }
   return g;
