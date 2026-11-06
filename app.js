@@ -440,7 +440,7 @@ function renderPlayer(ex) {
     const body = refs.body;
     placeFeatures = () => (LAYOUT_MQ.matches ? body.append(featuresPanel) : body.prepend(featuresPanel));
     placeFeatures();
-    syncPin = syncPinPadding;
+    syncPin = () => { syncPinPadding(); fitScenes(); };   // a height-only resize can change the crop
     if (pinObserver) pinObserver.disconnect();
     pinObserver = new ResizeObserver(syncPinPadding);
     pinObserver.observe(viewportPanel);
@@ -529,10 +529,21 @@ function renderPlayer(ex) {
 
   // A scene drawn narrower than 480px crops to its exercise's narrowBox (when
   // it has one), so its labels render larger.
+  // Beside the rail in a short window, height is what's scarce: the crop (taller
+  // at the same width) only applies while the pinned panel still fits.
   function fitScenes() {
     const box = S.step === 4 ? ex.counter.narrowBox : ex.narrowBox;
+    const vp = refs.body.querySelector('.viewport-panel');
+    const beside = !!box && getComputedStyle(vp).position === 'sticky' && !overRail(vp);
+    const [, , bw, bh] = box ? box.split(' ').map(Number) : [];
     for (const svg of refs.viewport.querySelectorAll('svg.scene')) {
-      const vb = box && svg.getBoundingClientRect().width < 480 ? box : '0 0 520 300';
+      const { width: w, height: h } = svg.getBoundingClientRect();
+      let crop = !!box && w < 480;
+      if (crop && beside) {
+        const uncropped = vp.offsetHeight - h + (w * SCENE_H) / SCENE_W;   // independent of today's viewBox
+        crop = uncropped + w * (bh / bw - SCENE_H / SCENE_W) <= window.innerHeight - 8;
+      }
+      const vb = crop ? box : `0 0 ${SCENE_W} ${SCENE_H}`;
       if (svg.getAttribute('viewBox') !== vb) svg.setAttribute('viewBox', vb);
     }
   }
@@ -710,11 +721,19 @@ function renderPlayer(ex) {
   }
   function bringIntoView(target) {
     if (!target.isConnected) return;
-    const cover = pinCover();
+    // Where the pinned scene's bottom will be once the page has scrolled by dy
+    // (a panel not yet stuck rises with the page until it reaches its top).
+    const vp = refs.body.querySelector('.viewport-panel');
+    const pinned = pinCover() > 0;
+    const v = vp.getBoundingClientRect();
+    const stuckAt = parseFloat(getComputedStyle(vp).top) || 0;
+    const coverAfter = (d) => (pinned ? Math.max(stuckAt, v.top - d) + v.height : 0);
     const r = target.getBoundingClientRect();
     // Far enough to show the button, never so far that it rises under the pinned scene.
-    const dy = Math.min(r.bottom + 12 - window.innerHeight, r.top - cover - 8);
+    const want = r.bottom + 12 - window.innerHeight;
+    const dy = Math.min(want, r.top - coverAfter(want) - 8);
     if (dy <= 0) return;
+    const cover = coverAfter(dy);
     // If the control in hand would end up hidden, focus moves on to the next action.
     const el = document.activeElement;
     if (el && el !== target && refs.rail.contains(el)) {
