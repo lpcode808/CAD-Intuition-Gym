@@ -874,8 +874,10 @@ async function runStateChecks(browser, collectors) {
     await page.locator('.rail button.btn.primary').click();
     await page.locator('.home').waitFor({ state: 'visible' });
     const card = await page.locator('.rep-done').innerText();
+    // The first guess (right, made before the reveal) stays on record through the
+    // restart, so the deliberate wrong one doesn't earn "Felt the miss" either.
     rec(checks, 'state: after restart, the rep card lists only this attempt\'s badges',
-      card.includes('Felt the miss') && !card.includes('Called it'), `card="${card.replace(/\s+/g, ' ').slice(0, 140)}"`);
+      card.includes('First rep') && !card.includes('Felt the miss') && !card.includes('Called it'), `card="${card.replace(/\s+/g, ' ').slice(0, 140)}"`);
     const focused = await page.evaluate(() => document.activeElement?.classList.contains('rep-done'));
     rec(checks, 'state: after a finish, focus lands on the rep card', focused === true);
 
@@ -988,8 +990,10 @@ async function runStateChecks(browser, collectors) {
     await ctx.close();
   }
 
-  /* Phone: a tap on A/B or the call keeps focus and the scroll position, and
-     badges go to the rep card instead of toasting over the pinned scene. */
+  /* Phone: a tap on A/B or the call keeps focus where it was tapped, and on
+     screen; the gate's reveal scrolls the verdict into view without hiding
+     the toggle; badges go to the rep card instead of toasting over the
+     pinned scene. */
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await ctx.newPage();
@@ -1002,9 +1006,17 @@ async function runStateChecks(browser, collectors) {
     await segB.evaluate((el) => el.scrollIntoView({ block: 'end' }));   // clear of the pinned scene
     const y0 = await page.evaluate(() => window.scrollY);
     await segB.click();
-    const afterSeg = await page.evaluate(() => ({ y: window.scrollY, ref: document.activeElement?.dataset?.ref || document.activeElement?.tagName }));
-    rec(checks, 'state [390x844]: tapping B keeps focus on the toggle and the scroll in place',
-      afterSeg.ref === 'view-b' && Math.abs(afterSeg.y - y0) <= 2, `y ${y0}→${afterSeg.y} focus=${afterSeg.ref}`);
+    await page.waitForTimeout(900);   // the reveal scrolls the verdict into view (smoothly)
+    const afterSeg = await page.evaluate(() => {
+      const cover = document.querySelector('.viewport-panel').getBoundingClientRect().bottom;
+      const b = document.querySelector('[data-ref="view-b"]').getBoundingClientRect();
+      const chip = document.querySelector('.rail .pred-chip').getBoundingClientRect();
+      return { y: window.scrollY, ref: document.activeElement?.dataset?.ref || document.activeElement?.tagName,
+        toggleClear: b.top >= cover, chipInView: chip.top >= cover && chip.bottom <= innerHeight };
+    });
+    rec(checks, 'state [390x844]: tapping B keeps focus on the toggle, clear of the pinned scene, and brings the verdict into view',
+      afterSeg.ref === 'view-b' && afterSeg.y >= y0 - 2 && afterSeg.toggleClear && afterSeg.chipInView,
+      `y ${y0}→${afterSeg.y} focus=${afterSeg.ref} toggleClear=${afterSeg.toggleClear} chipInView=${afterSeg.chipInView}`);
     const toastCount = await page.locator('.toast-host .toast').count();
     rec(checks, 'state [390x844]: the reveal\'s badge doesn\'t toast over the pinned scene', toastCount === 0, `toasts=${toastCount}`);
 
@@ -1013,9 +1025,13 @@ async function runStateChecks(browser, collectors) {
     await callA.evaluate((el) => el.scrollIntoView({ block: 'end' }));
     const y1 = await page.evaluate(() => window.scrollY);
     await callA.click();
-    const afterCall = await page.evaluate(() => ({ y: window.scrollY, slider: !!document.activeElement?.matches('input.slider') }));
-    rec(checks, 'state [390x844]: making the call moves focus to its slider without a jump',
-      afterCall.slider && Math.abs(afterCall.y - y1) <= 2, `y ${y1}→${afterCall.y} slider=${afterCall.slider}`);
+    const afterCall = await page.evaluate(() => {
+      const cover = document.querySelector('.viewport-panel').getBoundingClientRect().bottom;
+      const s = document.querySelector('.rail input.slider').getBoundingClientRect();
+      return { y: window.scrollY, slider: !!document.activeElement?.matches('input.slider'), onScreen: s.top >= cover && s.bottom <= innerHeight };
+    });
+    rec(checks, 'state [390x844]: making the call moves focus to its slider, on screen',
+      afterCall.slider && afterCall.onScreen && afterCall.y >= y1 - 2, `y ${y1}→${afterCall.y} slider=${afterCall.slider} onScreen=${afterCall.onScreen}`);
     await ctx.close();
   }
 
@@ -1135,9 +1151,9 @@ async function main() {
         await coldPage.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
         const cold = await coldPage.evaluate(() => {
           const btn = document.querySelector('.unit-toggle');
-          return { text: btn && btn.textContent, pressed: btn && btn.getAttribute('aria-pressed') };
+          return { text: btn && btn.textContent, label: btn && btn.getAttribute('aria-label') };
         });
-        rec(allChecks, `[${vp.label}] cold load defaults to inches`, cold.text === 'in' && cold.pressed === 'true', JSON.stringify(cold));
+        rec(allChecks, `[${vp.label}] cold load defaults to inches`, cold.text === 'in' && cold.label === 'Units: in (inches). Switch to millimeters.', JSON.stringify(cold));
         await coldCtx.close();
       }
 
@@ -1153,7 +1169,7 @@ async function main() {
 
       const unitA11y = await page.evaluate(() => {
         const btn = document.querySelector('.unit-toggle');
-        return btn && btn.getAttribute('aria-label') === 'Units: millimeters. Switch to inches.' && btn.getAttribute('aria-pressed') === 'false';
+        return btn && btn.getAttribute('aria-label') === 'Units: mm (millimeters). Switch to inches.' && !btn.hasAttribute('aria-pressed');
       });
       rec(allChecks, `[${vp.label}] unit toggle has an explicit accessible name and state`, unitA11y === true);
 

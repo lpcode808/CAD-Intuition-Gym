@@ -20,26 +20,24 @@ function unitToggleLabel() {
 }
 function unitToggleA11yLabel() {
   return getUnit() === 'in'
-    ? 'Units: inches. Switch to millimeters.'
-    : 'Units: millimeters. Switch to inches.';
+    ? 'Units: in (inches). Switch to millimeters.'
+    : 'Units: mm (millimeters). Switch to inches.';
 }
 
 const unitToggleBtn = h('button', {
   class: 'unit-toggle',
   title: 'Switch between millimeters and inches',
   'aria-label': unitToggleA11yLabel(),
-  'aria-pressed': getUnit() === 'in' ? 'true' : 'false',
   onclick: () => {
     toggleUnit();
     unitToggleBtn.textContent = unitToggleLabel();
     unitToggleBtn.setAttribute('aria-label', unitToggleA11yLabel());
-    unitToggleBtn.setAttribute('aria-pressed', getUnit() === 'in' ? 'true' : 'false');
     rerenderCurrent();
   },
 }, unitToggleLabel());
 appRoot.before(unitToggleBtn);   // first in Tab order, where it sits (top-right)
 
-const STEP_NAMES = ['Intent', 'Predict', 'Choose', 'The change', 'Flip it'];
+const STEP_NAMES = ['Intent', 'Predict', 'Choose', 'The change', 'Name + flip'];
 const TONE_MARK = { good: '✓', bad: '✕', warn: '△', idle: '' };
 
 /* ---------------------------------------------------------------- badges
@@ -54,7 +52,7 @@ const BADGES = [
   { id: 'felt-the-miss', glyph: '✕', name: 'Felt the miss', how: 'Finish one you predicted wrong. The miss is the workout.' },
   { id: 'spotter', glyph: 'AB', name: 'Spotter', how: 'Watch both schemes side by side.' },
   { id: 'cross-trainer', glyph: 'IRL', name: 'Cross-trainer', how: 'See a scene in the everyday layer.' },
-  { id: 'called-the-flip', glyph: '⇄', name: 'Called the flip', how: 'In “Flip it”, call the right scheme before you run it.' },
+  { id: 'called-the-flip', glyph: '⇄', name: 'Called the flip', how: 'In the flip, call the right scheme before you run it.' },
   { id: 'sharp-eye', glyph: '3×', name: 'Sharp eye', how: 'Call three predictions right.' },
   { id: 'second-set', glyph: '↺', name: 'Second set', how: 'Come back on a later day and redo one you finished.' },
   { id: 'into-the-cockpit', glyph: '↗', name: 'Into the cockpit', how: 'Open Onshape from a “Try the real thing” card.' },
@@ -155,6 +153,12 @@ const reps = {};
 function renderHome() {
   document.title = 'CAD Intuition Gym';
   rerenderCurrent = renderHome;
+  placeFeatures = syncPin = null;
+  if (pinObserver) pinObserver.disconnect();
+  if (cropObserver) cropObserver.disconnect();
+  document.documentElement.style.scrollPaddingTop = '';
+  // A re-render (units toggle, another tab's progress) keeps open reveals open.
+  const openSet = new Set([...appRoot.querySelectorAll('.recap-flip[open]')].map((d) => d.dataset.key));
   const prog = loadProgress();
   const anyDone = EXERCISES.some((ex) => prog[ex.id] && prog[ex.id].done);
   const availableExercises = EXERCISES.filter((ex) => ex.available);
@@ -223,7 +227,7 @@ function renderHome() {
     h('main', { class: 'home' },
       repDone,
       h('p', { class: 'kicker' }, 'CAD Intuition Gym'),
-      h('h1', {}, 'Model your intent, not your accident.'),
+      h('h1', { tabindex: '-1' }, 'Model your intent, not your accident.'),
       h('p', { class: 'lede' },
         'A gym for the CAD decisions that don’t have a button. You can sketch and extrude — but nothing you’ve modeled has ever broken on you. Here, it will. On purpose, a few minutes per exercise.'),
       h('p', { class: 'rep-how' },
@@ -248,10 +252,10 @@ function renderHome() {
             h('div', { class: 'recap-text' },
               h('p', { class: 'recap-title' }, ex.title),
               h('p', { class: 'recap-line' }, ex.takeaway.line),
-              h('details', { class: 'recap-flip' },
+              h('details', { class: 'recap-flip', 'data-key': `${ex.id}-flip`, open: openSet.has(`${ex.id}-flip`) },
                 h('summary', {}, 'Unless…?', h('span', { class: 'sr-only' }, ` — ${ex.title}`)),
                 h('p', {}, ex.takeaway.flip)),
-              ex.takeaway.tool && h('details', { class: 'recap-flip' },
+              ex.takeaway.tool && h('details', { class: 'recap-flip', 'data-key': `${ex.id}-tool`, open: openSet.has(`${ex.id}-tool`) },
                 h('summary', {}, 'In Onshape…?', h('span', { class: 'sr-only' }, ` — ${ex.title}`)),
                 h('p', {}, ex.takeaway.tool))))))),
       locker(),
@@ -295,6 +299,17 @@ function resetProgress() {
 
 /* ---------------------------------------------------------------- player */
 
+// At ≤1180px Features is drawn after the scene and the rail, so it goes last in
+// the DOM too (Tab order follows the drawn order). The current player sets
+// these hooks; home clears them.
+const LAYOUT_MQ = matchMedia('(max-width: 1180px)');
+let placeFeatures = null;
+let syncPin = null;
+let pinObserver = null;    // keeps scroll padding clear of a scene pinned above the rail
+let cropObserver = null;   // re-crops narrow scenes when their width changes
+LAYOUT_MQ.addEventListener('change', () => { if (placeFeatures) placeFeatures(); });
+window.addEventListener('resize', () => { if (syncPin) syncPin(); });
+
 function renderPlayer(ex) {
   justFinished = null;   // the rep card belongs to the home visit right after a finish
   // A redo isn't a cold prediction: its home row already shows the principle.
@@ -314,13 +329,15 @@ function renderPlayer(ex) {
     counterSeen: { a: false, b: false },
     flipDone: false,                       // the flip's verdict has been announced
     featuresOpen: null,   // null until the learner toggles it — then it sticks
+    cold: null, coldCall: null,            // the first committed guess and call, kept through a restart
   });
   // The flip's winner: whichever scheme holds at the full change.
   const counterAnswer = ['a', 'b'].find((p) => ex.counter.outcome(p, 1).tone === 'good');
   const refs = {};
+  let sliding = false;   // true while a slider's input handler runs
 
   function earn(id) {
-    const quiet = window.matchMedia('(max-width: 600px)').matches;
+    const quiet = window.matchMedia('(max-width: 980px)').matches;
     const b = award(id, { quiet });
     if (b) S.earned.push(quiet ? { ...b, quiet: true } : b);
   }
@@ -336,33 +353,53 @@ function renderPlayer(ex) {
   // Land the new step's first line in view — just below the pinned scene on
   // phones, or scrolled up to in short windows — and focus its heading.
   function landStep() {
-    const vp = refs.body.querySelector('.viewport-panel');
-    const cover = window.matchMedia('(max-width: 980px)').matches && getComputedStyle(vp).position === 'sticky'
-      ? vp.offsetHeight : 0;
+    const cover = pinCover();
     const top = refs.rail.getBoundingClientRect().top;
     if (top < cover || top > window.innerHeight - 60) window.scrollBy(0, top - cover - 12);
     focusStep();
     shieldRail();
   }
+  // The viewport panel stacked above the rail (not beside it)?
+  function overRail(vp) {
+    const v = vp.getBoundingClientRect(), r = refs.rail.getBoundingClientRect();
+    return v.left < r.right && r.left < v.right;
+  }
+  // How far down the window a scene pinned above the rail reaches (0 if none).
+  function pinCover() {
+    const vp = refs.body.querySelector('.viewport-panel');
+    return getComputedStyle(vp).position === 'sticky' && overRail(vp) ? vp.getBoundingClientRect().bottom : 0;
+  }
+  // Focus moved by the browser (Tab, focus()) stops clear of the pinned scene.
+  function syncPinPadding() {
+    if (!refs.body.isConnected) return;
+    const vp = refs.body.querySelector('.viewport-panel');
+    document.documentElement.style.scrollPaddingTop = pinCover() > 0 ? `${vp.offsetHeight + 12}px` : '';
+  }
   // The second click of a double-click or double-tap would land on whatever
-  // the new rail put under the pointer (a prediction, a scheme, the call).
+  // the new step put under the pointer (a prediction, a scheme, the call, the
+  // Features summary).
   function shieldRail() {
-    const rail = refs.rail;
-    rail.style.pointerEvents = 'none';
-    setTimeout(() => { rail.style.pointerEvents = ''; }, 400);
+    const body = refs.body;
+    body.style.pointerEvents = 'none';
+    setTimeout(() => { body.style.pointerEvents = ''; }, 400);
   }
   function focusStep() {
     (refs.rail.querySelector('[data-ref="stephead"]') || refs.rail).focus({ preventScroll: true });
   }
 
   function restart() {
+    // Like a redo, a restart can't rewrite a guess already on record: once the
+    // change step was reached (the Predict lock's rule), or a call once either
+    // scheme has run in the flip.
+    const cold = S.cold ?? (S.maxStep >= 3 ? S.predicted : null);
+    const coldCall = S.coldCall ?? ((S.counterSeen.a || S.counterSeen.b) ? S.counterCall : null);
     Object.assign(S, {
       step: 0, maxStep: 0, predicted: null, built: null, view: null,
       t: 0, moved: false, compare: false, revealed: false,
       counterT: 0, counterPath: ex.counter.defaultPath, counterMoved: false,
       seen: { a: false, b: false }, counterCall: null, counterSeen: { a: false, b: false },
-      flipDone: false,
-      earned: S.earned.filter((b) => b.quiet),   // never toasted (phone) — the rep card is their only showing
+      flipDone: false, cold, coldCall,
+      earned: S.earned.filter((b) => b.quiet),   // never toasted (stacked layout) — the rep card is their only showing
     });
     render();
     window.scrollTo(0, 0);
@@ -384,6 +421,7 @@ function renderPlayer(ex) {
         h('span', { class: 'panel-sub' }, 'Part Studio')),
       refs.features);
     featuresPanel.open = S.featuresOpen ?? window.matchMedia('(min-width: 981px)').matches;
+    const viewportPanel = h('div', { class: 'viewport-panel' }, refs.viewport);
 
     appRoot.replaceChildren(
       h('div', { class: 'player' },
@@ -395,8 +433,21 @@ function renderPlayer(ex) {
           stepper()),
         refs.body = h('main', { class: 'ex-body', 'data-step': String(S.step) },
           featuresPanel,
-          h('div', { class: 'viewport-panel' }, refs.viewport),
+          viewportPanel,
           h('div', { class: 'rail-panel' }, refs.rail))));
+
+    // Moved, not re-rendered, on a layout change, so its open state survives.
+    const body = refs.body;
+    placeFeatures = () => (LAYOUT_MQ.matches ? body.append(featuresPanel) : body.prepend(featuresPanel));
+    placeFeatures();
+    syncPin = syncPinPadding;
+    if (pinObserver) pinObserver.disconnect();
+    pinObserver = new ResizeObserver(syncPinPadding);
+    pinObserver.observe(viewportPanel);
+    if (cropObserver) cropObserver.disconnect();
+    // Deferred a frame: a new viewBox changes the observed height.
+    cropObserver = new ResizeObserver(() => requestAnimationFrame(fitScenes));
+    cropObserver.observe(refs.viewport);
 
     renderStep();
   }
@@ -472,7 +523,18 @@ function renderPlayer(ex) {
       refs.single = { svg, stage, chip };
       refs.viewport.replaceChildren(...[layerBar(), svg, chip].filter(Boolean));
     }
+    fitScenes();
     drawScenes();
+  }
+
+  // A scene drawn narrower than 480px crops to its exercise's narrowBox (when
+  // it has one), so its labels render larger.
+  function fitScenes() {
+    const box = S.step === 4 ? ex.counter.narrowBox : ex.narrowBox;
+    for (const svg of refs.viewport.querySelectorAll('svg.scene')) {
+      const vb = box && svg.getBoundingClientRect().width < 480 ? box : '0 0 520 300';
+      if (svg.getAttribute('viewBox') !== vb) svg.setAttribute('viewBox', vb);
+    }
   }
 
   /* ---- everyday layer: the same scene, seen as the real thing ---- */
@@ -484,6 +546,7 @@ function renderPlayer(ex) {
   function layerBar() {
     const def = everydayDef();
     if (!def) return null;
+    if (getLayer() === 'everyday') earn('cross-trainer');   // an Everyday scene is on screen
     return h('div', { class: 'layer-bar' },
       h('div', { class: 'segmented', role: 'group', 'aria-label': 'Scene layer' },
         [['cad', 'CAD'], ['everyday', 'Everyday']].map(([v, label]) =>
@@ -493,7 +556,6 @@ function renderPlayer(ex) {
             onclick: () => {
               if (getLayer() === v) return;
               setLayer(v);
-              if (v === 'everyday') earn('cross-trainer');
               renderViewport();
               const again = refs.viewport.querySelector('.layer-bar .seg.is-on');
               if (again) again.focus();
@@ -501,12 +563,13 @@ function renderPlayer(ex) {
           }, label))),
       getLayer() === 'everyday'
         ? h('span', { class: 'layer-thing' }, def.thing,
-          S.step >= 3 && h('span', { class: 'layer-note' }, ' Each slider position is a fresh one, built from your model.'))
+          (S.step === 3 || (S.step === 4 && S.counterCall)) && h('span', { class: 'layer-note' }, ' Each slider position is a fresh one, built from your model.'))
         : h('span', { class: 'layer-hint' }, 'Everyday shows the real object this part stands for.'));
   }
 
-  /* Under → CAD scene → over. The CAD drawing stays on top as the trace. */
-  function paintScene({ svg, stage }, sceneFn, def, opts) {
+  /* Under → CAD scene → over. The CAD drawing stays on top as the trace.
+     `name` says what the scene shows; the chip after it gives the verdict. */
+  function paintScene({ svg, stage }, sceneFn, def, opts, name) {
     clearNode(stage);
     const everyday = getLayer() === 'everyday' && def ? def : null;
     svg.classList.toggle('is-everyday', !!everyday);
@@ -518,8 +581,8 @@ function renderPlayer(ex) {
       else svg.style.removeProperty(prop);
     }
     svg.setAttribute('aria-label', everyday
-      ? `Everyday view: ${everyday.thing}`
-      : 'CAD modeling consequence scene');
+      ? `Everyday view: ${everyday.thing}` + (opts.path ? ` — scheme ${opts.path.toUpperCase()}` : '')
+      : name);
     if (everyday && everyday.under) everyday.under(svgEl('g', { class: 'ed-under' }, stage), opts);
     sceneFn(svgEl('g', { class: 'cad' }, stage), opts);
     if (everyday && everyday.over) {
@@ -531,6 +594,8 @@ function renderPlayer(ex) {
       if (opts.tone === 'warn' || opts.tone === 'bad') {
         over.querySelectorAll('.ed-say.good').forEach((n) => n.remove());
       }
+      // Nor a red failure line under an amber or idle chip.
+      if (opts.tone !== 'bad') over.querySelectorAll('.ed-say.bad').forEach((n) => n.remove());
     }
   }
 
@@ -543,22 +608,28 @@ function renderPlayer(ex) {
 
   function drawScenes() {
     if (S.step === 4) {
-      const o = ex.counter.outcome(S.counterPath, S.counterT);
-      paintScene(refs.single, ex.counter.scene, ex.counter.everyday, { t: S.counterT, path: S.counterPath, tone: o.tone });
+      const p = S.counterPath;
+      const o = ex.counter.outcome(p, S.counterT);
+      paintScene(refs.single, ex.counter.scene, ex.counter.everyday, { t: S.counterT, path: p, tone: o.tone },
+        `The flip — scheme ${p.toUpperCase()}: ${ex.counter.pathLabels[p]}`);
       setChip(refs.single.chip, o);
     } else if (S.step === 3 && S.compare) {
       for (const p of ['a', 'b']) {
         const o = ex.outcome(p, S.t);
-        paintScene(refs.panes[p], ex.scene, ex.everyday, { t: S.t, path: p, tone: o.tone });
+        paintScene(refs.panes[p], ex.scene, ex.everyday, { t: S.t, path: p, tone: o.tone }, `Scheme ${p.toUpperCase()}`);
         setChip(refs.panes[p].chip, o);
       }
     } else {
       const o = S.step === 3 ? ex.outcome(S.view, S.t) : null;
+      const p = S.step >= 2 ? S.view : null;
+      const name = !p ? ex.brief.heading
+        : S.step === 3 ? `Scheme ${p.toUpperCase()}: ${ex.paths[p].label}`
+          : `${ex.brief.heading} — scheme ${p.toUpperCase()}: ${ex.paths[p].label}`;
       paintScene(refs.single, ex.scene, ex.everyday, {
         t: S.step === 3 ? S.t : 0,
-        path: S.step >= 2 ? S.view : null,
+        path: p,
         tone: o ? o.tone : null,
-      });
+      }, name);
       setChip(refs.single.chip, o);
     }
     markSeen();
@@ -588,7 +659,7 @@ function renderPlayer(ex) {
     const past = t >= SEEN_T;
     if (view === null) return past ? 'Keep going — let both verdicts land.' : 'Drag the change past halfway — both schemes are on screen.';
     if (!seen[view] && past) return 'Keep going — the verdict hasn’t landed yet.';
-    if (!seen.a && !seen.b) return first;
+    if (!seen.a && !seen.b) return t < 0.02 ? first : 'Keep going — the verdict lands past halfway.';
     const other = seen.a ? 'b' : 'a';
     return view === other
       ? `Keep going — run ${other.toUpperCase()} through the change too.`
@@ -604,13 +675,15 @@ function renderPlayer(ex) {
     if (S.step === 3 && refs.continueBtn) {
       const both = S.seen.a && S.seen.b;
       refs.continueBtn.disabled = !both;
-      setHint(refs.moveHint, gateHint(S.seen, S.compare ? null : S.view,
+      // Untouched, the idle outcome note already says what to do.
+      setHint(refs.moveHint, S.t < 0.02 && !S.seen.a && !S.seen.b ? null : gateHint(S.seen, S.compare ? null : S.view,
         ex.change.hint || 'Drag the slider first — feel it before we name it.', S.t));
       // The verdict waits for the comparison, like the flip's moral does.
       if (both && !S.revealed) {
         S.revealed = true;
         fillPredChip();
         announce(`${refs.predChip.textContent} Both schemes have run — Name the lesson is ready.`);
+        revealGate(refs.continueBtn);
       }
     }
     if (S.step === 4 && refs.doneBtn) {
@@ -622,9 +695,33 @@ function renderPlayer(ex) {
         ex.counter.hint || 'Run the change one more time — this part has a different job.', S.counterT));
       if (both && !S.flipDone) {
         S.flipDone = true;
-        announce(`${refs.callChip.textContent} ${ex.counter.moral}`);
+        announce(`${refs.callChip.textContent} ${ex.counter.moral} Mark Exercise ${ex.num} done is ready.`);
+        revealGate(refs.doneBtn);
       }
     }
+  }
+
+  /* A gate just opened: bring the verdict and its button into view, once. Never
+     mid-drag — a slider waits for its release; otherwise next frame, after
+     renderStep has put the scroll back. */
+  function revealGate(target) {
+    if (sliding && refs.slider) refs.slider.addEventListener('change', () => bringIntoView(target), { once: true });
+    else requestAnimationFrame(() => bringIntoView(target));
+  }
+  function bringIntoView(target) {
+    if (!target.isConnected) return;
+    const cover = pinCover();
+    const r = target.getBoundingClientRect();
+    // Far enough to show the button, never so far that it rises under the pinned scene.
+    const dy = Math.min(r.bottom + 12 - window.innerHeight, r.top - cover - 8);
+    if (dy <= 0) return;
+    // If the control in hand would end up hidden, focus moves on to the next action.
+    const el = document.activeElement;
+    if (el && el !== target && refs.rail.contains(el)) {
+      const f = el.getBoundingClientRect();
+      if (f.bottom - dy < cover || f.top - dy < 0) target.focus({ preventScroll: true });
+    }
+    window.scrollBy({ top: dy, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
 
   /* ---- rail (step content) ---- */
@@ -664,15 +761,21 @@ function renderPlayer(ex) {
     });
     const describe = () => input.setAttribute('aria-valuetext', valuetext(input.valueAsNumber / 1000));
     describe();
-    input.addEventListener('input', () => { oninput(input.valueAsNumber / 1000); describe(); });
+    refs.slider = input;
+    input.addEventListener('input', () => {
+      sliding = true;
+      try { oninput(input.valueAsNumber / 1000); describe(); } finally { sliding = false; }
+    });
     // Fine-grained for dragging, but arrows move 5% (PageUp/PageDown 20%):
     // reaching the halfway reveal shouldn't take hundreds of key presses.
+    // A key step is released at once, like the end of a drag.
     input.addEventListener('keydown', (e) => {
       const steps = { ArrowRight: 50, ArrowUp: 50, ArrowLeft: -50, ArrowDown: -50, PageUp: 200, PageDown: -200 };
       if (!(e.key in steps)) return;
       e.preventDefault();
       input.value = String(Math.max(0, Math.min(1000, input.valueAsNumber + steps[e.key])));
       input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
     });
     return h('div', { class: 'slider-block' },
       h('div', { class: 'slider-head' },
@@ -706,7 +809,7 @@ function renderPlayer(ex) {
     const out = [
       h('h2', { class: 'kicker', tabindex: '-1', 'data-ref': 'stephead' }, 'Predict'),
       h('p', { class: 'prose' }, ex.predict.prompt),
-      optionButtons(S.predicted, locked ? null : (p) => { S.predicted = p; renderStep('continue'); }, locked ? S.predicted : null),
+      optionButtons(S.predicted, locked ? null : (p) => { if (S.built === S.predicted) { S.built = null; S.view = null; } S.predicted = p; renderStep('continue'); shieldRail(); }, locked ? S.predicted : null),
       h('p', { class: 'fine' }, locked ? 'Your guess is locked in — you made it before the change landed.' : ex.predict.note),
     ];
     if (S.predicted) {
@@ -722,7 +825,7 @@ function renderPlayer(ex) {
     const out = [
       h('h2', { class: 'kicker', tabindex: '-1', 'data-ref': 'stephead' }, 'Choose'),
       h('p', { class: 'prose' }, ex.choose.prompt),
-      optionButtons(S.built, (p) => { S.built = p; S.view = p; renderStep('continue'); }, S.predicted),
+      optionButtons(S.built, (p) => { S.built = p; S.view = p; renderStep('continue'); shieldRail(); }, S.predicted),
     ];
     if (S.built) {
       out.push(h('button', {
@@ -758,7 +861,7 @@ function renderPlayer(ex) {
 
     refs.outcomeNote = h('p', { class: 'outcome-note' });
     out.push(refs.outcomeNote);
-    refs.moveHint = h('p', { class: 'fine gate-hint', 'data-ref': 'movehint', 'aria-live': 'polite' });
+    refs.moveHint = h('p', { class: 'fine gate-hint', id: 'gate-hint', 'data-ref': 'movehint', 'aria-live': 'polite' });
     out.push(refs.moveHint);
 
     out.push(h('div', { class: 'viewrow' },
@@ -772,13 +875,19 @@ function renderPlayer(ex) {
           onclick: () => { S.view = p; renderStep(`view-${p}`); },
         }, `${p.toUpperCase()} · ${ex.paths[p].short}`))),
       h('button', {
-        class: 'btn ghost',
-        'aria-pressed': S.compare ? 'true' : 'false',
+        class: 'btn ghost' + (S.compare ? ' is-on' : ''),
         'data-ref': 'compare',
         onclick: () => {
           S.compare = !S.compare;
           if (S.compare) earn('spotter');
-          renderStep('compare');
+          if (!S.compare) { renderStep('compare'); return; }
+          renderStep();
+          // Stacked, the unpinned panes grow above the rail: show them, not the button.
+          const vp = refs.body.querySelector('.viewport-panel');
+          if (!overRail(vp)) { focusRef('compare'); return; }
+          refs.rail.querySelector('[data-ref="compare"]').focus({ preventScroll: true });
+          syncPinPadding();   // no longer pinned: drop the padding before aligning
+          vp.scrollIntoView({ block: 'start' });
         },
       }, S.compare ? 'Back to one view' : 'Compare side by side')));
 
@@ -788,7 +897,7 @@ function renderPlayer(ex) {
     if (S.revealed) fillPredChip();
 
     refs.continueBtn = h('button', {
-      class: 'btn primary', 'data-ref': 'continue', onclick: advance,
+      class: 'btn primary', 'data-ref': 'continue', 'aria-describedby': 'gate-hint', onclick: advance,
     }, 'Name the lesson →');
     out.push(refs.continueBtn);
 
@@ -810,7 +919,7 @@ function renderPlayer(ex) {
     refs.predChip.textContent = (right
       ? 'You called it. '
       : 'Not what you predicted — good, that’s the workout. ') + (ex.predict.why || '');
-    if (right && !isRedo) earn('called-it');
+    if (right && !isRedo && !S.cold) earn('called-it');
   }
 
   /* step 4 — name it, then flip it (counter-context) */
@@ -842,7 +951,11 @@ function renderPlayer(ex) {
               renderStep();
               shieldRail();
               const slider = refs.rail.querySelector('input.slider');
-              if (slider) slider.focus({ preventScroll: true });
+              if (slider) {
+                slider.focus({ preventScroll: true });
+                const r = slider.getBoundingClientRect();   // and make sure it's on screen
+                if (r.bottom > window.innerHeight - 8) window.scrollBy(0, r.bottom - window.innerHeight + 24);
+              }
             },
           },
             h('span', { class: 'option-key' }, p.toUpperCase()),
@@ -880,7 +993,7 @@ function renderPlayer(ex) {
 
     refs.counterNote = h('p', { class: 'outcome-note' });
     out.push(refs.counterNote);
-    refs.moveHint2 = h('p', { class: 'fine gate-hint', 'data-ref': 'movehint2', 'aria-live': 'polite' });
+    refs.moveHint2 = h('p', { class: 'fine gate-hint', id: 'gate-hint-2', 'data-ref': 'movehint2', 'aria-live': 'polite' });
     out.push(refs.moveHint2);
 
     const called = S.counterCall === counterAnswer;
@@ -893,7 +1006,7 @@ function renderPlayer(ex) {
     refs.moral.hidden = true;
     out.push(refs.moral);
 
-    refs.doneBtn = h('button', { class: 'btn primary', onclick: finish },
+    refs.doneBtn = h('button', { class: 'btn primary', 'aria-describedby': 'gate-hint-2', onclick: finish },
       `Mark Exercise ${ex.num} done ✓`);
     refs.doneBtn.disabled = true;
     out.push(refs.doneBtn);
@@ -930,10 +1043,12 @@ function renderPlayer(ex) {
     const prog = loadProgress();
     const prev = prog[ex.id] && prog[ex.id].done ? prog[ex.id] : null;
     const again = !!prev && new Date(prev.finishedAt).toDateString() !== new Date().toDateString();
-    const right = S.predicted === ex.predict.answer;
+    const guess = S.cold ?? S.predicted;   // a restart keeps the first committed guess and call
+    const right = guess === ex.predict.answer;
+    const call = S.coldCall ?? S.counterCall;
     prog[ex.id] = {
       done: true,
-      predicted: prev ? prev.predicted : S.predicted,          // a redo keeps the cold guess
+      predicted: prev ? prev.predicted : guess,          // a redo keeps the cold guess
       predictedRight: prev ? prev.predictedRight : right,
       finishedAt: new Date().toISOString(),
     };
@@ -942,9 +1057,9 @@ function renderPlayer(ex) {
     const quiet = { quiet: true };
     const badges = [
       ...S.earned,
-      !isRedo && S.counterCall === counterAnswer && award('called-the-flip', quiet),
+      !isRedo && call === counterAnswer && award('called-the-flip', quiet),
       award('first-rep', quiet),
-      !right && award('felt-the-miss', quiet),
+      !isRedo && !right && award('felt-the-miss', quiet),
       again && award('second-set', quiet),
       EXERCISES.filter((e) => prog[e.id] && prog[e.id].predictedRight).length >= 3 && award('sharp-eye', quiet),
       EXERCISES.filter((e) => e.available).every((e) => prog[e.id] && prog[e.id].done) && award('full-circuit', quiet),
@@ -960,13 +1075,31 @@ function renderPlayer(ex) {
 
 /* ---------------------------------------------------------------- router */
 
+let routeShield = 0;
+let routed = false;   // false until the first route (a cold load starts at the top, with the units pill)
+
 function route() {
   const id = location.hash.replace(/^#\/?/, '');
   const ex = EXERCISES.find((e) => e.id === id);
   if (ex && ex.available) renderPlayer(ex);
   else renderHome();
   window.scrollTo(0, 0);
+  // A route change mustn't drop focus to <body> (the rep card takes its own).
+  if (routed && (!document.activeElement || document.activeElement === document.body)) {
+    const target = appRoot.querySelector('[data-ref="stephead"]') || appRoot.querySelector('.home h1');
+    if (target) target.focus({ preventScroll: true });
+  }
+  routed = true;
+  // The second tap of a double-tap would land on the new screen's controls.
+  appRoot.style.pointerEvents = 'none';
+  clearTimeout(routeShield);
+  routeShield = setTimeout(() => { appRoot.style.pointerEvents = ''; }, 400);
 }
 
+// Another tab finished a rep or reset progress: keep this tab's home current.
+window.addEventListener('storage', (e) => {
+  if (e.key !== null && e.key !== STORE_KEY && e.key !== BADGE_KEY) return;
+  if (rerenderCurrent === renderHome) renderHome();
+});
 window.addEventListener('hashchange', route);
 route();

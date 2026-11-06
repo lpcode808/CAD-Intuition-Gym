@@ -189,6 +189,7 @@ a.ex-row:hover { background: var(--panel-2); }
   font-size: 12px;
   color: var(--faint);
 }
+.home-foot .linklike { white-space: nowrap; }
 
 .recap { margin-top: 44px; }
 .recap .section-label { margin-top: 0; }
@@ -438,6 +439,16 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .ex-body.is-compare { grid-template-columns: minmax(0, 1fr) 372px; }
 .ex-body.is-compare .features-panel { display: none; }
 
+/* Laptops: three columns would squeeze the scene to phone size. Scene | rail,
+   with Features under the rail; the scene spans both rows so it stays pinned
+   beside them. */
+@media (min-width: 981px) and (max-width: 1180px) {
+  .ex-body { grid-template-columns: minmax(0, 1fr) 372px; }
+  .viewport-panel { grid-column: 1; grid-row: 1 / span 2; }
+  .rail-panel { grid-column: 2; grid-row: 1; }
+  .features-panel { grid-column: 2; grid-row: 2; }
+}
+
 /* ---- features panel (the Onshape furniture) ---- */
 
 .features-panel {
@@ -559,7 +570,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .rail { display: flex; flex-direction: column; gap: 14px; }
 /* Focus lands on these programmatically (each step's heading, the rep card,
    the recap heading) so Tab starts there, not at the top. No ring needed. */
-.rail:focus, [data-ref="stephead"]:focus, .rep-done:focus, .recap h2:focus { outline: none; }
+.rail:focus, [data-ref="stephead"]:focus, .rep-done:focus, .recap h2:focus, .home h1:focus { outline: none; }
 
 .rail-head { font-family: var(--serif); font-size: 22px; line-height: 1.2; margin: 0; }
 .prose { font-family: var(--serif); font-size: 15.5px; line-height: 1.6; margin: 0; }
@@ -627,7 +638,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 }
 .option.is-selected .option-key { background: var(--accent); border-color: var(--accent); color: #fff; }
 .option-text { min-width: 0; }
-.option-label { display: block; font-weight: 600; font-size: 13.5px; padding-right: 64px; }
+.option-label { display: block; font-weight: 600; font-size: 13.5px; padding-right: 80px; }
 .option-sub { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
 .guess-tag {
   position: absolute;
@@ -666,7 +677,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   padding: 7px 12px;
 }
 .btn.ghost:hover { color: var(--ink); border-color: var(--border-strong); }
-.btn.ghost[aria-pressed="true"] {
+.btn.ghost.is-on {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-soft);
@@ -887,7 +898,7 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .scene.is-everyday .part { fill: var(--ed-fill, #ecdcc0); }
 .scene.is-everyday .part.alt { fill: var(--ed-fill-alt, var(--ed-fill, #ecdcc0)); }
 .scene.is-everyday .switch-part { fill: var(--ed-fill-alt, #d7e0ea); }
-.scene.is-everyday .dim { opacity: 0.8; }
+.scene.is-everyday .dim :is(.ext, .dimline, .arrowhead) { opacity: 0.8; }
 .scene.is-trace .part { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 6 4; }
 /* Over an illustration, the CAD labels need a heavier halo to stay crisp. */
 .scene.is-everyday :is(.dimtext, .scenelabel, .ghost-label, .intent-label, .scope-label) { stroke-width: 5; stroke-linejoin: round; }
@@ -942,17 +953,16 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 @media (max-width: 980px) {
   .player { padding: 12px 12px 40px; }
   .ex-body { grid-template-columns: 1fr; }
-  .viewport-panel { order: 1; }
-  .rail-panel { order: 2; }
-  .features-panel { order: 3; }
   .ex-body.is-compare { grid-template-columns: 1fr; }
   .compare { grid-template-columns: 1fr; } /* rail sits below here anyway — stack for legibility */
   .home { padding: 40px 20px 56px; }
 }
 
-/* Pinned only in tall windows: in phone landscape or at 150-200% zoom the
-   scene is taller than the window and would cover every control. */
-@media (max-width: 980px) and (min-height: 600px) {
+/* Pinned above the rail only in tall portrait windows. Stacked, the scene
+   grows with the window's width, so in a landscape window (phone landscape,
+   a short desktop window, 150-200% zoom) it can be as tall as the window and
+   cover every control — those get the scene beside the rail instead (below). */
+@media (max-width: 980px) and (min-height: 600px) and (max-aspect-ratio: 1/1) {
   .ex-body[data-step="3"]:not(.is-compare) .viewport-panel,
   .ex-body[data-step="4"] .viewport-panel {
     position: sticky;
@@ -962,11 +972,23 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
   }
 }
 
+/* Landscape windows below 981px: scene | rail, so the scene and the change
+   slider are on screen together. The scene pins beside the rail, where it
+   can't cover a control. */
+@media (min-width: 600px) and (max-width: 980px) and (min-aspect-ratio: 1001/1000) {
+  .ex-body, .ex-body.is-compare { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  .viewport-panel { grid-column: 1; grid-row: 1 / span 2; }
+  .rail-panel { grid-column: 2; grid-row: 1; }
+  .features-panel { grid-column: 2; grid-row: 2; }
+  .ex-body:not(.is-compare) .viewport-panel { position: sticky; top: 0; z-index: 5; }
+}
+
 @media (max-width: 600px) {
   .rep-done { margin-top: 8px; } /* clear of the units pill */
   .seg { min-height: 40px; padding: 8px 12px; }
   .layer-bar .seg { min-height: 40px; }
   .ex-header .linklike { padding: 10px 4px; margin: -10px 0; }
+  .home-foot .linklike { padding: 10px 4px; margin: -10px 0; }
   .slider { height: 40px; }
   .recap-flip summary { padding: 10px 0; }
   .toast-host { top: 10px; bottom: auto; }
@@ -1017,6 +1039,8 @@ button.step-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 @media (forced-colors: active) {
   .option.is-selected, .seg.is-on { outline: 2px solid Highlight; outline-offset: -3px; }
   .seg.is-on, .option.is-selected .option-label { font-weight: 700; }
+  .option.is-selected:focus-visible { outline: 4px double Highlight; outline-offset: 2px; }
+  .seg.is-on:focus-visible { outline: 4px double Highlight; outline-offset: -6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
